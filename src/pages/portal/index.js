@@ -1,7 +1,18 @@
+/* eslint-disable @next/next/no-img-element */
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { SignOutButton } from "@/components/ui/sign-out-button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { getPortalStatus } from "@/lib/wp";
 
 export default function PortalPage({ initialStatus, initialError }) {
@@ -15,7 +26,7 @@ export default function PortalPage({ initialStatus, initialError }) {
     const { estimateId, locationId, inviteToken } = router.query;
     if (!estimateId || status) return;
 
-    setLoading(true);
+    startTransition(() => setLoading(true));
     getPortalStatus(
       {
         estimateId,
@@ -33,8 +44,13 @@ export default function PortalPage({ initialStatus, initialError }) {
       .catch((err) => {
         setError(err.message);
       })
-      .finally(() => setLoading(false));
+      .finally(() => {
+        startTransition(() => setLoading(false));
+      });
   }, [router, status]);
+
+  const view = useMemo(() => normaliseStatus(status), [status]);
+  const inviteToken = typeof router.query.inviteToken === "string" ? router.query.inviteToken : null;
 
   return (
     <>
@@ -42,8 +58,9 @@ export default function PortalPage({ initialStatus, initialError }) {
         <title>Customer Portal • CheapAlarms</title>
       </Head>
       <main className="relative min-h-screen bg-background text-foreground">
-        <div className="absolute right-6 top-6">
+        <div className="absolute right-6 top-6 flex items-center gap-2">
           <ThemeToggle />
+          <SignOutButton />
         </div>
         <div className="mx-auto max-w-3xl px-6 py-12">
           <header className="mb-8 text-center">
@@ -54,74 +71,168 @@ export default function PortalPage({ initialStatus, initialError }) {
               Your installation at a glance
             </h1>
             <p className="mt-2 text-muted-foreground">
-              We pull live data from WordPress via the headless API bridge.
+              Live data from the CheapAlarms WordPress API.
             </p>
+            {inviteToken ? (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Invite token provided: <code>{inviteToken}</code>
+              </p>
+            ) : null}
           </header>
 
           {loading && (
-            <p className="mb-6 rounded-md border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
-              Loading latest portal status…
-            </p>
+            <Card className="mb-6 border-dashed border-border bg-muted/30 text-muted-foreground">
+              <CardHeader>
+                <CardTitle>Refreshing</CardTitle>
+                <CardDescription>Loading the latest portal status…</CardDescription>
+              </CardHeader>
+            </Card>
           )}
 
           {error && (
-            <div className="rounded-lg border border-primary/40 bg-primary/10 p-4 text-sm text-primary">
-              <p className="font-semibold">We hit a snag.</p>
-              <p className="mt-1 text-primary/80">{error}</p>
-            </div>
+            <Card className="mb-6 border border-primary/40 bg-primary/10 text-primary">
+              <CardHeader>
+                <CardTitle>We hit a snag</CardTitle>
+                <CardDescription className="text-primary/80">
+                  {error}
+                </CardDescription>
+              </CardHeader>
+            </Card>
           )}
 
-          {status && (
+          {view ? (
             <section className="space-y-6">
-              <Card title="Estimate">
-                <Detail label="Estimate ID" value={status.estimateId} />
-                <Detail label="Status" value={status.status ?? "pending"} />
-                <Detail label="Next step" value={status.nextStep ?? "—"} />
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Estimate</CardTitle>
+                    <CardDescription>
+                      Estimate {view.estimateId ?? "unknown"}
+                    </CardDescription>
+                  </div>
+                  <Badge variant={badgeVariant(view.quote.status)}>
+                    {view.quote.label}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <Detail label="Quote number" value={view.quote.number} />
+                  <Detail label="Next step" value={view.nextStep} />
+                  <Detail
+                    label="Accepted on"
+                    value={formatDate(view.quote.acceptedAt)}
+                  />
+                </CardContent>
               </Card>
 
-              <Card title="Account access">
-                <Detail
-                  label="Invite sent"
-                  value={status.invite?.sentAt ?? "—"}
-                />
-                <Detail
-                  label="Portal URL"
-                  value={
-                    status.invite?.portalUrl ? (
-                      <a
-                        href={status.invite.portalUrl}
-                        className="text-primary underline hover:text-primary/80"
-                      >
-                        Open portal
-                      </a>
-                    ) : (
-                      "—"
-                    )
-                  }
-                />
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Portal account</CardTitle>
+                    <CardDescription>
+                      Manage customer access to the dashboard.
+                    </CardDescription>
+                  </div>
+                  <Badge variant={badgeVariant(view.account.status)}>
+                    {view.account.label}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm text-muted-foreground">
+                  <Detail
+                    label="Invite last sent"
+                    value={formatDate(view.account.lastInviteAt)}
+                  />
+                  <Detail
+                    label="Invite expires"
+                    value={formatDate(view.account.expiresAt)}
+                  />
+                  <div className="flex flex-wrap gap-3 pt-2">
+                    <Button
+                      variant="outline"
+                      disabled={!view.account.portalUrl}
+                      asChild={Boolean(view.account.portalUrl)}
+                    >
+                      {view.account.portalUrl ? (
+                        <a href={view.account.portalUrl} target="_blank" rel="noreferrer">
+                          Open portal
+                        </a>
+                      ) : (
+                        <span>Portal link unavailable</span>
+                      )}
+                    </Button>
+                    {view.account.resetUrl ? (
+                      <Button variant="ghost" asChild>
+                        <a href={view.account.resetUrl} target="_blank" rel="noreferrer">
+                          Password reset link
+                        </a>
+                      </Button>
+                    ) : null}
+                  </div>
+                </CardContent>
               </Card>
 
-              {status.photos?.length ? (
-                <Card title="Uploaded photos">
-                  <ul className="grid grid-cols-2 gap-4">
-                    {status.photos.map((photo) => (
-                      <li key={photo.url}>
-                        <img
-                          src={photo.url}
-                          alt={photo.label ?? "Uploaded photo"}
-                          className="h-40 w-full rounded-lg object-cover"
-                        />
-                      </li>
-                    ))}
-                  </ul>
-                </Card>
-              ) : (
-                <Card title="Uploaded photos">
-                  <p className="text-muted-foreground">No photos uploaded yet.</p>
-                </Card>
-              )}
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Installation</CardTitle>
+                    <CardDescription>
+                      {view.installation.message ?? "Scheduling details"}
+                    </CardDescription>
+                  </div>
+                  <Badge variant={badgeVariant(view.installation.status)}>
+                    {view.installation.label}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-2 text-sm text-muted-foreground">
+                  <Detail
+                    label="Can schedule"
+                    value={view.installation.canSchedule ? "Yes" : "No"}
+                  />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-start justify-between gap-4">
+                  <div>
+                    <CardTitle>Photos</CardTitle>
+                    <CardDescription>
+                      {view.photos.items.length
+                        ? `${view.photos.items.length} uploaded`
+                        : "No uploads yet"}
+                    </CardDescription>
+                  </div>
+                  <Badge variant="outline">
+                    {view.photos.missingCount > 0
+                      ? `${view.photos.missingCount} missing`
+                      : "Complete"}
+                  </Badge>
+                </CardHeader>
+                <CardContent>
+                      {view.photos.items.length ? (
+                    <ul className="grid grid-cols-2 gap-4 md:grid-cols-3">
+                      {view.photos.items.map((photo) => (
+                        <li key={photo.url}>
+                          <figure className="overflow-hidden rounded-lg border border-border">
+                            <img
+                              src={photo.url}
+                              alt={photo.label ?? "Uploaded photo"}
+                              className="h-32 w-full object-cover"
+                            />
+                            <figcaption className="px-2 py-1 text-xs text-muted-foreground">
+                              {photo.label ?? "Uploaded photo"}
+                            </figcaption>
+                          </figure>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      We’ll show photos here once the customer uploads them.
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             </section>
-          )}
+          ) : null}
         </div>
       </main>
     </>
@@ -159,15 +270,72 @@ function cookieHeader(req) {
   return cookie ? { Cookie: cookie } : {};
 }
 
-function Card({ title, children }) {
-  return (
-    <article className="rounded-xl border border-border bg-card p-6 shadow-lg shadow-black/5">
-      <h2 className="text-lg font-semibold">{title}</h2>
-      <div className="mt-4 space-y-2 text-sm text-muted-foreground">
-        {children}
-      </div>
-    </article>
-  );
+function normaliseStatus(status) {
+  if (!status) return null;
+  const quote = status.quote ?? {};
+  const account = status.account ?? {};
+  const installation = status.installation ?? {};
+  const photos = status.photos ?? {};
+
+  return {
+    estimateId: status.estimateId ?? quote.number ?? null,
+    nextStep: status.nextStep ?? installation.message ?? "We'll keep you posted.",
+    quote: {
+      status: quote.status ?? "pending",
+      label: quote.statusLabel ?? "Awaiting approval",
+      number: quote.number ?? status.estimateId ?? "—",
+      acceptedAt: quote.acceptedAt ?? null,
+    },
+    account: {
+      status: account.status ?? "pending",
+      label: account.statusLabel ?? "Invite pending",
+      lastInviteAt: account.lastInviteAt ?? null,
+      expiresAt: account.expiresAt ?? null,
+      portalUrl: account.portalUrl ?? null,
+      resetUrl: account.resetUrl ?? null,
+    },
+    installation: {
+      status: installation.status ?? "pending",
+      label: installation.statusLabel ?? "Not scheduled",
+      message: installation.message ?? null,
+      canSchedule: installation.canSchedule ?? false,
+    },
+    photos: {
+      items: Array.isArray(photos.items) ? photos.items : [],
+      missingCount:
+        photos.missingCount ??
+        Math.max(
+          0,
+          (photos.required ?? 0) - (Array.isArray(photos.items) ? photos.items.length : 0)
+        ),
+    },
+  };
+}
+
+function badgeVariant(status) {
+  const normalized = (status ?? "").toLowerCase();
+  if (["accepted", "active", "scheduled"].includes(normalized)) {
+    return "secondary";
+  }
+  if (["declined", "rejected", "failed"].includes(normalized)) {
+    return "destructive";
+  }
+  return "outline";
+}
+
+function formatDate(value) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleString("en-AU", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  } catch (error) {
+    return value;
+  }
 }
 
 function Detail({ label, value }) {

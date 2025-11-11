@@ -1,10 +1,12 @@
 import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { SignOutButton } from "@/components/ui/sign-out-button";
 
 export default function Home() {
   return (
     <main className="relative flex min-h-screen items-center justify-center bg-background text-foreground">
-      <div className="absolute right-6 top-6">
+      <div className="absolute right-6 top-6 flex items-center gap-2">
         <ThemeToggle />
+        <SignOutButton />
       </div>
       <div className="text-center space-y-4 px-6">
         <p className="text-sm uppercase tracking-[0.3em] text-muted-foreground">

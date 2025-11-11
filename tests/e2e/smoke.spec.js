@@ -12,5 +12,17 @@ test.describe("headless surface smoke test", () => {
     await page.goto("/dashboard");
     await expect(page.getByRole("heading", { name: /sign in/i })).toBeVisible();
   });
+
+  test("theme toggle switches to dark mode", async ({ page }) => {
+    await page.goto("/");
+    const toggle = page.getByRole("button", { name: /toggle dark mode/i });
+    await toggle.click();
+    await expect(page.locator("html")).toHaveClass(/dark/);
+  });
+
+  test("portal requires estimate id", async ({ page }) => {
+    await page.goto("/portal");
+    await expect(page.getByText(/estimateid is required/i)).toBeVisible();
+  });
 });
 

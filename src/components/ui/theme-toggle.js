@@ -4,8 +4,18 @@ import { Moon, Sun } from "lucide-react";
 import { useTheme } from "./theme-provider";
 
 export function ThemeToggle({ className = "" }) {
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, ready } = useTheme();
   const isDark = theme === "dark";
+
+  if (!ready) {
+    return (
+      <span
+        className={`inline-flex items-center gap-2 rounded-lg border border-transparent bg-muted px-3 py-2 text-sm text-muted-foreground ${className}`}
+      >
+        …
+      </span>
+    );
+  }
 
   return (
     <button
@@ -15,7 +25,7 @@ export function ThemeToggle({ className = "" }) {
       aria-pressed={isDark}
       aria-label="Toggle dark mode"
     >
-      {isDark ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+      {isDark ? <Moon aria-hidden className="h-4 w-4" /> : <Sun aria-hidden className="h-4 w-4" />}
       <span>{isDark ? "Dark" : "Light"}</span>
     </button>
   );

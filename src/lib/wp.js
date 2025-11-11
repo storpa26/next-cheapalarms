@@ -16,10 +16,15 @@ async function wpFetch(path, options = {}) {
   const url = `${WP_API_BASE}${path}`;
 
   const headers = normaliseHeaders(options.headers);
-  const token =
+  let token =
     options.token ??
     headers.Authorization?.replace(/^Bearer\s+/i, "") ??
     extractTokenFromHeaders(headers);
+
+  if (!token && typeof window !== "undefined") {
+    const parsed = parseCookie(document.cookie || "");
+    token = parsed[TOKEN_COOKIE] ?? null;
+  }
 
   if (token && !headers.Authorization) {
     headers.Authorization = `Bearer ${token}`;
@@ -54,11 +59,12 @@ export async function getPortalStatus(
   { estimateId, locationId, inviteToken },
   fetchOptions = {}
 ) {
-  const search = new URLSearchParams({
-    estimateId,
-    locationId,
-    inviteToken,
-  }).toString();
+  const params = new URLSearchParams();
+  if (estimateId) params.set("estimateId", estimateId);
+  if (locationId) params.set("locationId", locationId);
+  if (inviteToken) params.set("inviteToken", inviteToken);
+
+  const search = params.toString();
   return wpFetch(`/ca/v1/portal/status?${search}`, fetchOptions);
 }
 
