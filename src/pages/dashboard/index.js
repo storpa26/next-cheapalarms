@@ -19,9 +19,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useState } from "react";
 import { getEstimates } from "@/lib/wp";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/use-toast";
 
 export default function DashboardPage({ estimates, error }) {
+  const [resending, setResending] = useState({});
   const items = estimates?.items ?? [];
   const summary = buildSummary(items);
 
@@ -111,22 +115,32 @@ export default function DashboardPage({ estimates, error }) {
                               <StatusBadge status={estimate.status} />
                             </TableCell>
                             <TableCell className="text-xs text-muted-foreground">
-                              {estimate.inviteToken ? (
-                                <Link
-                                  href={`/portal?estimateId=${encodeURIComponent(
-                                    estimate.id ?? ""
-                                  )}&locationId=${encodeURIComponent(
-                                    estimates.locationId ?? ""
-                                  )}&inviteToken=${encodeURIComponent(
-                                    estimate.inviteToken
-                                  )}`}
-                                  className="text-primary underline hover:text-primary/80"
+                              <div className="flex flex-col items-start gap-1">
+                                {estimate.inviteToken ? (
+                                  <Link
+                                    href={`/portal?estimateId=${encodeURIComponent(
+                                      estimate.id ?? ""
+                                    )}&locationId=${encodeURIComponent(
+                                      estimates.locationId ?? ""
+                                    )}&inviteToken=${encodeURIComponent(
+                                      estimate.inviteToken
+                                    )}`}
+                                    className="text-primary underline hover:text-primary/80"
+                                  >
+                                    Open portal
+                                  </Link>
+                                ) : (
+                                  <span>—</span>
+                                )}
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={Boolean(resending[estimate.id ?? ""])}
+                                  onClick={() => handleResendInvite(estimate, setResending)}
                                 >
-                                  Copy link
-                                </Link>
-                              ) : (
-                                "—"
-                              )}
+                                  {resending[estimate.id ?? ""] ? "Resending…" : "Resend invite"}
+                                </Button>
+                              </div>
                             </TableCell>
                             <TableCell className="text-right text-muted-foreground">
                               {formatDate(estimate.createdAt)}
@@ -154,6 +168,15 @@ export default function DashboardPage({ estimates, error }) {
 }
 
 export async function getServerSideProps({ req }) {
+  if (req?.url?.includes("__mock=1")) {
+    return {
+      props: {
+        estimates: mockDashboardData(),
+        error: null,
+      },
+    };
+  }
+
   try {
     const estimates = await getEstimates(
       { limit: 50 },
@@ -239,5 +262,65 @@ function StatusBadge({ status }) {
   }
 
   return <Badge variant={variant}>{label || "Unknown"}</Badge>;
+}
+
+async function handleResendInvite(estimate, setResending) {
+  const key = estimate.id ?? "";
+
+  try {
+    setResending((prev) => ({ ...prev, [key]: true }));
+    const response = await fetch("/api/portal/resend", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        estimateId: estimate.id,
+        locationId: estimate.locationId,
+      }),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || "Failed to resend invite.");
+    }
+
+    toast({
+      title: "Invite Sent",
+      description: `A new invite was emailed to ${estimate.email ?? "the customer"}.`,
+    });
+  } catch (error) {
+    toast({
+      title: "Resend failed",
+      description: error instanceof Error ? error.message : "Please try again.",
+      variant: "destructive",
+    });
+  } finally {
+    setResending((prev) => ({ ...prev, [key]: false }));
+  }
+}
+
+function mockDashboardData() {
+  return {
+    locationId: "mock-location",
+    items: [
+      {
+        id: "EST-123",
+        estimateNumber: "EST-123",
+        email: "customer@example.com",
+        status: "accepted",
+        createdAt: new Date().toISOString(),
+        inviteToken: "mock-token",
+      },
+      {
+        id: "EST-456",
+        estimateNumber: "EST-456",
+        email: "pending@example.com",
+        status: "pending",
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        inviteToken: null,
+      },
+    ],
+  };
 }
 

@@ -51,6 +51,10 @@ export default function PortalPage({ initialStatus, initialError }) {
 
   const view = useMemo(() => normaliseStatus(status), [status]);
   const inviteToken = typeof router.query.inviteToken === "string" ? router.query.inviteToken : null;
+  const errorHint =
+    error && /401|unauthor/i.test(error)
+      ? "You need a valid invite link or must log in with a WordPress account that has portal access."
+      : null;
 
   return (
     <>
@@ -96,6 +100,9 @@ export default function PortalPage({ initialStatus, initialError }) {
                 <CardDescription className="text-primary/80">
                   {error}
                 </CardDescription>
+                {errorHint ? (
+                  <p className="text-xs text-primary/60">{errorHint}</p>
+                ) : null}
               </CardHeader>
             </Card>
           )}
@@ -245,6 +252,13 @@ PortalPage.getInitialProps = async ({ query, req }) => {
     return { initialStatus: null, initialError: "estimateId is required." };
   }
 
+  if (query.__mock === "1") {
+    return {
+      initialStatus: mockPortalStatus(estimateId, query.locationId),
+      initialError: null,
+    };
+  }
+
   try {
     const status = await getPortalStatus(
       {
@@ -347,5 +361,38 @@ function Detail({ label, value }) {
       </span>
     </p>
   );
+}
+
+function mockPortalStatus(estimateId, locationId) {
+  return {
+    estimateId,
+    locationId,
+    nextStep: "Our team will confirm shortly.",
+    quote: {
+      status: "pending",
+      statusLabel: "Awaiting approval",
+      number: estimateId,
+      acceptedAt: null,
+    },
+    account: {
+      status: "pending",
+      statusLabel: "Invite pending",
+      lastInviteAt: null,
+      expiresAt: null,
+      portalUrl: null,
+      resetUrl: null,
+    },
+    installation: {
+      status: "pending",
+      statusLabel: "Not scheduled",
+      message: null,
+      canSchedule: false,
+    },
+    photos: {
+      items: [],
+      missingCount: 6,
+      required: 6,
+    },
+  };
 }
 

@@ -79,6 +79,19 @@ export async function authenticate({ username, password }) {
   });
 }
 
+export async function resendPortalInvite({ estimateId, locationId }) {
+  return wpFetch("/ca/v1/portal/resend-invite", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      estimateId,
+      locationId,
+    }),
+  });
+}
+
 export { WP_API_BASE, TOKEN_COOKIE };
 
 function normaliseHeaders(customHeaders = {}) {
