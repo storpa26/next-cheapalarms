@@ -33,8 +33,18 @@ test.describe("headless surface smoke test", () => {
 
   test("portal mock renders data", async ({ page }) => {
     await page.goto("/portal?estimateId=TEST&locationId=LOC&__mock=1");
+    await expect(page.getByRole("heading", { name: /your installation at a glance/i })).toBeVisible();
     await expect(page.getByText(/estimate test/i)).toBeVisible();
-    await expect(page.getByText(/invite pending/i)).toBeVisible();
+    await expect(page.getByText(/site photos/i)).toBeVisible();
+    await expect(page.getByText(/checklist/i)).toBeVisible();
+    await expect(page.getByText(/documents/i)).toBeVisible();
+
+    await page.locator("aside").getByRole("button", { name: /^Photos$/i }).click();
+    await page.getByRole("button", { name: /missing \(6\)/i }).click();
+    await expect(page.getByText(/skip photos for now/i)).toBeVisible();
+
+    await page.locator("aside").getByRole("button", { name: /^Support$/i }).click();
+    await expect(page.getByText(/your CheapAlarms specialist/i)).toBeVisible();
   });
 });
 
