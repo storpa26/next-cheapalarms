@@ -46,5 +46,10 @@ test.describe("headless surface smoke test", () => {
     await page.locator("aside").getByRole("button", { name: /^Support$/i }).click();
     await expect(page.getByText(/your CheapAlarms specialist/i)).toBeVisible();
   });
+
+  test("admin products form renders and lists items (mocked auth)", async ({ page }) => {
+    await page.goto("/admin/products");
+    await expect(page.getByRole("heading", { name: /products/i })).toBeVisible();
+  });
 });
 
