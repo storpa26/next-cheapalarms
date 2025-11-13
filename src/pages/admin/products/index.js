@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { SignOutButton } from "@/components/ui/sign-out-button";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import AdminLayout from "@/components/admin/layout/AdminLayout";
 
 const initialProduct = {
   type: "base",
@@ -163,17 +162,8 @@ export default function AdminProducts() {
       <Head>
         <title>Admin • Products</title>
       </Head>
-      <main className="min-h-screen bg-background text-foreground">
-        <div className="sticky top-0 z-10 border-b border-border/60 bg-card/80 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-            <h1 className="text-lg font-semibold">Products</h1>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              <SignOutButton />
-            </div>
-          </div>
-        </div>
-        <div className="mx-auto grid max-w-6xl gap-6 px-6 py-8 md:grid-cols-2">
+      <AdminLayout title="Products">
+        <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>
               <CardTitle>Add / Update product</CardTitle>
@@ -464,7 +454,7 @@ export default function AdminProducts() {
             </CardContent>
           </Card>
         </div>
-      </main>
+      </AdminLayout>
     </>
   );
 }

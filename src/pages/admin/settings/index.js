@@ -1,0 +1,101 @@
+import Head from "next/head";
+import AdminLayout from "@/components/admin/layout/AdminLayout";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
+
+export default function AdminSettings() {
+  const [gstRate, setGstRate] = useState(0.1);
+  const [jwtTtl, setJwtTtl] = useState(3600);
+  const [cors, setCors] = useState(["http://localhost:3000"]);
+
+  function addOrigin() {
+    setCors((prev) => [...prev, ""]);
+  }
+  function updateOrigin(i, v) {
+    setCors((prev) => prev.map((o, idx) => (idx === i ? v : o)));
+  }
+  function removeOrigin(i) {
+    setCors((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  return (
+    <>
+      <Head>
+        <title>Superadmin • Settings</title>
+      </Head>
+      <AdminLayout title="Settings">
+        <div className="grid gap-6 md:grid-cols-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tax & Pricing</CardTitle>
+              <CardDescription>Configure GST and other pricing defaults.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs text-muted-foreground">GST rate</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={gstRate}
+                  onChange={(e) => setGstRate(parseFloat(e.target.value || "0"))}
+                  className="mt-1 w-40 rounded-md border border-border bg-background px-3 py-2"
+                />
+              </div>
+              <Button variant="outline" size="sm">Save</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Authentication</CardTitle>
+              <CardDescription>JWT session settings.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div>
+                <label className="block text-xs text-muted-foreground">JWT TTL (seconds)</label>
+                <input
+                  type="number"
+                  value={jwtTtl}
+                  onChange={(e) => setJwtTtl(parseInt(e.target.value || "0", 10))}
+                  className="mt-1 w-40 rounded-md border border-border bg-background px-3 py-2"
+                />
+              </div>
+              <Button variant="outline" size="sm">Save</Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>CORS</CardTitle>
+              <CardDescription>Allowed origins for API requests.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="space-y-2">
+                {cors.map((o, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      value={o}
+                      onChange={(e) => updateOrigin(i, e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2"
+                      placeholder="https://example.com"
+                    />
+                    <Button variant="ghost" size="sm" onClick={() => removeOrigin(i)}>
+                      Remove
+                    </Button>
+                  </div>
+                ))}
+                <Button variant="outline" size="sm" onClick={addOrigin}>
+                  Add origin
+                </Button>
+              </div>
+              <Button variant="outline" size="sm">Save</Button>
+            </CardContent>
+          </Card>
+        </div>
+      </AdminLayout>
+    </>
+  );
+}
+
+
