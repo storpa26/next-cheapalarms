@@ -96,6 +96,18 @@ export const addonCatalog = [
     deviceSlots: 1,
     category: "Interior",
     maxPerSystem: 30,
+    details: {
+      tagline: "Smart dual PIR that ignores pets under 20kg but reacts to human-sized movement immediately.",
+      heroVideo: "https://cdn.coverr.co/videos/coverr-smart-home-security-4072/1080p.mp4",
+      heroPoster: "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80",
+      keyStats: ["Pet friendly", "Range 12m", "90° FOV"],
+      doINeedThis:
+        "Choose it if you want internal movement detection without triggering on pets or late-night fridge raids.",
+      bestFor: ["Hallways and living rooms", "Short-term rental monitoring", "Sites with indoor pets"],
+      avoidIf: ["You rely solely on perimeter contacts", "Rooms smaller than 3×3 m."],
+      howItWorks:
+        "Dual PIR beams compare warm movement to background temperature, while the microwave filter reduces false alarms from HVAC drafts.",
+    },
   },
   {
     id: "motion_outdoor",
@@ -108,6 +120,18 @@ export const addonCatalog = [
     deviceSlots: 1,
     category: "Perimeter",
     maxPerSystem: 15,
+    details: {
+      tagline: "Weather-hardened motion that covers your driveway or courtyards with adjustable beam height.",
+      heroVideo: "https://cdn.coverr.co/videos/coverr-drone-footage-of-a-modern-home-4947/1080p.mp4",
+      heroPoster:
+        "https://images.unsplash.com/photo-1505691938895-1758d7feb511?auto=format&fit=crop&w=1200&q=80",
+      keyStats: ["IP55", "Range 15m", "Pet immunity"],
+      doINeedThis: "Add it when you want an early warning before someone reaches doors or vehicles.",
+      bestFor: ["Driveways", "Backyards", "Warehouses with roller doors"],
+      avoidIf: ["No outdoor zones", "High-traffic footpaths directly adjacent to sensors"],
+      howItWorks:
+        "Two PIR elements watch the same zone. If both see motion within a tight timing window, the alert fires. Pet immunity keeps the lower beam above typical animal height.",
+    },
   },
   {
     id: "glass_break",
@@ -132,6 +156,19 @@ export const addonCatalog = [
     deviceSlots: 1,
     category: "Safety",
     maxPerSystem: 20,
+    details: {
+      tagline: "Lightweight fob with tactile feedback so staff can discreetly summon help.",
+      heroVideo: "https://cdn.coverr.co/videos/coverr-sending-an-emergency-message-9237/1080p.mp4",
+      heroPoster:
+        "https://images.unsplash.com/photo-1529152392257-4b77f6099893?auto=format&fit=crop&w=1200&q=80",
+      keyStats: ["Up to 5-year battery", "Silent alarm", "Includes lanyard"],
+      doINeedThis:
+        "Required if you want staff or family to trigger a silent alarm without reaching a keypad.",
+      bestFor: ["Retail counters", "Panic pendants for elderly care", "Staff working late alone"],
+      avoidIf: ["Highly mobile environments where devices get misplaced regularly"],
+      howItWorks:
+        "Encrypted signal pairs with the hub; double-tap safety avoids accidental presses. We can program it for silent duress or audible alarm.",
+    },
   },
   {
     id: "keypad",

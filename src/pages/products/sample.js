@@ -5,6 +5,7 @@ import CoveragePlanner from "../../components/products/calculator/CoveragePlanne
 import AddonsGrid from "../../components/products/calculator/AddonsGrid";
 import ServiceOptions from "../../components/products/calculator/ServiceOptions";
 import SummaryPanel from "../../components/products/calculator/SummaryPanel";
+import AddonDetailModal from "../../components/products/calculator/AddonDetailModal";
 import { useAjaxCalculator } from "../../hooks/useAjaxCalculator";
 
 function extractContactId(result) {
@@ -54,6 +55,8 @@ export default function SampleProductPage() {
   const [quoteError, setQuoteError] = useState("");
   const [quoteSuccess, setQuoteSuccess] = useState(false);
 
+  const [detailAddonId, setDetailAddonId] = useState(null);
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -62,6 +65,10 @@ export default function SampleProductPage() {
   const activeProfile = useMemo(
     () => propertyProfiles.find((profile) => profile.id === profileId),
     [propertyProfiles, profileId],
+  );
+  const detailAddon = useMemo(
+    () => addonCatalog.find((addon) => addon.id === detailAddonId),
+    [addonCatalog, detailAddonId],
   );
 
   async function handleCreateContact(e) {
@@ -143,6 +150,12 @@ export default function SampleProductPage() {
     }
   }
 
+  function handleAddFromModal() {
+    if (!detailAddonId) return;
+    const currentQty = addonQuantities[detailAddonId] ?? 0;
+    setAddonQuantity(detailAddonId, currentQty + 1);
+  }
+
   return (
     <div className="min-h-screen bg-slate-50">
       <CalculatorHero />
@@ -166,6 +179,7 @@ export default function SampleProductPage() {
             catalog={addonCatalog}
             quantities={addonQuantities}
             onQuantityChange={setAddonQuantity}
+            onShowDetails={setDetailAddonId}
           />
           <ServiceOptions services={services} onChange={updateService} />
         </div>
@@ -298,6 +312,14 @@ export default function SampleProductPage() {
           </div>
         </div>
       </section>
+
+      <AddonDetailModal
+        addon={detailAddon}
+        open={Boolean(detailAddon)}
+        onClose={() => setDetailAddonId(null)}
+        onAdd={handleAddFromModal}
+        quantity={detailAddonId ? addonQuantities[detailAddonId] ?? 0 : 0}
+      />
     </div>
   );
 }

@@ -20,7 +20,7 @@ function QuantityStepper({ value, onChange, max }) {
   );
 }
 
-export default function AddonsGrid({ catalog, quantities, onQuantityChange }) {
+export default function AddonsGrid({ catalog, quantities, onQuantityChange, onShowDetails }) {
   const categories = Array.from(new Set(catalog.map((item) => item.category)));
 
   return (
@@ -63,6 +63,13 @@ export default function AddonsGrid({ catalog, quantities, onQuantityChange }) {
                       </span>
                       {max ? <span>Max {max} per system</span> : null}
                       {item.powerDrawMa ? <span>{item.powerDrawMa} mA draw</span> : null}
+                      <button
+                        type="button"
+                        onClick={() => onShowDetails?.(item.id)}
+                        className="ml-auto text-primary underline-offset-4 hover:underline"
+                      >
+                        Learn more
+                      </button>
                     </div>
                   </div>
                 );
