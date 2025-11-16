@@ -5,30 +5,30 @@ const steps = [
     title: "Wolf creeps in",
     desc: "Door Buddy spots the wolf cracking open the door.",
     emoji: "🐺",
-    desktop: { top: 30, align: "left" },
+    desktop: { cardTop: 10, cardLeftPercent: 6, runnerTop: 40, runnerLeftPercent: 10 },
   },
   {
     title: "Hub 2 wakes up",
     desc: "Brain double-checks other sensors to avoid false alarms.",
     emoji: "🧠",
-    desktop: { top: 30, align: "right" },
+    desktop: { cardTop: 10, cardLeftPercent: 55, runnerTop: 120, runnerLeftPercent: 90 },
   },
   {
     title: "Squad responds",
     desc: "Sirens blast, lights flash, and the wolf panics.",
     emoji: "🚨",
-    desktop: { top: 190, align: "left" },
+    desktop: { cardTop: 180, cardLeftPercent: 8, runnerTop: 210, runnerLeftPercent: 15 },
   },
   {
     title: "Piggy gets pinged",
     desc: "App + monitoring message Percy the Pig instantly.",
     emoji: "🐷",
-    desktop: { top: 340, align: "right" },
+    desktop: { cardTop: 320, cardLeftPercent: 52, runnerTop: 330, runnerLeftPercent: 82 },
   },
 ];
 
-const brandDark = "#FFFFFF";
-const brandTeal = "#0DC5C7";
+const brandDark = "#02111B";
+const brandTeal = "#0EF2D0";
 
 export default function StoryRail() {
   const cardRefs = useRef([]);
@@ -54,23 +54,20 @@ export default function StoryRail() {
     };
   }, []);
 
-  const runnerPositions = steps.map((step) => {
-    if (step.desktop.align === "left") {
-      return { top: step.desktop.top + 30, left: 10 };
-    }
-    return { top: step.desktop.top + 30, left: 90 };
-  });
+  const runnerPositions = steps.map((step) => ({
+    top: step.desktop.runnerTop,
+    left: step.desktop.runnerLeftPercent,
+  }));
   const currentRunnerPos = runnerPositions[activeStep] ?? runnerPositions[0];
 
   const desktopView = (
-    <div className="relative hidden h-[430px] md:block">
-      {[60, 220, 370].map((top) => (
-        <div
-          key={top}
-          className="absolute left-[6%] right-[6%] h-1 rounded-full border-t-4 border-dashed opacity-40"
-          style={{ top: `${top}px`, borderColor: brandTeal }}
-        />
-      ))}
+    <div className="relative hidden h-[450px] md:block">
+      {/* Runner lane */}
+      <div className="absolute left-[6%] right-[6%] top-[30px] h-70 rounded-[999px] border border-[#d8f6f5] bg-white/80 shadow-inner" />
+      {/* Zig-zag rails */}
+      <div className="absolute left-[8%] right-[8%] top-[160px] h-1 rounded-full border-t-4 border-dashed border-[#9DEDEC]/60" />
+      <div className="absolute left-[8%] right-[8%] top/[310px] h-1 rounded-full border-t-4 border-dashed border-[#9DEDEC]/60" />
+      <div className="absolute left-[8%] right-[8%] top/[420px] h-1 rounded-full border-t-4 border-dashed border-[#9DEDEC]/60" />
       <div
         className="absolute text-4xl transition-all duration-700 ease-out"
         role="img"
@@ -80,35 +77,37 @@ export default function StoryRail() {
           left: `${currentRunnerPos.left}%`,
           transform: "translate(-50%, -50%)",
           filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.5))",
+          opacity: activeStep === steps.length - 1 ? 0 : 1,
         }}
       >
         🐺
       </div>
-      <div
-        className="absolute text-4xl"
-        role="img"
-        aria-label="pig cheering"
-        style={{
-          bottom: 10,
-          right: "4%",
-          filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.5))",
-        }}
-      >
-        🐷
-      </div>
+      {activeStep === steps.length - 1 ? (
+        <div
+          className="absolute text-4xl transition-opacity duration-700"
+          role="img"
+          aria-label="wolf caught"
+          style={{
+            top: `${runnerPositions[runnerPositions.length - 1].top}px`,
+            left: `${runnerPositions[runnerPositions.length - 1].left}%`,
+            transform: "translate(-50%, -50%)",
+            filter: "drop-shadow(0 8px 20px rgba(0,0,0,0.5))",
+          }}
+        >
+          ❌
+        </div>
+      ) : null}
       {steps.map((step, index) => {
-        const alignRight = step.desktop.align === "right";
         return (
           <div
             key={step.title}
             ref={(el) => {
               cardRefs.current[index] = el;
             }}
-            className="absolute w-[38%] rounded-3xl border p-6 text-left shadow-lg transition"
+            className="absolute w-[36%] rounded-3xl border p-6 text-left shadow-lg transition"
             style={{
-              top: `${step.desktop.top}px`,
-              left: alignRight ? "auto" : "6%",
-              right: alignRight ? "6%" : "auto",
+              top: `${step.desktop.cardTop}px`,
+              left: `${step.desktop.cardLeftPercent}%`,
               backgroundColor: activeStep === index ? "#E8FBFB" : "#FFFFFF",
               borderColor: activeStep === index ? brandTeal : "#E2EBEE",
             }}
