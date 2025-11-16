@@ -1,8 +1,13 @@
 import dynamic from "next/dynamic";
 import HeroSection from "../../components/products/ajax-landing/HeroSection";
+import MeetTheCast from "../../components/products/ajax-landing/MeetTheCast";
+import HowItProtects from "../../components/products/ajax-landing/HowItProtects";
 import StoryRail from "../../components/products/ajax-landing/StoryRail";
-import SquadShowcase from "../../components/products/ajax-landing/SquadShowcase";
 import ResilienceSection from "../../components/products/ajax-landing/ResilienceSection";
+import CapacitySection from "../../components/products/ajax-landing/CapacitySection";
+import KitSection from "../../components/products/ajax-landing/KitSection";
+import MiniCalculator from "../../components/products/ajax-landing/MiniCalculator";
+import FaqSection from "../../components/products/ajax-landing/FaqSection";
 import CtaStrip from "../../components/products/ajax-landing/CtaStrip";
 
 const QuizSection = dynamic(
@@ -26,10 +31,14 @@ export default function AjaxHubLandingPage() {
   return (
     <div className="bg-slate-100 text-slate-900">
       <HeroSection />
+      <MeetTheCast />
+      <HowItProtects />
       <StoryRail />
-      <SquadShowcase />
       <ResilienceSection />
-      <QuizSection />
+      <CapacitySection />
+      <KitSection />
+      <MiniCalculator />
+      <FaqSection />
       <CtaStrip />
     </div>
   );

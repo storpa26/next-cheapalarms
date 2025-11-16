@@ -2,93 +2,141 @@ import Link from "next/link";
 
 const brandTeal = "#0DC5C7";
 const brandPink = "#F78AB3";
-const brandNavy = "#031A27";
+
+// Pre-generated star positions for consistency
+const starPositions = Array.from({ length: 30 }, (_, i) => {
+  const seed = i * 0.618; // Golden ratio for distribution
+  return {
+    left: ((seed * 100) % 100).toFixed(2),
+    top: (((seed * 1.618) * 100) % 100).toFixed(2),
+    size: (2 + (seed * 2) % 2).toFixed(1),
+    opacity: (0.3 + (seed * 0.5) % 0.5).toFixed(2),
+    duration: (2 + (seed * 2) % 2).toFixed(1),
+  };
+});
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-[#F8FDFF] text-slate-900">
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#031A27] via-[#052A3A] to-[#031A27] text-white min-h-screen flex items-center">
+      {/* Night sky stars effect */}
       <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute -top-32 right-0 h-72 w-72 rounded-full bg-[#B0F7F2]/60 blur-3xl" />
-        <div className="absolute bottom-0 left-0 h-64 w-64 rounded-full bg-[#FFE4EE]/80 blur-[140px]" />
+        {starPositions.map((star, i) => (
+          <div
+            key={i}
+            className="absolute rounded-full bg-white"
+            style={{
+              left: `${star.left}%`,
+              top: `${star.top}%`,
+              width: `${star.size}px`,
+              height: `${star.size}px`,
+              opacity: star.opacity,
+              animation: `twinkle ${star.duration}s infinite`,
+            }}
+          />
+        ))}
       </div>
-      <div className="relative mx-auto flex max-w-6xl flex-col gap-10 px-6 py-20 lg:flex-row lg:items-center">
-        <div className="flex-1 space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs uppercase tracking-[0.4em] text-[#0EB8B9] shadow-sm">
+
+      {/* House silhouette with shield */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <div className="relative">
+          {/* Translucent shield */}
+          <div
+            className="absolute inset-0 rounded-3xl border-4 opacity-20 blur-xl"
+            style={{
+              borderColor: brandTeal,
+              boxShadow: `0 0 100px ${brandTeal}40`,
+            }}
+          />
+          {/* House outline */}
+          <div className="relative w-96 h-80">
+            <div className="absolute inset-0 bg-slate-800/30 rounded-3xl backdrop-blur-sm border-2 border-slate-700/50" />
+            {/* Windows with light */}
+            <div className="absolute top-1/4 left-1/4 w-16 h-20 bg-yellow-400/30 rounded-lg" />
+            <div className="absolute top-1/4 right-1/4 w-16 h-20 bg-yellow-400/30 rounded-lg" />
+            {/* Hub glow inside */}
+            <div
+              className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-12 h-12 rounded-lg"
+              style={{
+                background: `linear-gradient(135deg, ${brandTeal}, ${brandTeal}80)`,
+                boxShadow: `0 0 30px ${brandTeal}60`,
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Wolf in shadows */}
+      <div className="absolute bottom-20 left-10 opacity-40">
+        <div className="text-6xl" role="img" aria-label="Wolf lurking">
+          🐺
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 mx-auto max-w-6xl px-6 py-20">
+        <div className="max-w-3xl">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-sm px-4 py-2 text-xs uppercase tracking-[0.4em] text-[#0EF2D0] mb-6">
             <span role="img" aria-hidden>
               🐷
             </span>
             CheapAlarms presents
           </div>
-          <h1 className="text-4xl font-semibold leading-tight text-slate-900 md:text-5xl">
-            Percy the Pig vs. the Sneaky Wolf.
+
+          <h1 className="text-5xl md:text-7xl font-bold leading-tight mb-6">
+            Keep the wolf out.
+            <br />
+            Sleep like the Pig.
           </h1>
-          <p className="text-lg text-slate-700">
-            Ajax Hub 2 keeps Percy&apos;s smart home safe. Scroll to watch the wolf get trapped, meet every gadget buddy, and
-            build your own kit using the exact same playbook.
+
+          <p className="text-xl md:text-2xl text-slate-300 mb-8 leading-relaxed">
+            Ajax Hub 2 (4G) is the &quot;brain&quot; of your alarm system. It quietly connects all your sensors, sirens
+            and cameras, and calls for help the instant something is wrong.
           </p>
+
+          <div className="space-y-3 mb-10">
+            <div className="flex items-center gap-3 text-slate-300">
+              <span className="text-[#0EF2D0]">✓</span>
+              <span>Works even if Wi-Fi dies, thanks to 4G backup</span>
+            </div>
+            <div className="flex items-center gap-3 text-slate-300">
+              <span className="text-[#0EF2D0]">✓</span>
+              <span>Talks to up to 100 security devices around your home</span>
+            </div>
+            <div className="flex items-center gap-3 text-slate-300">
+              <span className="text-[#0EF2D0]">✓</span>
+              <span>Sends you alerts and photos in seconds</span>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-4">
-            <a
-              href="#story"
-              className="rounded-full border border-slate-300 px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-white"
-            >
-              Watch the chase
-            </a>
             <Link
               href="/products/sample"
-              className="rounded-full px-6 py-3 text-sm font-semibold text-white shadow-lg"
-              style={{ background: `linear-gradient(135deg, ${brandTeal}, #06aeb0)` }}
+              className="rounded-full px-8 py-4 text-base font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105"
+              style={{ background: `linear-gradient(135deg, ${brandTeal}, #0ab5b6)` }}
             >
-              Build my kit
+              Build my Ajax system
             </Link>
-          </div>
-        </div>
-        <div className="flex-1">
-          <div className="relative mx-auto max-w-md overflow-hidden rounded-[32px] border border-slate-200 bg-white p-1 shadow-xl">
-            <div className="rounded-[30px] bg-gradient-to-b from-white to-[#E8F7F7] p-8">
-              <div className="flex items-center justify-between text-sm text-slate-600">
-                <span className="flex items-center gap-2 font-semibold text-slate-900">
-                  <span role="img" aria-hidden>
-                    🐷
-                  </span>
-                  Percy
-                </span>
-                <span className="flex items-center gap-2 text-slate-500">
-                  <span role="img" aria-hidden>
-                    🐺
-                  </span>
-                  Wolf
-                </span>
-              </div>
-              <div className="mt-6 h-60 rounded-3xl border border-slate-100 bg-white p-6 text-sm text-slate-600 shadow-inner">
-                <p className="text-base font-semibold text-slate-900">Hub 2 stats</p>
-                <ul className="mt-4 space-y-3">
-                  <li className="flex items-center justify-between">
-                    <span>Device slots</span>
-                    <span className="font-semibold text-[#0DB8BA]">200</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span>Power backup</span>
-                    <span className="font-semibold text-[#0DB8BA]">16 hrs</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span>Dual uplinks</span>
-                    <span className="font-semibold text-[#0DB8BA]">4G + Ethernet</span>
-                  </li>
-                  <li className="flex items-center justify-between">
-                    <span>Encryption</span>
-                    <span className="font-semibold text-[#0DB8BA]">AES-128</span>
-                  </li>
-                </ul>
-                <div className="mt-6 rounded-2xl border border-slate-100 bg-[#F9FFFF] p-4 text-xs uppercase tracking-wide text-slate-500">
-                  <p>Mission</p>
-                  <p className="mt-1 text-sm font-semibold text-slate-900">Outsmart the wolf, every time.</p>
-                </div>
-              </div>
-            </div>
+            <a
+              href="#story"
+              className="rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-base font-semibold text-white hover:bg-white/20 transition-all duration-300"
+            >
+              How it works (2 min story)
+            </a>
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        @keyframes twinkle {
+          0%,
+          100% {
+            opacity: 0.2;
+          }
+          50% {
+            opacity: 1;
+          }
+        }
+      `}</style>
     </section>
   );
 }
-
