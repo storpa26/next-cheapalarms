@@ -1,55 +1,37 @@
+import { WP_API_BASE } from "@/lib/wp";
+import { parse as parseCookie } from "cookie";
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
     return res.status(405).end();
   }
 
+  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
+  if (!wpBase) {
+    return res.status(500).json({ ok: false, error: "WP API base not configured" });
+  }
+
+  const cookies = parseCookie(req.headers.cookie || "");
+  const token = cookies.ca_jwt || null;
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
+
   try {
-    if (!process.env.GHL_API_KEY) {
-      return res
-        .status(500)
-        .json({ ok: false, error: "Missing GHL_API_KEY in environment" });
-    }
-    const { contactId, subject, html, text, fromEmail } = req.body || {};
-
-    if (!contactId) {
-      return res.status(400).json({ ok: false, error: "contactId required" });
-    }
-    if (!subject) {
-      return res.status(400).json({ ok: false, error: "subject required" });
-    }
-    if (!html && !text) {
-      return res
-        .status(400)
-        .json({ ok: false, error: "Provide html or text content" });
-    }
-
-    const effectiveFromEmail = fromEmail || process.env.GHL_FROM_EMAIL || "quotes@cheapalarms.dev";
-
-    const payload = {
-      contactId,
-      type: "Email",
-      status: "pending",
-      subject,
-      html: html || undefined,
-      message: text || undefined,
-      emailFrom: effectiveFromEmail,
-      locationId: process.env.GHL_LOCATION_ID || undefined,
-    };
-
-    const { ghlFetch } = await import("../../../lib/ghl");
-    const result = await ghlFetch("/conversations/messages", {
+    const resp = await fetch(`${wpBase}/ca/v1/ghl/messages`, {
       method: "POST",
-      body: payload,
-      includeLocationHeader: true,
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: req.headers.cookie ?? "",
+        ...authHeader,
+        ...devHeader,
+      },
+      credentials: "include",
+      body: JSON.stringify(req.body ?? {}),
     });
-    return res.status(200).json({ ok: true, message: result });
+    const body = await resp.json();
+    return res.status(resp.status).json(body);
   } catch (e) {
-    const raw = e && (e.data || e.message || e.toString?.());
-    const error =
-      typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-    return res.status(e.status || 500).json({ ok: false, error });
+    return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
   }
 }
-
-

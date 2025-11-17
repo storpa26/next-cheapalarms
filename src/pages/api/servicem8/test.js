@@ -1,54 +1,35 @@
-/**
- * Test endpoint to verify ServiceM8 API connection
- * GET /api/servicem8/test - Check if API key is configured
- */
+import { WP_API_BASE } from "@/lib/wp";
+import { parse as parseCookie } from "cookie";
+
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).end();
   }
 
+  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
+  if (!wpBase) {
+    return res.status(500).json({ ok: false, error: "WP API base not configured" });
+  }
+
+  const cookies = parseCookie(req.headers.cookie || "");
+  const token = cookies.ca_jwt || null;
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
+
   try {
-    if (!process.env.SERVICEM8_API_KEY) {
-      return res.status(200).json({
-        ok: false,
-        hasKey: false,
-        message: "SERVICEM8_API_KEY not configured",
-      });
-    }
-
-    // Test API connection by fetching companies (lightweight endpoint)
-    const { servicem8Fetch } = await import("../../../lib/servicem8");
-    
-    try {
-      const companies = await servicem8Fetch("/company.json", {
-        method: "GET",
-      });
-
-      return res.status(200).json({
-        ok: true,
-        hasKey: true,
-        message: "ServiceM8 API connection successful",
-        testData: {
-          companiesCount: Array.isArray(companies) ? companies.length : 0,
-          sample: Array.isArray(companies) && companies.length > 0 ? companies[0] : null,
-        },
-      });
-    } catch (apiError) {
-      return res.status(200).json({
-        ok: false,
-        hasKey: true,
-        message: "API key configured but connection failed",
-        error: apiError.message || "Unknown error",
-        status: apiError.status,
-        data: apiError.data,
-      });
-    }
+    const resp = await fetch(`${wpBase}/ca/v1/servicem8/test`, {
+      headers: {
+        "Content-Type": "application/json",
+        Cookie: req.headers.cookie ?? "",
+        ...authHeader,
+        ...devHeader,
+      },
+      credentials: "include",
+    });
+    const body = await resp.json();
+    return res.status(resp.status).json(body);
   } catch (e) {
-    const raw = e && (e.data || e.message || e.toString?.());
-    const error =
-      typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-    return res.status(e.status || 500).json({ ok: false, error });
+    return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
   }
 }
-

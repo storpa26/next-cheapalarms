@@ -1,92 +1,63 @@
-/**
- * ServiceM8 Jobs API endpoints
- * GET /api/servicem8/jobs - List jobs
- * POST /api/servicem8/jobs - Create a new job
- */
+import { WP_API_BASE } from "@/lib/wp";
+import { parse as parseCookie } from "cookie";
+
 export default async function handler(req, res) {
-  try {
-    if (!process.env.SERVICEM8_API_KEY) {
-      return res.status(500).json({
-        ok: false,
-        error: "Missing SERVICEM8_API_KEY in environment",
-      });
-    }
-
-    const { servicem8Fetch } = await import("../../../lib/servicem8");
-
-    if (req.method === "GET") {
-      // Get jobs (with optional filters)
-      const { uuid, company_uuid, status } = req.query;
-      let endpoint = "/job.json";
-
-      // Build query params if provided
-      const params = new URLSearchParams();
-      if (uuid) params.append("uuid", uuid);
-      if (company_uuid) params.append("company_uuid", company_uuid);
-      if (status) params.append("status", status);
-
-      if (params.toString()) {
-        endpoint += `?${params.toString()}`;
-      }
-
-      const jobs = await servicem8Fetch(endpoint, { method: "GET" });
-
-      return res.status(200).json({
-        ok: true,
-        jobs: Array.isArray(jobs) ? jobs : [jobs],
-        count: Array.isArray(jobs) ? jobs.length : 1,
-      });
-    }
-
-    if (req.method === "POST") {
-      // Create a new job
-      const {
-        company_uuid,
-        job_type_uuid,
-        assigned_to_staff_uuid,
-        scheduled_start_date,
-        scheduled_end_date,
-        description,
-        address,
-        ...otherFields
-      } = req.body;
-
-      if (!company_uuid) {
-        return res.status(400).json({
-          ok: false,
-          error: "company_uuid is required",
-        });
-      }
-
-      const jobData = {
-        company_uuid,
-        ...(job_type_uuid && { job_type_uuid }),
-        ...(assigned_to_staff_uuid && { assigned_to_staff_uuid }),
-        ...(scheduled_start_date && { scheduled_start_date }),
-        ...(scheduled_end_date && { scheduled_end_date }),
-        ...(description && { description }),
-        ...(address && { address }),
-        ...otherFields,
-      };
-
-      const job = await servicem8Fetch("/job.json", {
-        method: "POST",
-        body: jobData,
-      });
-
-      return res.status(200).json({
-        ok: true,
-        job,
-      });
-    }
-
-    res.setHeader("Allow", "GET, POST");
-    return res.status(405).end();
-  } catch (e) {
-    const raw = e && (e.data || e.message || e.toString?.());
-    const error =
-      typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-    return res.status(e.status || 500).json({ ok: false, error });
+  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
+  if (!wpBase) {
+    return res.status(500).json({ ok: false, error: "WP API base not configured" });
   }
-}
 
+  const cookies = parseCookie(req.headers.cookie || "");
+  const token = cookies.ca_jwt || null;
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
+
+  if (req.method === "GET") {
+    try {
+      const params = new URLSearchParams();
+      if (req.query.uuid) params.append("uuid", req.query.uuid);
+      if (req.query.company_uuid) params.append("company_uuid", req.query.company_uuid);
+      if (req.query.status) params.append("status", req.query.status);
+
+      const queryString = params.toString();
+      const url = `${wpBase}/ca/v1/servicem8/jobs${queryString ? `?${queryString}` : ""}`;
+
+      const resp = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.cookie ?? "",
+          ...authHeader,
+          ...devHeader,
+        },
+        credentials: "include",
+      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+
+  if (req.method === "POST") {
+    try {
+      const resp = await fetch(`${wpBase}/ca/v1/servicem8/jobs`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.cookie ?? "",
+          ...authHeader,
+          ...devHeader,
+        },
+        credentials: "include",
+        body: JSON.stringify(req.body ?? {}),
+      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+
+  res.setHeader("Allow", ["GET", "POST"]);
+  return res.status(405).json({ ok: false, error: "Method not allowed" });
+}

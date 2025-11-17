@@ -1,91 +1,62 @@
-/**
- * ServiceM8 Companies API endpoints
- * GET /api/servicem8/companies - List companies (clients)
- * POST /api/servicem8/companies - Create a new company
- */
+import { WP_API_BASE } from "@/lib/wp";
+import { parse as parseCookie } from "cookie";
+
 export default async function handler(req, res) {
-  try {
-    if (!process.env.SERVICEM8_API_KEY) {
-      return res.status(500).json({
-        ok: false,
-        error: "Missing SERVICEM8_API_KEY in environment",
-      });
-    }
-
-    const { servicem8Fetch } = await import("../../../lib/servicem8");
-
-    if (req.method === "GET") {
-      const { uuid, name } = req.query;
-      let endpoint = "/company.json";
-
-      const params = new URLSearchParams();
-      if (uuid) params.append("uuid", uuid);
-      if (name) params.append("name", name);
-
-      if (params.toString()) {
-        endpoint += `?${params.toString()}`;
-      }
-
-      const companies = await servicem8Fetch(endpoint, { method: "GET" });
-
-      return res.status(200).json({
-        ok: true,
-        companies: Array.isArray(companies) ? companies : [companies],
-        count: Array.isArray(companies) ? companies.length : 1,
-      });
-    }
-
-    if (req.method === "POST") {
-      // Create a new company
-      const {
-        name,
-        email,
-        phone,
-        address,
-        city,
-        state,
-        postcode,
-        country,
-        ...otherFields
-      } = req.body;
-
-      if (!name) {
-        return res.status(400).json({
-          ok: false,
-          error: "Company name is required",
-        });
-      }
-
-      const companyData = {
-        name,
-        ...(email && { email }),
-        ...(phone && { phone }),
-        ...(address && { address }),
-        ...(city && { city }),
-        ...(state && { state }),
-        ...(postcode && { postcode }),
-        ...(country && { country }),
-        ...otherFields,
-      };
-
-      const company = await servicem8Fetch("/company.json", {
-        method: "POST",
-        body: companyData,
-      });
-
-      return res.status(200).json({
-        ok: true,
-        company,
-      });
-    }
-
-    res.setHeader("Allow", "GET, POST");
-    return res.status(405).end();
-  } catch (e) {
-    const raw = e && (e.data || e.message || e.toString?.());
-    const error =
-      typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-    return res.status(e.status || 500).json({ ok: false, error });
+  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
+  if (!wpBase) {
+    return res.status(500).json({ ok: false, error: "WP API base not configured" });
   }
-}
 
+  const cookies = parseCookie(req.headers.cookie || "");
+  const token = cookies.ca_jwt || null;
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
+
+  if (req.method === "GET") {
+    try {
+      const params = new URLSearchParams();
+      if (req.query.uuid) params.append("uuid", req.query.uuid);
+      if (req.query.name) params.append("name", req.query.name);
+
+      const queryString = params.toString();
+      const url = `${wpBase}/ca/v1/servicem8/companies${queryString ? `?${queryString}` : ""}`;
+
+      const resp = await fetch(url, {
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.cookie ?? "",
+          ...authHeader,
+          ...devHeader,
+        },
+        credentials: "include",
+      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+
+  if (req.method === "POST") {
+    try {
+      const resp = await fetch(`${wpBase}/ca/v1/servicem8/companies`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.cookie ?? "",
+          ...authHeader,
+          ...devHeader,
+        },
+        credentials: "include",
+        body: JSON.stringify(req.body ?? {}),
+      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+
+  res.setHeader("Allow", ["GET", "POST"]);
+  return res.status(405).json({ ok: false, error: "Method not allowed" });
+}

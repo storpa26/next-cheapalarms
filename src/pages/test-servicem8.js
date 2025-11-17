@@ -1,4 +1,53 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
+
+// Move components outside to prevent re-creation on every render
+const TestSection = ({ title, children }) => (
+  <div className="rounded-xl border border-border/60 bg-card p-6 mb-6 shadow-sm">
+    <h2 className="mt-0 mb-4 text-xl font-semibold text-foreground">
+      {title}
+    </h2>
+    {children}
+  </div>
+);
+
+const ResultDisplay = ({ result, label }) => {
+  if (!result) return null;
+  
+  const isSuccess = result.ok === true;
+  return (
+    <div className={`mt-4 p-4 rounded-md border ${
+      isSuccess 
+        ? 'bg-green-50 border-green-200' 
+        : 'bg-red-50 border-red-200'
+    }`}>
+      <div className={`font-semibold mb-2 ${
+        isSuccess ? 'text-green-700' : 'text-red-700'
+      }`}>
+        {label}: {isSuccess ? '✓ Success' : '✗ Failed'}
+      </div>
+      <pre className="m-0 text-sm overflow-auto max-h-96 bg-background p-3 rounded border border-border/60 text-foreground">
+        {JSON.stringify(result, null, 2)}
+      </pre>
+    </div>
+  );
+};
+
+const Button = ({ onClick, loading, children, variant = 'primary', disabled }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    disabled={loading || disabled}
+    className={`px-4 py-2 rounded-md border-none cursor-pointer font-medium text-sm transition-all ${
+      loading || disabled
+        ? 'opacity-60 cursor-not-allowed bg-muted text-muted-foreground'
+        : variant === 'primary'
+        ? 'bg-primary text-primary-foreground hover:opacity-90'
+        : 'bg-secondary text-secondary-foreground hover:opacity-90'
+    }`}
+  >
+    {loading ? 'Loading...' : children}
+  </button>
+);
 
 export default function TestServiceM8() {
   const [results, setResults] = useState({});
@@ -18,8 +67,24 @@ export default function TestServiceM8() {
       description: '',
       scheduled_start_date: '',
       scheduled_end_date: '',
+      status: 'Quote',
     },
   });
+
+  // Memoized handlers to prevent unnecessary re-renders
+  const handleCompanyChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      company: { ...prev.company, [field]: value }
+    }));
+  }, []);
+
+  const handleJobChange = useCallback((field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      job: { ...prev.job, [field]: value }
+    }));
+  }, []);
 
   const updateLoading = (key, value) => {
     setLoading(prev => ({ ...prev, [key]: value }));
@@ -110,53 +175,6 @@ export default function TestServiceM8() {
     }
   };
 
-  const TestSection = ({ title, children }) => (
-    <div className="rounded-xl border border-border/60 bg-card p-6 mb-6 shadow-sm">
-      <h2 className="mt-0 mb-4 text-xl font-semibold text-foreground">
-        {title}
-      </h2>
-      {children}
-    </div>
-  );
-
-  const ResultDisplay = ({ result, label }) => {
-    if (!result) return null;
-    
-    const isSuccess = result.ok === true;
-    return (
-      <div className={`mt-4 p-4 rounded-md border ${
-        isSuccess 
-          ? 'bg-green-50 border-green-200' 
-          : 'bg-red-50 border-red-200'
-      }`}>
-        <div className={`font-semibold mb-2 ${
-          isSuccess ? 'text-green-700' : 'text-red-700'
-        }`}>
-          {label}: {isSuccess ? '✓ Success' : '✗ Failed'}
-        </div>
-        <pre className="m-0 text-sm overflow-auto max-h-96 bg-background p-3 rounded border border-border/60 text-foreground">
-          {JSON.stringify(result, null, 2)}
-        </pre>
-      </div>
-    );
-  };
-
-  const Button = ({ onClick, loading, children, variant = 'primary', disabled }) => (
-    <button
-      onClick={onClick}
-      disabled={loading || disabled}
-      className={`px-4 py-2 rounded-md border-none cursor-pointer font-medium text-sm transition-all ${
-        loading || disabled
-          ? 'opacity-60 cursor-not-allowed bg-muted text-muted-foreground'
-          : variant === 'primary'
-          ? 'bg-primary text-primary-foreground hover:opacity-90'
-          : 'bg-secondary text-secondary-foreground hover:opacity-90'
-      }`}
-    >
-      {loading ? 'Loading...' : children}
-    </button>
-  );
-
   return (
     <div className="p-8 max-w-6xl mx-auto bg-background min-h-screen">
       <div className="mb-8">
@@ -215,10 +233,12 @@ export default function TestServiceM8() {
             <input
               type="text"
               value={formData.company.name}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                company: { ...prev.company, name: e.target.value }
-              }))}
+              onChange={(e) => handleCompanyChange('name', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="Acme Corp"
             />
@@ -230,10 +250,12 @@ export default function TestServiceM8() {
             <input
               type="email"
               value={formData.company.email}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                company: { ...prev.company, email: e.target.value }
-              }))}
+              onChange={(e) => handleCompanyChange('email', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="contact@acme.com"
             />
@@ -245,10 +267,12 @@ export default function TestServiceM8() {
             <input
               type="tel"
               value={formData.company.phone}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                company: { ...prev.company, phone: e.target.value }
-              }))}
+              onChange={(e) => handleCompanyChange('phone', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="0412345678"
             />
@@ -260,10 +284,12 @@ export default function TestServiceM8() {
             <input
               type="text"
               value={formData.company.address}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                company: { ...prev.company, address: e.target.value }
-              }))}
+              onChange={(e) => handleCompanyChange('address', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="123 Main St"
             />
@@ -275,10 +301,12 @@ export default function TestServiceM8() {
             <input
               type="text"
               value={formData.company.city}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                company: { ...prev.company, city: e.target.value }
-              }))}
+              onChange={(e) => handleCompanyChange('city', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="Sydney"
             />
@@ -290,10 +318,12 @@ export default function TestServiceM8() {
             <input
               type="text"
               value={formData.company.state}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                company: { ...prev.company, state: e.target.value }
-              }))}
+              onChange={(e) => handleCompanyChange('state', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="NSW"
             />
@@ -305,10 +335,12 @@ export default function TestServiceM8() {
             <input
               type="text"
               value={formData.company.postcode}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                company: { ...prev.company, postcode: e.target.value }
-              }))}
+              onChange={(e) => handleCompanyChange('postcode', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="2000"
             />
@@ -337,13 +369,30 @@ export default function TestServiceM8() {
             <input
               type="text"
               value={formData.job.company_uuid}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                job: { ...prev.job, company_uuid: e.target.value }
-              }))}
+              onChange={(e) => handleJobChange('company_uuid', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="Copy from companies list above"
             />
+          </div>
+          <div>
+            <label className="block mb-2 text-sm font-medium text-foreground">
+              Job Status *
+            </label>
+            <select
+              value={formData.job.status}
+              onChange={(e) => handleJobChange('status', e.target.value)}
+              className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
+            >
+              <option value="Quote">Quote</option>
+              <option value="Work Order">Work Order</option>
+              <option value="Completed">Completed</option>
+              <option value="Unsuccessful">Unsuccessful</option>
+            </select>
           </div>
           <div>
             <label className="block mb-2 text-sm font-medium text-foreground">
@@ -352,10 +401,12 @@ export default function TestServiceM8() {
             <input
               type="text"
               value={formData.job.description}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                job: { ...prev.job, description: e.target.value }
-              }))}
+              onChange={(e) => handleJobChange('description', e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                }
+              }}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
               placeholder="Install Ajax security system"
             />
@@ -367,10 +418,7 @@ export default function TestServiceM8() {
             <input
               type="datetime-local"
               value={formData.job.scheduled_start_date}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                job: { ...prev.job, scheduled_start_date: e.target.value }
-              }))}
+              onChange={(e) => handleJobChange('scheduled_start_date', e.target.value)}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
             />
           </div>
@@ -381,10 +429,7 @@ export default function TestServiceM8() {
             <input
               type="datetime-local"
               value={formData.job.scheduled_end_date}
-              onChange={(e) => setFormData(prev => ({
-                ...prev,
-                job: { ...prev.job, scheduled_end_date: e.target.value }
-              }))}
+              onChange={(e) => handleJobChange('scheduled_end_date', e.target.value)}
               className="w-full px-3 py-2 rounded-md border border-border bg-background text-sm text-foreground"
             />
           </div>

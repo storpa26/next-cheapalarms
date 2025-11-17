@@ -1,52 +1,59 @@
-/**
- * ServiceM8 Single Job API endpoints
- * GET /api/servicem8/jobs/[uuid] - Get a specific job
- * DELETE /api/servicem8/jobs/[uuid] - Delete a job
- */
+import { WP_API_BASE } from "@/lib/wp";
+import { parse as parseCookie } from "cookie";
+
 export default async function handler(req, res) {
-  try {
-    if (!process.env.SERVICEM8_API_KEY) {
-      return res.status(500).json({
-        ok: false,
-        error: "Missing SERVICEM8_API_KEY in environment",
-      });
-    }
-
-    const { uuid } = req.query;
-    if (!uuid) {
-      return res.status(400).json({
-        ok: false,
-        error: "Job UUID is required",
-      });
-    }
-
-    const { servicem8Fetch } = await import("../../../../lib/servicem8");
-
-    if (req.method === "GET") {
-      const job = await servicem8Fetch(`/job/${uuid}.json`, { method: "GET" });
-
-      return res.status(200).json({
-        ok: true,
-        job,
-      });
-    }
-
-    if (req.method === "DELETE") {
-      await servicem8Fetch(`/job/${uuid}.json`, { method: "DELETE" });
-
-      return res.status(200).json({
-        ok: true,
-        message: "Job deleted successfully",
-      });
-    }
-
-    res.setHeader("Allow", "GET, DELETE");
-    return res.status(405).end();
-  } catch (e) {
-    const raw = e && (e.data || e.message || e.toString?.());
-    const error =
-      typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-    return res.status(e.status || 500).json({ ok: false, error });
+  const { uuid } = req.query;
+  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
+  if (!wpBase) {
+    return res.status(500).json({ ok: false, error: "WP API base not configured" });
   }
-}
 
+  if (!uuid) {
+    return res.status(400).json({ ok: false, error: "Job UUID is required" });
+  }
+
+  const cookies = parseCookie(req.headers.cookie || "");
+  const token = cookies.ca_jwt || null;
+  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
+  const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
+
+  if (req.method === "GET") {
+    try {
+      const resp = await fetch(`${wpBase}/ca/v1/servicem8/jobs/${encodeURIComponent(uuid)}`, {
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.cookie ?? "",
+          ...authHeader,
+          ...devHeader,
+        },
+        credentials: "include",
+      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+
+  if (req.method === "DELETE") {
+    try {
+      const resp = await fetch(`${wpBase}/ca/v1/servicem8/jobs/${encodeURIComponent(uuid)}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          Cookie: req.headers.cookie ?? "",
+          ...authHeader,
+          ...devHeader,
+        },
+        credentials: "include",
+      });
+      const body = await resp.json();
+      return res.status(resp.status).json(body);
+    } catch (e) {
+      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
+    }
+  }
+
+  res.setHeader("Allow", ["GET", "DELETE"]);
+  return res.status(405).json({ ok: false, error: "Method not allowed" });
+}
