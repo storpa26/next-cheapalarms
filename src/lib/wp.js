@@ -22,8 +22,16 @@ async function wpFetch(path, options = {}) {
     extractTokenFromHeaders(headers);
 
   if (!token && typeof window !== "undefined") {
-    const parsed = parseCookie(document.cookie || "");
-    token = parsed[TOKEN_COOKIE] ?? null;
+    // Browser-compatible cookie parsing
+    const cookieString = document.cookie || "";
+    const cookies = {};
+    cookieString.split(';').forEach(cookie => {
+      const [name, ...rest] = cookie.trim().split('=');
+      if (name) {
+        cookies[name] = decodeURIComponent(rest.join('='));
+      }
+    });
+    token = cookies[TOKEN_COOKIE] ?? null;
   }
 
   if (token && !headers.Authorization) {
@@ -66,6 +74,10 @@ export async function getPortalStatus(
 
   const search = params.toString();
   return wpFetch(`/ca/v1/portal/status?${search}`, fetchOptions);
+}
+
+export async function getPortalDashboard(fetchOptions = {}) {
+  return wpFetch('/ca/v1/portal/dashboard', fetchOptions);
 }
 
 export async function authenticate({ username, password }) {

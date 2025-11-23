@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useRouter } from "next/router";
 import CalculatorHero from "../../components/products/calculator/CalculatorHero";
 import PropertyProfileSelector from "../../components/products/calculator/PropertyProfileSelector";
 import CoveragePlanner from "../../components/products/calculator/CoveragePlanner";
@@ -6,6 +7,7 @@ import AddonsGrid from "../../components/products/calculator/AddonsGrid";
 import ServiceOptions from "../../components/products/calculator/ServiceOptions";
 import SummaryPanel from "../../components/products/calculator/SummaryPanel";
 import AddonDetailModal from "../../components/products/calculator/AddonDetailModal";
+import { LoginModal } from "../../components/ui/login-modal";
 import { useAjaxCalculator } from "../../hooks/useAjaxCalculator";
 
 function extractContactId(result) {
@@ -21,8 +23,6 @@ function extractContactId(result) {
 }
 
 export default function SampleProductPage() {
-  const DEV_CONTACT_ID = "I0x5hG9wIE5LZeQymrXV";
-  const enableLeadForm = false;
   const {
     baseKit,
     addonCatalog,
@@ -46,15 +46,16 @@ export default function SampleProductPage() {
   } = useAjaxCalculator();
 
   const [inCart, setInCart] = useState(false);
-  const [creatingContact, setCreatingContact] = useState(false);
-  const [contactCreated, setContactCreated] = useState(Boolean(DEV_CONTACT_ID));
-  const [contactError, setContactError] = useState("");
-  const [contactId, setContactId] = useState(DEV_CONTACT_ID);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [sendingQuote, setSendingQuote] = useState(false);
-  const [quoteError, setQuoteError] = useState("");
-  const [quoteSuccess, setQuoteSuccess] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showEmailSentModal, setShowEmailSentModal] = useState(false);
+  const [estimateId, setEstimateId] = useState(null);
+  const [locationId, setLocationId] = useState(null);
 
+  const router = useRouter();
   const [detailAddonId, setDetailAddonId] = useState(null);
 
   const [firstName, setFirstName] = useState("");
@@ -71,84 +72,256 @@ export default function SampleProductPage() {
     [addonCatalog, detailAddonId],
   );
 
-  async function handleCreateContact(e) {
-    e.preventDefault();
-    setContactError("");
-    setCreatingContact(true);
-    try {
-      const res = await fetch("/api/ghl/contacts", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, lastName, email, phone }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        const raw = json && json.error;
-        const msg =
-          typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-        throw new Error(msg || "Failed to create contact");
-      }
-      const id = extractContactId(json.contact);
-      if (!id) {
-        setContactCreated(false);
-        throw new Error("Contact created but ID missing in response");
-      }
-      setContactId(id);
-      setContactCreated(true);
-      setContactError("");
-      setQuoteSuccess(false);
-    } catch (err) {
-      setContactError(err.message || "Failed to create contact");
-    } finally {
-      setCreatingContact(false);
-    }
-  }
-
   function handleAddToCart() {
     setInCart(true);
   }
 
-  async function handleRequestQuote() {
-    setQuoteError("");
-    setQuoteSuccess(false);
-    setSendingQuote(true);
+  async function handleSubmitQuote(e) {
+    e.preventDefault();
+
+    // Validate required fields
+    if (!email) {
+      setSubmitError("Email is required");
+      return;
+    }
+
+    if (!inCart) {
+      setSubmitError("Please add configuration to cart first");
+      return;
+    }
+
+    setSubmitError("");
+    setSubmitSuccess(false);
+    setIsSubmitting(true);
+
     try {
-      const res = await fetch("/api/ghl/messages", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactId,
-          subject: `Your ${baseKit.name} configuration`,
-          html: buildHtmlEmail({
-            firstName,
-            totals,
-            activeProfile,
-            selectedAddons,
-            coverage,
-          }),
-          text: buildTextEmail({
-            firstName,
-            totals,
-            activeProfile,
-            selectedAddons,
-            coverage,
-          }),
-        }),
-      });
-      const json = await res.json();
-      if (!res.ok || !json.ok) {
-        const raw = json && json.error;
+      // Step 1: Create GHL contact
+      let contactRes;
+      try {
+        contactRes = await fetch("/api/ghl/contacts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ firstName, lastName, email, phone }),
+        });
+      } catch (fetchError) {
+        throw new Error(`Network error: ${fetchError.message}. Please check if the server is running.`);
+      }
+
+      let contactJson;
+      try {
+        contactJson = await contactRes.json();
+      } catch (parseError) {
+        const text = await contactRes.text().catch(() => "Unable to read response");
+        throw new Error(`Invalid response from server: ${text.substring(0, 200)}`);
+      }
+
+      if (!contactRes.ok || !contactJson.ok) {
+        const raw = contactJson && contactJson.error;
         const msg =
           typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-        throw new Error(msg || "Failed to send quote email");
+        throw new Error(msg || "Failed to create contact");
       }
-      setQuoteSuccess(true);
+
+      const contactId = extractContactId(contactJson.contact);
+      if (!contactId) {
+        throw new Error("Contact created but ID missing in response");
+      }
+
+      // Step 2: Get locationId from env or use default
+      const effectiveLocationId = process.env.NEXT_PUBLIC_GHL_LOCATION_ID || null;
+
+      // Step 3: Build line items from calculator data
+      const items = [];
+
+      // Add base kit
+      if (baseKit && baseKit.priceExGst) {
+        items.push({
+          name: baseKit.name,
+          description: baseKit.summary?.join(", ") || baseKit.name,
+          amount: baseKit.priceExGst,
+          qty: 1,
+        });
+      }
+
+      // Add addons
+      selectedAddons.forEach((addon) => {
+        if (addon.priceExGst && addon.quantity > 0) {
+          items.push({
+            name: addon.name,
+            description: addon.description || addon.name,
+            amount: addon.priceExGst,
+            qty: addon.quantity,
+          });
+        }
+      });
+
+      // Add services
+      // services is an object: { monitoringTier, cellularBackup, extendedWarrantyYears }
+      if (services.monitoringTier && services.monitoringTier !== "off") {
+        const monitoringPrice = {
+          standard: 49,
+          premium: 79,
+        }[services.monitoringTier] || 0;
+        if (monitoringPrice > 0) {
+          items.push({
+            name: `Monitoring - ${services.monitoringTier.charAt(0).toUpperCase() + services.monitoringTier.slice(1)}`,
+            description: `Monthly monitoring service (${services.monitoringTier} tier)`,
+            amount: monitoringPrice,
+            qty: 1,
+          });
+        }
+      }
+      
+      if (services.cellularBackup) {
+        items.push({
+          name: "Cellular Backup",
+          description: "Cellular backup service",
+          amount: 18,
+          qty: 1,
+        });
+      }
+      
+      if (services.extendedWarrantyYears > 0) {
+        items.push({
+          name: `Extended Warranty - ${services.extendedWarrantyYears} ${services.extendedWarrantyYears === 1 ? "Year" : "Years"}`,
+          description: `Extended warranty coverage`,
+          amount: 89 * services.extendedWarrantyYears,
+          qty: 1,
+        });
+      }
+
+      // Step 4: Build estimate payload
+      // Format phone to E.164 format (required by GHL)
+      const formattedPhone = phone 
+        ? (phone.startsWith("+") ? phone : `+61${phone.replace(/^0/, "").replace(/\s+/g, "")}`)
+        : "";
+
+      const estimatePayload = {
+        ...(effectiveLocationId && { altId: effectiveLocationId }),
+        altType: "location",
+        name: `Ajax Hub 2 Configuration - ${activeProfile?.title || "Custom"}`,
+        title: "ESTIMATE",
+        businessDetails: {
+          name: "Cheap Alarms",
+          address: {
+            addressLine1: "Cheap Alarms Pty Ltd",
+            city: "Brisbane",
+            state: "QLD",
+            postalCode: "4000",
+            countryCode: "AU"
+          }
+        },
+        currency: "AUD",
+        items: items.map(item => ({
+          ...item,
+          currency: "AUD", // Each item needs currency field
+          type: "one_time", // Required by GHL - must be "one_time" or "recurring"
+          taxInclusive: true, // Required by GHL
+        })),
+        discount: { type: "percentage", value: 0 },
+        termsNotes: "<p>Quote generated from website configurator.</p>",
+        contactDetails: {
+          id: contactId, // Include the contactId to link the estimate to the contact
+          email: email,
+          name: firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || email,
+          phoneNo: formattedPhone,
+          address: {
+            addressLine1: "Address not provided",
+            city: "TBD",
+            state: "TBD",
+            postalCode: "TBD",
+            countryCode: "AU"
+          }
+        },
+        issueDate: new Date().toISOString().split("T")[0],
+        expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        frequencySettings: { enabled: false },
+        liveMode: true
+      };
+
+      // Step 5: Create estimate
+      let estimateRes;
+      try {
+        estimateRes = await fetch("/api/estimate/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(estimatePayload),
+        });
+      } catch (fetchError) {
+        throw new Error(`Network error: ${fetchError.message}. Please check if the server is running.`);
+      }
+
+      let estimateJson;
+      try {
+        estimateJson = await estimateRes.json();
+      } catch (parseError) {
+        const text = await estimateRes.text().catch(() => "Unable to read response");
+        throw new Error(`Invalid response from server: ${text.substring(0, 200)}`);
+      }
+
+      if (!estimateRes.ok || !estimateJson.ok) {
+        const raw = estimateJson && (estimateJson.err || estimateJson.error);
+        const msg =
+          typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
+        throw new Error(msg || "Failed to create estimate");
+      }
+
+      const createdEstimateId = estimateJson.estimateId || estimateJson.result?.estimate?.id || estimateJson.result?.id || estimateJson.result?._id;
+      const createdLocationId = effectiveLocationId || estimateJson.locationId;
+
+      // Store estimate and location IDs
+      setEstimateId(createdEstimateId);
+      setLocationId(createdLocationId);
+
+      // Step 6: Handle account flow
+      if (estimateJson.accountExists) {
+        // Account exists - show login modal
+        setShowLoginModal(true);
+        setSubmitSuccess(false);
+      } else {
+        // New account - send password reset email via GHL
+        try {
+          const resetRes = await fetch("/api/auth/send-password-reset", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ 
+              email: email,
+              estimateId: createdEstimateId,
+              locationId: createdLocationId 
+            }),
+          });
+          
+          const resetJson = await resetRes.json();
+          if (resetRes.ok && resetJson.ok) {
+            // Show modal saying email was sent
+            setShowEmailSentModal(true);
+            setSubmitSuccess(true);
+          } else {
+            throw new Error(resetJson.error || resetJson.err || "Failed to send password reset email");
+          }
+        } catch (err) {
+          setSubmitError(err.message || "Failed to send password reset email");
+        }
+      }
     } catch (err) {
-      setQuoteError(err.message || "Failed to send quote email");
+      setSubmitError(err.message || "Failed to submit quote request");
     } finally {
-      setSendingQuote(false);
+      setIsSubmitting(false);
     }
   }
+
+  const handleLoginSuccess = (loginResult) => {
+    // User logged in successfully
+    setShowLoginModal(false);
+    setSubmitSuccess(true);
+    // Redirect to portal with estimate
+    if (estimateId) {
+      const portalUrl = `/portal?estimateId=${estimateId}${locationId ? `&locationId=${locationId}` : ""}`;
+      router.push(portalUrl);
+    } else {
+      router.push("/portal");
+    }
+  };
 
   function handleAddFromModal() {
     if (!detailAddonId) return;
@@ -198,116 +371,105 @@ export default function SampleProductPage() {
       <section className="border-t bg-white">
         <div className="mx-auto max-w-5xl px-6 py-10">
           <div className="mb-6 text-center">
-            <p className="text-sm uppercase tracking-wide text-muted-foreground">Next steps</p>
-            <h2 className="text-2xl font-semibold">Share details & request your quote</h2>
+            <p className="text-sm uppercase tracking-wide text-muted-foreground">Ready to proceed?</p>
+            <h2 className="text-2xl font-semibold">Submit Your Quote Request</h2>
             <p className="text-sm text-muted-foreground">
-              We’ll attach this configuration, send the staged email, and surface it in the portal
-              demo workflow.
+              Enter your contact details below. We'll create your contact and estimate, then send you a portal link.
             </p>
           </div>
           <div className="grid gap-8 md:grid-cols-2">
             <div className="rounded-2xl border p-6">
-              <h3 className="text-lg font-semibold">Contact details</h3>
-              <p className="text-sm text-muted-foreground">
-                We create a GHL contact so later steps (estimate, portal invite, scheduling) can link
-                back to this quote.
+              <h3 className="text-lg font-semibold">Contact Details & Quote Request</h3>
+              <p className="text-sm text-muted-foreground mb-4">
+                We'll create your contact and estimate, then send you a portal link to view your quote.
               </p>
-              {enableLeadForm ? (
-                <form onSubmit={handleCreateContact} className="mt-4 space-y-3">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">First name</label>
-                      <input
-                        type="text"
-                        value={firstName}
-                        onChange={(e) => setFirstName(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                        required
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">Last name</label>
-                      <input
-                        type="text"
-                        value={lastName}
-                        onChange={(e) => setLastName(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                      />
-                    </div>
+              <form onSubmit={handleSubmitQuote} className="space-y-4">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">First name</label>
+                    <input
+                      type="text"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
                   </div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">Email</label>
-                      <input
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                        required={!phone}
-                      />
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-sm font-medium">Phone</label>
-                      <input
-                        type="tel"
-                        value={phone}
-                        onChange={(e) => setPhone(e.target.value)}
-                        className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                        required={!email}
-                      />
-                    </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Last name</label>
+                    <input
+                      type="text"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
                   </div>
-                  {contactError ? <div className="text-sm text-red-600">{contactError}</div> : null}
-                  <button
-                    type="submit"
-                    disabled={creatingContact || contactCreated}
-                    className={`inline-flex items-center rounded-md px-4 py-2 text-sm font-medium ${
-                      creatingContact || contactCreated
-                        ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                        : "bg-black text-white hover:bg-gray-800"
-                    }`}
-                  >
-                    {contactCreated ? "Contact Created" : creatingContact ? "Submitting..." : "Submit"}
-                  </button>
-                </form>
-              ) : (
-                <div className="mt-6 rounded-md border border-dashed p-4 text-sm text-muted-foreground">
-                  Lead form temporarily disabled for faster testing. Using contact ID{" "}
-                  <code className="font-mono">{DEV_CONTACT_ID}</code>.
                 </div>
-              )}
-            </div>
-            <div className="rounded-2xl border p-6">
-              <h3 className="text-lg font-semibold">Send the staged email</h3>
-              <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
-                <li>Includes total (${totals.totalIncGst.toFixed(0)} inc GST) and coverage summary.</li>
-                <li>Mentions selected property profile ({activeProfile?.title ?? "Custom"}).</li>
-                <li>Builds the GHL conversation thread we reuse later.</li>
-              </ul>
-              <button
-                type="button"
-                onClick={handleRequestQuote}
-                disabled={!inCart || !contactCreated || !contactId || sendingQuote}
-                className={`mt-4 inline-flex w-full items-center justify-center rounded-md px-4 py-2 text-sm font-medium ${
-                  !inCart || !contactCreated || !contactId || sendingQuote
-                    ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                    : "bg-emerald-600 text-white hover:bg-emerald-700"
-                }`}
-              >
-                {sendingQuote ? "Sending…" : quoteSuccess ? "Quote Sent" : "Request Quote Email"}
-              </button>
-              {!inCart ? (
-                <div className="mt-2 text-xs text-muted-foreground">Add the configuration first.</div>
-              ) : null}
-              {inCart && (!contactCreated || !contactId) ? (
-                <div className="mt-2 text-xs text-muted-foreground">Create the contact to continue.</div>
-              ) : null}
-              {quoteError ? <div className="mt-2 text-sm text-red-600">{quoteError}</div> : null}
-              {quoteSuccess ? (
-                <div className="mt-2 text-sm text-emerald-700">
-                  Email sent via GHL Conversations. Check the Messages tab to confirm.
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Email <span className="text-red-500">*</span>
+                    </label>
+                    <input
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">Phone</label>
+                    <input
+                      type="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  </div>
                 </div>
-              ) : null}
+
+                <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+                  <p className="font-medium mb-1">Quote Summary</p>
+                  <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
+                    <li>Total: ${totals.totalIncGst.toFixed(0)} inc GST</li>
+                    <li>Property profile: {activeProfile?.title ?? "Custom"}</li>
+                  </ul>
+                </div>
+
+                {submitError ? (
+                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
+                    {submitError}
+                  </div>
+                ) : null}
+
+                {submitSuccess && !showLoginModal ? (
+                  <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+                    Quote request submitted! Redirecting to portal...
+                  </div>
+                ) : null}
+
+                <button
+                  type="submit"
+                  disabled={!inCart || !email || isSubmitting}
+                  className={`w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium ${
+                    !inCart || !email || isSubmitting
+                      ? "cursor-not-allowed bg-gray-200 text-gray-500"
+                      : "bg-emerald-600 text-white hover:bg-emerald-700"
+                  }`}
+                >
+                  {isSubmitting
+                    ? "Creating Contact & Estimate…"
+                    : submitSuccess
+                    ? "Redirecting to Portal…"
+                    : "Submit & Request Quote"}
+                </button>
+
+                {!inCart ? (
+                  <p className="text-xs text-muted-foreground text-center">
+                    Please add configuration to cart first.
+                  </p>
+                ) : null}
+              </form>
             </div>
           </div>
         </div>
@@ -320,6 +482,37 @@ export default function SampleProductPage() {
         onAdd={handleAddFromModal}
         quantity={detailAddonId ? addonQuantities[detailAddonId] ?? 0 : 0}
       />
+
+      {/* Login Modal - shown when account exists */}
+      <LoginModal
+        open={showLoginModal}
+        onClose={() => setShowLoginModal(false)}
+        email={email}
+        estimateId={estimateId}
+        onLoginSuccess={handleLoginSuccess}
+      />
+
+      {/* Email Sent Modal - shown when account doesn't exist */}
+      {showEmailSentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <h2 className="text-xl font-semibold mb-4 text-foreground">Email Sent</h2>
+            <p className="text-muted-foreground mb-4">
+              We've sent a password setup email to <strong className="text-foreground">{email}</strong>. 
+              Please check your inbox and follow the instructions to set your password.
+            </p>
+            <p className="text-sm text-muted-foreground mb-6">
+              Once you've set your password, you'll be able to access your quote and upload photos.
+            </p>
+            <button
+              onClick={() => setShowEmailSentModal(false)}
+              className="w-full bg-emerald-600 text-white rounded-md px-4 py-2 hover:bg-emerald-700 transition-colors"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

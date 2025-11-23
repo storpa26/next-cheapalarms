@@ -43,10 +43,29 @@ export default async function handler(req, res) {
         credentials: "include",
         body: JSON.stringify(req.body ?? {}),
       });
+
+      // Handle non-JSON responses
+      const contentType = resp.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await resp.text();
+        return res.status(resp.status).json({ 
+          ok: false, 
+          error: `WordPress returned non-JSON response: ${text.substring(0, 200)}` 
+        });
+      }
+
       const body = await resp.json();
       return res.status(resp.status).json(body);
     } catch (e) {
-      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
+      const errorMessage = e instanceof Error ? e.message : "Unknown error";
+      // Provide more context for fetch failures
+      if (errorMessage.includes("fetch failed") || errorMessage.includes("ECONNREFUSED") || errorMessage.includes("ENOTFOUND")) {
+        return res.status(500).json({ 
+          ok: false, 
+          error: `Cannot connect to WordPress at ${wpBase}. Error: ${errorMessage}. Please ensure WordPress is running and NEXT_PUBLIC_WP_URL is set correctly.` 
+        });
+      }
+      return res.status(500).json({ ok: false, error: errorMessage });
     }
   }
 

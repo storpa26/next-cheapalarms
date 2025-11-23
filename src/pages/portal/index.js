@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/ui/sign-out-button";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getPortalStatus } from "@/lib/wp";
+import { PhotoUpload } from "@/components/ui/photo-upload";
+import { getPortalStatus, getPortalDashboard } from "@/lib/wp";
+import Link from "next/link";
 
 const SECTION_CONFIG = [
   {
@@ -78,7 +80,7 @@ const SECTION_CONFIG = [
   },
 ];
 
-export default function PortalPage({ initialStatus, initialError, initialSection }) {
+export default function PortalPage({ initialStatus, initialError, initialSection, initialEstimateId, initialLocationId, initialEstimates }) {
   const router = useRouter();
   const [status, setStatus] = useState(initialStatus);
   const [error, setError] = useState(initialError);
@@ -86,6 +88,25 @@ export default function PortalPage({ initialStatus, initialError, initialSection
   const [activeSection, setActiveSection] = useState(initialSection ?? "overview");
   const [photoTab, setPhotoTab] = useState("uploaded");
   const [taskState, setTaskState] = useState({});
+  const [estimates, setEstimates] = useState(initialEstimates || []);
+  const hasTriedFetch = useRef(false);
+
+  // Safely extract estimateId and locationId from router.query or use initial props
+  const estimateId = useMemo(() => {
+    if (router.isReady && router.query.estimateId) {
+      const val = router.query.estimateId;
+      return Array.isArray(val) ? val[0] : val;
+    }
+    return initialEstimateId || null;
+  }, [router.isReady, router.query.estimateId, initialEstimateId]);
+
+  const locationId = useMemo(() => {
+    if (router.isReady && router.query.locationId) {
+      const val = router.query.locationId;
+      return Array.isArray(val) ? val[0] : val;
+    }
+    return initialLocationId || null;
+  }, [router.isReady, router.query.locationId, initialLocationId]);
 
   const sections = SECTION_CONFIG;
   const currentSectionId =
@@ -97,15 +118,26 @@ export default function PortalPage({ initialStatus, initialError, initialSection
 
   useEffect(() => {
     if (!router.isReady) return;
-    const { estimateId, locationId, inviteToken } = router.query;
-    if (!estimateId || status) return;
+    const routerEstimateId = Array.isArray(router.query.estimateId) 
+      ? router.query.estimateId[0] 
+      : router.query.estimateId;
+    const routerLocationId = Array.isArray(router.query.locationId)
+      ? router.query.locationId[0]
+      : router.query.locationId;
+    const routerInviteToken = Array.isArray(router.query.inviteToken)
+      ? router.query.inviteToken[0]
+      : router.query.inviteToken;
+    
+    // Use router query estimateId or fall back to initialEstimateId
+    const effectiveEstimateId = routerEstimateId || initialEstimateId;
+    if (!effectiveEstimateId || status) return;
 
     startTransition(() => setLoading(true));
     getPortalStatus(
       {
-        estimateId,
-        locationId,
-        inviteToken,
+        estimateId: effectiveEstimateId,
+        locationId: routerLocationId || initialLocationId,
+        inviteToken: routerInviteToken,
       },
       {
         credentials: "include",
@@ -121,10 +153,59 @@ export default function PortalPage({ initialStatus, initialError, initialSection
       .finally(() => {
         startTransition(() => setLoading(false));
       });
-  }, [router, status]);
+  }, [router, status, initialEstimateId, initialLocationId]);
+
+  // Fetch dashboard if no estimateId (only on client-side if not provided via SSR)
+  useEffect(() => {
+    if (!router.isReady) return;
+    const routerEstimateId = Array.isArray(router.query.estimateId) 
+      ? router.query.estimateId[0] 
+      : router.query.estimateId;
+    
+    // If no estimateId and we haven't successfully loaded estimates, fetch dashboard
+    // Only try once to prevent infinite loops on 401 errors
+    if (!routerEstimateId && estimates.length === 0 && !loading && !hasTriedFetch.current) {
+      // Don't check token here - wpFetch will handle token extraction automatically
+      // If token is missing, the API will return 401 and we'll handle it in the catch block
+      hasTriedFetch.current = true; // Mark as tried to prevent retry loops
+      startTransition(() => setLoading(true));
+      getPortalDashboard({
+        credentials: "include",
+      })
+        .then((result) => {
+          if (result.ok && Array.isArray(result.estimates)) {
+            setEstimates(result.estimates);
+            setError(null);
+          } else {
+            const errorMsg = result.err || result.error || "Failed to load estimates";
+            setError(errorMsg);
+          }
+        })
+        .catch((err) => {
+          // Show the full error message including status codes
+          const errorMessage = err.message || "Failed to load estimates";
+          setError(errorMessage);
+          console.error("Dashboard fetch error:", err);
+          
+          // If 401, provide helpful message
+          if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+            setError("Please log in to view your estimates.");
+          }
+        })
+        .finally(() => {
+          startTransition(() => setLoading(false));
+        });
+    }
+  }, [router.isReady, router.query.estimateId, estimates.length, loading]);
 
   const view = useMemo(() => normaliseStatus(status), [status]);
-  const inviteToken = typeof router.query.inviteToken === "string" ? router.query.inviteToken : null;
+  const inviteToken = useMemo(() => {
+    if (router.isReady && router.query.inviteToken) {
+      const val = router.query.inviteToken;
+      return Array.isArray(val) ? val[0] : val;
+    }
+    return null;
+  }, [router.isReady, router.query.inviteToken]);
   const errorHint =
     error && /401|unauthor/i.test(error)
       ? "You need a valid invite link or must log in with a WordPress account that has portal access."
@@ -155,6 +236,9 @@ export default function PortalPage({ initialStatus, initialError, initialSection
     router.replace({ pathname: router.pathname, query: nextQuery }, undefined, { shallow: true });
   };
 
+  // Check if we have an estimateId
+  const hasEstimateId = estimateId || initialEstimateId;
+
   return (
     <>
       <Head>
@@ -168,6 +252,16 @@ export default function PortalPage({ initialStatus, initialError, initialSection
               <p className="mt-3 text-lg font-semibold text-foreground">Customer Portal</p>
             </div>
             <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
+              {hasEstimateId && (
+                <Link href="/portal">
+                  <button
+                    type="button"
+                    className="mb-2 w-full rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
+                  >
+                    ← Back to Estimates
+                  </button>
+                </Link>
+              )}
               {sections.map((section) => (
                 <button
                   key={section.id}
@@ -235,7 +329,65 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                 </Card>
               ) : null}
 
-              {view ? (
+              {/* Show estimates list on Overview when no estimateId */}
+              {!hasEstimateId && currentSectionId === "overview" && (
+                <div className="space-y-6">
+                  <header className="space-y-3">
+                    <h1 className="text-3xl font-bold">My Estimates</h1>
+                    <p className="text-muted-foreground">Select an estimate to view details</p>
+                  </header>
+
+                  {!loading && !error && estimates.length === 0 && (
+                    <Card>
+                      <CardContent className="p-6">
+                        <p className="text-muted-foreground">No estimates found.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {!loading && !error && estimates.length > 0 && (
+                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                      {estimates.map((estimate) => (
+                        <Card key={estimate.estimateId} className="hover:shadow-lg transition-shadow">
+                          <CardHeader>
+                            <CardTitle>Estimate #{estimate.number || estimate.estimateId}</CardTitle>
+                            <CardDescription>
+                              <Badge variant={estimate.status === 'accepted' ? 'default' : 'secondary'}>
+                                {estimate.statusLabel}
+                              </Badge>
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <Link href={`/portal/estimate/${estimate.estimateId}${estimate.locationId ? `?locationId=${estimate.locationId}` : ''}`}>
+                              <Button className="w-full">View Details</Button>
+                            </Link>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Show empty state for other sections when no estimateId */}
+              {!hasEstimateId && currentSectionId !== "overview" && (
+                <div className="space-y-8">
+                  <header className="space-y-3">
+                    <Badge variant="outline" className="uppercase tracking-[0.35em]">
+                      {currentSection.badge}
+                    </Badge>
+                    <h1 className="text-3xl font-bold">{currentSection.label}</h1>
+                    <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
+                  </header>
+                  <Card>
+                    <CardContent className="p-6">
+                      <p className="text-muted-foreground">Please select an estimate to view {currentSection.label.toLowerCase()}.</p>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+
+              {hasEstimateId && view ? (
                 <div className="space-y-8">
                   <header className="space-y-3">
                     <Badge variant="outline" className="uppercase tracking-[0.35em]">
@@ -296,7 +448,13 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                   {currentSectionId === "documents" ? <DocumentSection documents={documentsData} /> : null}
 
                   {currentSectionId === "photos" ? (
-                    <PhotoSection photos={view.photos} photoTab={photoTab} setPhotoTab={setPhotoTab} />
+                    <PhotoSection
+                      photos={view.photos}
+                      photoTab={photoTab}
+                      setPhotoTab={setPhotoTab}
+                      estimateId={estimateId}
+                      locationId={locationId}
+                    />
                   ) : null}
 
                   {currentSectionId === "support" ? (
@@ -325,19 +483,58 @@ export default function PortalPage({ initialStatus, initialError, initialSection
 }
 
 PortalPage.getInitialProps = async ({ query, req }) => {
-  const estimateId = query.estimateId;
+  const estimateId = Array.isArray(query.estimateId) ? query.estimateId[0] : query.estimateId;
+  const locationId = Array.isArray(query.locationId) ? query.locationId[0] : query.locationId;
   const initialSection =
     typeof query.section === "string" && query.section !== "" ? query.section : "overview";
 
+  // If no estimateId, fetch dashboard
   if (!estimateId) {
-    return { initialStatus: null, initialError: "estimateId is required.", initialSection };
+    try {
+      const dashboard = await getPortalDashboard({
+        headers: cookieHeader(req),
+      });
+      // If dashboard fetch succeeded, return the estimates
+      if (dashboard.ok && Array.isArray(dashboard.estimates)) {
+        return {
+          initialStatus: null,
+          initialError: null,
+          initialSection,
+          initialEstimateId: null,
+          initialLocationId: null,
+          initialEstimates: dashboard.estimates,
+        };
+      }
+      // If dashboard returned but not ok, return empty (client will retry)
+      return {
+        initialStatus: null,
+        initialError: null,
+        initialSection,
+        initialEstimateId: null,
+        initialLocationId: null,
+        initialEstimates: [],
+      };
+    } catch (error) {
+      // If SSR fetch fails (e.g., 401, 404), let client-side handle it
+      // Return undefined for initialEstimates so client-side will retry
+      return {
+        initialStatus: null,
+        initialError: null,
+        initialSection,
+        initialEstimateId: null,
+        initialLocationId: null,
+        initialEstimates: undefined, // undefined triggers client-side retry
+      };
+    }
   }
 
   if (query.__mock === "1") {
     return {
-      initialStatus: mockPortalStatus(estimateId, query.locationId),
+      initialStatus: mockPortalStatus(estimateId, locationId),
       initialError: null,
       initialSection,
+      initialEstimateId: estimateId,
+      initialLocationId: locationId || null,
     };
   }
 
@@ -345,19 +542,27 @@ PortalPage.getInitialProps = async ({ query, req }) => {
     const status = await getPortalStatus(
       {
         estimateId,
-        locationId: query.locationId,
-        inviteToken: query.inviteToken,
+        locationId: locationId || undefined,
+        inviteToken: Array.isArray(query.inviteToken) ? query.inviteToken[0] : query.inviteToken,
       },
       {
         headers: cookieHeader(req),
       }
     );
-    return { initialStatus: status, initialError: null, initialSection };
+    return { 
+      initialStatus: status, 
+      initialError: null, 
+      initialSection,
+      initialEstimateId: estimateId,
+      initialLocationId: locationId || null,
+    };
   } catch (error) {
     return {
       initialStatus: null,
       initialError: error instanceof Error ? error.message : "Unknown error",
       initialSection,
+      initialEstimateId: estimateId,
+      initialLocationId: locationId || null,
     };
   }
 };
@@ -878,16 +1083,124 @@ function InstallationTimeline({ timeline }) {
   );
 }
 
-function PhotoSection({ photos, photoTab, setPhotoTab }) {
-  const uploaded = photos.items ?? [];
+function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locationId }) {
+  const [uploaded, setUploaded] = useState(photos.items ?? []);
   const samples = photos.samples ?? [];
   const missing = photos.missingCount ?? 0;
   const required = photos.required ?? 6;
+  const [email, setEmail] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
+  const [emailError, setEmailError] = useState("");
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const [loadingPhotos, setLoadingPhotos] = useState(false);
+  // Fetch uploaded photos
+  const fetchUploadedPhotos = useCallback(async () => {
+    if (!estimateId) return;
+    setLoadingPhotos(true);
+    try {
+      const res = await fetch(`/api/estimate/photos?estimateId=${encodeURIComponent(estimateId)}`);
+      const data = await res.json();
+      if (data.ok && data.stored && data.stored.uploads) {
+        // Transform stored uploads to match the expected format
+        const photos = data.stored.uploads.map((upload) => ({
+          url: upload.url || upload.urls?.[0] || "",
+          label: upload.label || upload.filename || "Uploaded photo",
+          notes: upload.notes || "",
+          attachmentId: upload.attachmentId,
+        }));
+        setUploaded(photos);
+      }
+    } catch (err) {
+      console.error("Failed to fetch photos:", err);
+    } finally {
+      setLoadingPhotos(false);
+    }
+  }, [estimateId]);
+
+  // Fetch photos on mount and when estimateId changes
+  useEffect(() => {
+    fetchUploadedPhotos();
+  }, [fetchUploadedPhotos]);
+
   const tabs = [
     { id: "uploaded", label: `Uploaded (${uploaded.length})` },
     { id: "missing", label: `Missing (${missing})` },
     { id: "samples", label: "Example shots" },
   ];
+
+  const handleSendPasswordReset = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      setEmailError("Please enter your email address");
+      return;
+    }
+    setEmailError("");
+    setSendingEmail(true);
+    try {
+      const res = await fetch("/api/auth/send-password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.err || json.error || "Failed to send email");
+      }
+      setEmailSent(true);
+      setEmail("");
+    } catch (err) {
+      setEmailError(err.message || "Failed to send password reset email");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
+  // Handle photo upload completion
+  const handleUploadComplete = useCallback(
+    async (uploadedPhotos) => {
+      if (!estimateId || !locationId) {
+        setUploadError("Missing estimate ID or location ID");
+        return;
+      }
+
+      try {
+        // Store photos linked to estimate
+        const uploads = uploadedPhotos.map((photo) => ({
+          url: photo.url,
+          attachmentId: photo.attachmentId,
+          filename: photo.filename,
+          label: photo.filename,
+        }));
+
+        const res = await fetch("/api/estimate/photos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            estimateId,
+            locationId,
+            uploads,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.ok) {
+          throw new Error(data.err || data.error || "Failed to store photos");
+        }
+
+        // Refresh uploaded photos list
+        await fetchUploadedPhotos();
+        setUploadError("");
+      } catch (err) {
+        setUploadError(err.message || "Failed to save photos");
+      }
+    },
+    [estimateId, locationId, fetchUploadedPhotos]
+  );
+
+  const handleUploadError = useCallback((error) => {
+    setUploadError(error);
+  }, []);
 
   return (
     <Card>
@@ -914,6 +1227,35 @@ function PhotoSection({ photos, photoTab, setPhotoTab }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4 text-sm text-muted-foreground">
+        {/* Email input for password reset */}
+        <div className="rounded-lg border border-border bg-muted/40 p-4">
+          <p className="mb-2 font-medium text-foreground">Need to log in?</p>
+          <p className="mb-3 text-xs text-muted-foreground">
+            Enter your email address and we'll send you a link to set your password.
+          </p>
+          {emailSent ? (
+            <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
+              Password reset email sent! Check your inbox.
+            </div>
+          ) : (
+            <form onSubmit={handleSendPasswordReset} className="flex flex-col gap-2 sm:flex-row">
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your@email.com"
+                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                disabled={sendingEmail}
+              />
+              <Button type="submit" disabled={sendingEmail || !email} variant="secondary" className="sm:w-auto">
+                {sendingEmail ? "Sending..." : "Send Login Link"}
+              </Button>
+            </form>
+          )}
+          {emailError && (
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{emailError}</p>
+          )}
+        </div>
         {photoTab === "uploaded" ? (
           uploaded.length ? (
             <ul className="grid gap-4 md:grid-cols-3">
@@ -943,20 +1285,30 @@ function PhotoSection({ photos, photoTab, setPhotoTab }) {
           <div className="space-y-4">
             <p>
               We still need {missing} photo{missing === 1 ? "" : "s"} to finalise your estimate. You can
-              drag and drop them below or choose the “Skip for now” option.
+              drag and drop them below or choose the "Skip for now" option.
             </p>
-            <div className="flex flex-col gap-4 md:flex-row">
-              <div className="flex-1 rounded-lg border-2 border-dashed border-border bg-muted/40 p-6 text-center">
-                <p className="font-medium text-foreground">Drop files here</p>
-                <p className="text-sm text-muted-foreground">JPG or PNG up to 10MB each.</p>
-                <Button className="mt-4" variant="secondary">
-                  Select files
-                </Button>
+            {uploadError && (
+              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
+                {uploadError}
               </div>
+            )}
+            <div className="flex flex-col gap-4 md:flex-row">
+              {estimateId && locationId ? (
+                <PhotoUpload
+                  estimateId={estimateId}
+                  locationId={locationId}
+                  onUploadComplete={handleUploadComplete}
+                  onError={handleUploadError}
+                />
+              ) : (
+                <div className="flex-1 rounded-lg border-2 border-dashed border-border bg-muted/40 p-6 text-center">
+                  <p className="font-medium text-foreground">Loading...</p>
+                </div>
+              )}
               <div className="flex-1 rounded-lg border border-border bg-background p-6">
-                <p className="font-medium text-foreground">Can’t share photos?</p>
+                <p className="font-medium text-foreground">Can't share photos?</p>
                 <p className="text-sm text-muted-foreground">
-                  That’s okay—you can skip this step and we’ll call to confirm details.
+                  That's okay—you can skip this step and we'll call to confirm details.
                 </p>
                 <Button variant="outline" className="mt-4">
                   Skip photos for now
