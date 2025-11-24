@@ -35,8 +35,8 @@ export default function LoginPage() {
         throw new Error(result.err ?? "Login failed");
       }
 
-      // Redirect to return URL or default to dashboard
-      const returnUrl = router.query.from || "/dashboard";
+      // Redirect to return URL or default to admin
+      const returnUrl = router.query.from || "/admin";
       router.push(returnUrl);
     } catch (err) {
       setError(err.message);
@@ -116,7 +116,7 @@ export async function getServerSideProps({ req }) {
   if (cookies[TOKEN_COOKIE]) {
     return {
       redirect: {
-        destination: "/dashboard",
+        destination: "/admin",
         permanent: false,
       },
     };

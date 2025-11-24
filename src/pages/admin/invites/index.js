@@ -3,6 +3,7 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
 export default function AdminInvites() {
   const [q, setQ] = useState("");
@@ -90,4 +91,17 @@ function mockInvites() {
   ];
 }
 
+export async function getServerSideProps({ req }) {
+  // Check authentication first
+  if (!isAuthenticated(req)) {
+    return {
+      redirect: {
+        destination: getLoginRedirect("/admin/invites"),
+        permanent: false,
+      },
+    };
+  }
+
+  return { props: {} };
+}
 

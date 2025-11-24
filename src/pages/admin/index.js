@@ -3,7 +3,9 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { AlertsStrip } from "@/components/admin/ui/AlertsStrip";
 import { CardStat } from "@/components/admin/ui/CardStat";
 import { ActivityList } from "@/components/admin/ui/ActivityList";
+import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
+// This component should never render - getServerSideProps redirects to /admin/estimates
 export default function AdminOverview() {
   const alerts = [
     { title: "3 invites expiring in 48 hours", description: "Consider resending." },
@@ -58,4 +60,16 @@ function ActionLink({ label, href }) {
   );
 }
 
+export async function getServerSideProps({ req }) {
+  // Check authentication first
+  if (!isAuthenticated(req)) {
+    return {
+      redirect: {
+        destination: getLoginRedirect("/admin"),
+        permanent: false,
+      },
+    };
+  }
 
+  return { props: {} };
+}

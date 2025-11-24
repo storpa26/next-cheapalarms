@@ -8,9 +8,10 @@ export function SignOutButton({ className = "" }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
-  // Show button on protected pages (dashboard, portal) or if explicitly requested
+  // Show button on protected pages (admin, dashboard, portal) or if explicitly requested
   // Since these pages require auth, if user is here, they're authenticated
-  const isProtectedPage = router.pathname?.startsWith("/dashboard") || 
+  const isProtectedPage = router.pathname?.startsWith("/admin") || 
+                         router.pathname?.startsWith("/dashboard") || 
                          router.pathname?.startsWith("/portal");
 
   const handleLogout = async () => {

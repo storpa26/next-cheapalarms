@@ -3,6 +3,7 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
 export default function AdminIntegrations() {
   const [apiKey, setApiKey] = useState("");
@@ -70,4 +71,17 @@ export default function AdminIntegrations() {
   );
 }
 
+export async function getServerSideProps({ req }) {
+  // Check authentication first
+  if (!isAuthenticated(req)) {
+    return {
+      redirect: {
+        destination: getLoginRedirect("/admin/integrations"),
+        permanent: false,
+      },
+    };
+  }
+
+  return { props: {} };
+}
 

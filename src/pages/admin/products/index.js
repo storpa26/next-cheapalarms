@@ -3,6 +3,7 @@ import Head from "next/head";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
+import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
 const initialProduct = {
   type: "base",
@@ -510,4 +511,17 @@ function filterMatch(p, q) {
   );
 }
 
+export async function getServerSideProps({ req }) {
+  // Check authentication first
+  if (!isAuthenticated(req)) {
+    return {
+      redirect: {
+        destination: getLoginRedirect("/admin/products"),
+        permanent: false,
+      },
+    };
+  }
+
+  return { props: {} };
+}
 

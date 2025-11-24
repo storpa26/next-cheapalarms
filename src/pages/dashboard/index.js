@@ -168,53 +168,14 @@ export default function DashboardPage({ estimates, error }) {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  // Check authentication first
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/dashboard"),
-        permanent: false,
-      },
-    };
-  }
-
-  if (req?.url?.includes("__mock=1")) {
-    return {
-      props: {
-        estimates: mockDashboardData(),
-        error: null,
-      },
-    };
-  }
-
-  try {
-    const estimates = await getEstimates(
-      { limit: 50 },
-      {
-        headers: cookieHeader(req),
-      }
-    );
-    return { props: { estimates } };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-
-    if (/401/.test(message) || /unauthor/i.test(message)) {
-      return {
-        redirect: {
-          destination: getLoginRedirect("/dashboard"),
-          permanent: false,
-        },
-      };
-    }
-
-    return {
-      props: {
-        estimates: null,
-        error: message,
-      },
-    };
-  }
+// Redirect /dashboard to /admin for backward compatibility
+export async function getServerSideProps() {
+  return {
+    redirect: {
+      destination: "/admin",
+      permanent: false,
+    },
+  };
 }
 
 function cookieHeader(req) {
