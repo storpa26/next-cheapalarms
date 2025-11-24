@@ -90,6 +90,7 @@ export default function PortalPage({ initialStatus, initialError, initialSection
   const [photoTab, setPhotoTab] = useState("uploaded");
   const [taskState, setTaskState] = useState({});
   const [estimates, setEstimates] = useState(initialEstimates || []);
+  const [authChecking, setAuthChecking] = useState(true);
   const hasTriedFetch = useRef(false);
 
   // Safely extract estimateId and locationId from router.query or use initial props
@@ -156,28 +157,45 @@ export default function PortalPage({ initialStatus, initialError, initialSection
       });
   }, [router, status, initialEstimateId, initialLocationId]);
 
-  // Note: We don't check authentication here on client-side because the cookie is httpOnly
-  // and can't be read by JavaScript. Instead, we let API calls handle authentication.
-  // If API returns 401, we'll redirect to login in the catch block below.
-
-  // Fetch dashboard if no estimateId (only on client-side if not provided via SSR)
+  // Check authentication on mount - prevent flash of content for unauthenticated users
   useEffect(() => {
     if (!router.isReady) return;
+    
+    const routerInviteToken = Array.isArray(router.query.inviteToken) 
+      ? router.query.inviteToken[0] 
+      : router.query.inviteToken;
     const routerEstimateId = Array.isArray(router.query.estimateId) 
       ? router.query.estimateId[0] 
       : router.query.estimateId;
     
-    // If no estimateId and we haven't successfully loaded estimates, fetch dashboard
-    // Only try once to prevent infinite loops on 401 errors
-    if (!routerEstimateId && estimates.length === 0 && !loading && !hasTriedFetch.current) {
-      // Don't check token here - wpFetch will handle token extraction automatically
-      // If token is missing, the API will return 401 and we'll handle it in the catch block
-      hasTriedFetch.current = true; // Mark as tried to prevent retry loops
+    // If there's an invite token, allow rendering immediately
+    if (routerInviteToken) {
+      setAuthChecking(false);
+      return;
+    }
+    
+    // If we have initialEstimates from SSR, user is authenticated
+    if (initialEstimates !== undefined) {
+      setAuthChecking(false);
+      return;
+    }
+    
+    // If we have initialStatus, user is authenticated (has estimateId)
+    if (initialStatus || routerEstimateId) {
+      setAuthChecking(false);
+      return;
+    }
+    
+    // No invite token and no initial data - need to check auth by fetching dashboard
+    // This will either succeed (auth OK) or fail with 401 (redirect to login)
+    if (!hasTriedFetch.current) {
+      hasTriedFetch.current = true;
       startTransition(() => setLoading(true));
       getPortalDashboard({
         credentials: "include",
       })
         .then((result) => {
+          setAuthChecking(false);
           if (result.ok && Array.isArray(result.estimates)) {
             setEstimates(result.estimates);
             setError(null);
@@ -187,25 +205,25 @@ export default function PortalPage({ initialStatus, initialError, initialSection
           }
         })
         .catch((err) => {
-          // Show the full error message including status codes
           const errorMessage = err.message || "Failed to load estimates";
-          console.error("Dashboard fetch error:", err);
           
-          // If 401, redirect to login
+          // If 401, redirect to login immediately without logging (expected behavior)
           if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
             const from = router.asPath;
             router.push(getLoginRedirect(from));
             return;
           }
           
-          // For other errors, show the error message
+          // Only log and show non-401 errors
+          console.error("Dashboard fetch error:", err);
           setError(errorMessage);
+          setAuthChecking(false);
         })
         .finally(() => {
           startTransition(() => setLoading(false));
         });
     }
-  }, [router.isReady, router.query.estimateId, estimates.length, loading, router]);
+  }, [router.isReady, router.query.inviteToken, router.query.estimateId, initialEstimates, initialStatus, router]);
 
   const view = useMemo(() => normaliseStatus(status), [status]);
   const inviteToken = useMemo(() => {
@@ -247,6 +265,22 @@ export default function PortalPage({ initialStatus, initialError, initialSection
 
   // Check if we have an estimateId
   const hasEstimateId = estimateId || initialEstimateId;
+
+  // Show loading state while checking authentication to prevent flash of content
+  if (authChecking) {
+    return (
+      <>
+        <Head>
+          <title>Customer Portal • CheapAlarms</title>
+        </Head>
+        <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
+          <div className="text-center">
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </main>
+      </>
+    );
+  }
 
   return (
     <>
