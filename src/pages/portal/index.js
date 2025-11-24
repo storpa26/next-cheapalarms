@@ -114,6 +114,7 @@ export default function PortalPage({ initialStatus, initialError, initialSection
   const [estimates, setEstimates] = useState(initialEstimates || []);
   const [authChecking, setAuthChecking] = useState(true);
   const hasTriedFetch = useRef(false);
+  const lastFetchedEstimateId = useRef(null);
 
   // Safely extract estimateId and locationId from router.query or use initial props
   const estimateId = useMemo(() => {
@@ -154,7 +155,16 @@ export default function PortalPage({ initialStatus, initialError, initialSection
     
     // Use router query estimateId or fall back to initialEstimateId
     const effectiveEstimateId = routerEstimateId || initialEstimateId;
-    if (!effectiveEstimateId || status) return;
+    
+    // Skip if we already fetched this exact estimateId (prevents infinite loops)
+    if (!effectiveEstimateId || lastFetchedEstimateId.current === effectiveEstimateId) return;
+    
+    // Mark that we're fetching this estimateId
+    lastFetchedEstimateId.current = effectiveEstimateId;
+    
+    // Clear previous status when estimateId changes
+    setStatus(null);
+    setError(null);
 
     startTransition(() => setLoading(true));
     getPortalStatus(
@@ -173,11 +183,15 @@ export default function PortalPage({ initialStatus, initialError, initialSection
       })
       .catch((err) => {
         setError(err.message);
+        // Reset ref on error so we can retry
+        if (lastFetchedEstimateId.current === effectiveEstimateId) {
+          lastFetchedEstimateId.current = null;
+        }
       })
       .finally(() => {
         startTransition(() => setLoading(false));
       });
-  }, [router, status, initialEstimateId, initialLocationId]);
+  }, [router.isReady, router.query.estimateId, router.query.locationId, router.query.inviteToken, initialEstimateId, initialLocationId]);
 
   // Check authentication on mount - prevent flash of content for unauthenticated users
   useEffect(() => {
@@ -229,14 +243,20 @@ export default function PortalPage({ initialStatus, initialError, initialSection
         .catch((err) => {
           const errorMessage = err.message || "Failed to load estimates";
           
-          // If 401, redirect to login immediately without logging (expected behavior)
-          if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
+          // Handle auth errors and network errors - redirect to login
+          if (
+            errorMessage.includes('401') || 
+            errorMessage.includes('Unauthorized') ||
+            errorMessage.includes('Failed to fetch') ||
+            errorMessage.includes('Unable to connect') ||
+            errorMessage.includes('not configured')
+          ) {
             const from = router.asPath;
             router.push(getLoginRedirect(from));
             return;
           }
           
-          // Only log and show non-401 errors
+          // Only log and show other errors
           console.error("Dashboard fetch error:", err);
           setError(errorMessage);
           setAuthChecking(false);
@@ -394,10 +414,133 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                 </Card>
               ) : null}
 
-              {/* Show estimates list on Overview when no estimateId */}
+              {/* Show overview dashboard when no estimateId */}
               {!hasEstimateId && currentSectionId === "overview" && (
                 <div className="space-y-6">
                   <header className="space-y-3">
+                    <h1 className="text-3xl font-bold">Welcome to Your Portal</h1>
+                    <p className="text-muted-foreground">Get a quick overview of your projects and activity</p>
+                  </header>
+
+                  {/* Overview stats cards */}
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Total Estimates</CardTitle>
+                        <CardDescription className="text-2xl font-bold mt-2">
+                          {estimates.length} estimate{estimates.length !== 1 ? 's' : ''}
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Active Projects</CardTitle>
+                        <CardDescription className="text-2xl font-bold mt-2">
+                          {estimates.filter(e => e.status === 'accepted').length} active
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Pending Review</CardTitle>
+                        <CardDescription className="text-2xl font-bold mt-2">
+                          {estimates.filter(e => e.status !== 'accepted').length} pending
+                        </CardDescription>
+                      </CardHeader>
+                    </Card>
+                  </div>
+
+                  {/* Quick actions */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Quick Actions</CardTitle>
+                      <CardDescription>Navigate to different sections of your portal</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex flex-wrap gap-2">
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleNavigate("estimate")}
+                        >
+                          View All Estimates
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleNavigate("payments")}
+                        >
+                          Payment History
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleNavigate("documents")}
+                        >
+                          Documents
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleNavigate("support")}
+                        >
+                          Get Support
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Recent estimates preview */}
+                  {estimates.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <CardTitle>Recent Estimates</CardTitle>
+                            <CardDescription>Your most recent estimates</CardDescription>
+                          </div>
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => handleNavigate("estimate")}
+                          >
+                            View All
+                          </Button>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-2">
+                          {estimates.slice(0, 3).map((estimate) => (
+                            <Link 
+                              key={estimate.estimateId}
+                              href={`/portal/estimate/${estimate.estimateId}${estimate.locationId ? `?locationId=${estimate.locationId}` : ''}`}
+                              className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
+                            >
+                              <div>
+                                <p className="font-medium">Estimate #{estimate.number || estimate.estimateId}</p>
+                                <p className="text-sm text-muted-foreground">{estimate.statusLabel}</p>
+                              </div>
+                              <Button variant="ghost" size="sm">View</Button>
+                            </Link>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {estimates.length === 0 && !loading && (
+                    <Card>
+                      <CardContent className="p-6 text-center">
+                        <p className="text-muted-foreground">No estimates found. Check back later for updates.</p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+
+              {/* Show estimates list on Estimate tab when no estimateId */}
+              {!hasEstimateId && currentSectionId === "estimate" && (
+                <div className="space-y-6">
+                  <header className="space-y-3">
+                    <Badge variant="outline" className="uppercase tracking-[0.35em]">
+                      {currentSection.badge}
+                    </Badge>
                     <h1 className="text-3xl font-bold">My Estimates</h1>
                     <p className="text-muted-foreground">Select an estimate to view details</p>
                   </header>
@@ -435,7 +578,7 @@ export default function PortalPage({ initialStatus, initialError, initialSection
               )}
 
               {/* Show empty state for other sections when no estimateId */}
-              {!hasEstimateId && currentSectionId !== "overview" && (
+              {!hasEstimateId && currentSectionId !== "overview" && currentSectionId !== "estimate" && (
                 <div className="space-y-8">
                   <header className="space-y-3">
                     <Badge variant="outline" className="uppercase tracking-[0.35em]">
@@ -452,7 +595,38 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                 </div>
               )}
 
-              {hasEstimateId && view ? (
+              {hasEstimateId ? (
+                loading ? (
+                  <div className="space-y-8">
+                    <header className="space-y-3">
+                      <Badge variant="outline" className="uppercase tracking-[0.35em]">
+                        {currentSection.badge}
+                      </Badge>
+                      <h1 className="text-3xl font-bold">{currentSection.label}</h1>
+                      <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
+                    </header>
+                    <Card>
+                      <CardContent className="p-6">
+                        <p className="text-muted-foreground">Loading estimate data...</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : error ? (
+                  <div className="space-y-8">
+                    <header className="space-y-3">
+                      <Badge variant="outline" className="uppercase tracking-[0.35em]">
+                        {currentSection.badge}
+                      </Badge>
+                      <h1 className="text-3xl font-bold">{currentSection.label}</h1>
+                      <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
+                    </header>
+                    <Card>
+                      <CardContent className="p-6">
+                        <p className="text-muted-foreground">Error loading estimate: {error}</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : view ? (
                 <div className="space-y-8">
                   <header className="space-y-3">
                     <Badge variant="outline" className="uppercase tracking-[0.35em]">
@@ -538,6 +712,22 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                     </div>
                   ) : null}
                 </div>
+                ) : (
+                  <div className="space-y-8">
+                    <header className="space-y-3">
+                      <Badge variant="outline" className="uppercase tracking-[0.35em]">
+                        {currentSection.badge}
+                      </Badge>
+                      <h1 className="text-3xl font-bold">{currentSection.label}</h1>
+                      <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
+                    </header>
+                    <Card>
+                      <CardContent className="p-6">
+                        <p className="text-muted-foreground">Loading estimate data...</p>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )
               ) : null}
             </div>
           </div>

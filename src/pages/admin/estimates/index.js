@@ -17,6 +17,7 @@ import { getEstimates } from "@/lib/wp";
 import Link from "next/link";
 import { toast } from "@/components/ui/use-toast";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { isAuthError, isPermissionError, getPermissionErrorMessage } from "@/lib/admin/utils/error-handler";
 
 export default function AdminEstimates({ estimates, error }) {
   const [q, setQ] = useState("");
@@ -192,11 +193,22 @@ export async function getServerSideProps({ req }) {
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
 
-    if (/401/.test(message) || /unauthor/i.test(message)) {
+    // Handle authentication errors - redirect to login
+    if (isAuthError(message)) {
       return {
         redirect: {
           destination: getLoginRedirect("/admin/estimates"),
           permanent: false,
+        },
+      };
+    }
+
+    // Handle permission errors (403) - show user-friendly message
+    if (isPermissionError(message)) {
+      return {
+        props: {
+          estimates: null,
+          error: getPermissionErrorMessage("estimates", "ca_view_estimates capability"),
         },
       };
     }

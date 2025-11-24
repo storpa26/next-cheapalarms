@@ -13,6 +13,11 @@ async function wpFetch(path, options = {}) {
     throw new Error("wpFetch expects path to start with '/'");
   }
 
+  // Validate WP_API_BASE before making request
+  if (!WP_API_BASE) {
+    throw new Error("WordPress API base URL is not configured. Please set NEXT_PUBLIC_WP_URL environment variable.");
+  }
+
   const url = `${WP_API_BASE}${path}`;
 
   const headers = normaliseHeaders(options.headers);
@@ -38,23 +43,32 @@ async function wpFetch(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, {
-    credentials: "include",
-    ...options,
-    headers,
-    next: {
-      revalidate: options.next?.revalidate ?? 30,
-    },
-  });
+  try {
+    const response = await fetch(url, {
+      credentials: "include",
+      ...options,
+      headers,
+      next: {
+        revalidate: options.next?.revalidate ?? 30,
+      },
+    });
 
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `WP error ${response.status} ${response.statusText}: ${errorText}`
-    );
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(
+        `WP error ${response.status} ${response.statusText}: ${errorText}`
+      );
+    }
+
+    return response.json();
+  } catch (error) {
+    // Handle network errors (Failed to fetch, CORS, connection refused, etc.)
+    if (error instanceof TypeError && error.message === "Failed to fetch") {
+      throw new Error("Unable to connect to WordPress API. Please check your connection and API configuration.");
+    }
+    // Re-throw other errors (including our custom errors)
+    throw error;
   }
-
-  return response.json();
 }
 
 export async function getEstimates(params = {}, fetchOptions = {}) {

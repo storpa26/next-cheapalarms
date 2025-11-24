@@ -1,10 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 
-function EmptyPhotoState() {
+function EmptyPhotoState({ onSelectFiles, onSkip }) {
   return (
     <div className="space-y-4">
       <p className="text-sm text-muted-foreground">
@@ -15,7 +15,7 @@ function EmptyPhotoState() {
         <div className="flex-1 rounded-lg border-2 border-dashed border-border bg-muted/40 p-6 text-center">
           <p className="font-medium text-foreground">Drop files here</p>
           <p className="text-sm text-muted-foreground">JPG or PNG up to 10MB each.</p>
-          <Button className="mt-4" variant="secondary">
+          <Button className="mt-4" variant="secondary" onClick={onSelectFiles}>
             Select files
           </Button>
         </div>
@@ -24,7 +24,7 @@ function EmptyPhotoState() {
           <p className="text-sm text-muted-foreground">
             Choose "Skip for now" and we'll call to double-check anything we need before installation.
           </p>
-          <Button variant="outline" className="mt-4">
+          <Button variant="outline" className="mt-4" onClick={onSkip}>
             Skip photos for now
           </Button>
         </div>
@@ -44,6 +44,8 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
   const [sendingEmail, setSendingEmail] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [loadingPhotos, setLoadingPhotos] = useState(false);
+  const [photosSkipped, setPhotosSkipped] = useState(false);
+  const photoUploadRef = useRef(null);
 
   // Fetch uploaded photos
   const fetchUploadedPhotos = useCallback(async () => {
@@ -52,18 +54,22 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
     try {
       const res = await fetch(`/api/estimate/photos?estimateId=${encodeURIComponent(estimateId)}`);
       const data = await res.json();
-      if (data.ok && data.stored && data.stored.uploads) {
+      if (data.ok && data.stored && data.stored.uploads && Array.isArray(data.stored.uploads)) {
         // Transform stored uploads to match the expected format
-        const photos = data.stored.uploads.map((upload) => ({
+        const fetchedPhotos = data.stored.uploads.map((upload) => ({
           url: upload.url || upload.urls?.[0] || "",
           label: upload.label || upload.filename || "Uploaded photo",
           notes: upload.notes || "",
           attachmentId: upload.attachmentId,
         }));
-        setUploaded(photos);
+        setUploaded(fetchedPhotos);
+      } else if (data.ok && data.stored && (!data.stored.uploads || data.stored.uploads.length === 0)) {
+        // No stored uploads - keep existing uploaded state or set to empty
+        setUploaded([]);
       }
     } catch (err) {
       console.error("Failed to fetch photos:", err);
+      // Don't clear uploaded on error - keep existing state
     } finally {
       setLoadingPhotos(false);
     }
@@ -74,11 +80,21 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
     fetchUploadedPhotos();
   }, [fetchUploadedPhotos]);
 
+  // Update tabs when uploaded count changes
   const tabs = [
     { id: "uploaded", label: `Uploaded (${uploaded.length})` },
     { id: "missing", label: `Missing (${missing})` },
     { id: "samples", label: "Example shots" },
   ];
+
+  // Handle skip photos
+  const handleSkipPhotos = useCallback(() => {
+    if (window.confirm("Are you sure you want to skip uploading photos? We'll call you to confirm details instead.")) {
+      setPhotosSkipped(true);
+      // Optionally, you could store this in the backend
+      // For now, just show a confirmation message
+    }
+  }, []);
 
   const handleSendPasswordReset = async (e) => {
     e.preventDefault();
@@ -109,7 +125,7 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
 
   // Handle photo upload completion
   const handleUploadComplete = useCallback(
-    async (uploadedPhotos) => {
+    async (newUploadedPhotos) => {
       if (!estimateId || !locationId) {
         setUploadError("Missing estimate ID or location ID");
         return;
@@ -117,7 +133,7 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
 
       try {
         // Store photos linked to estimate
-        const uploads = uploadedPhotos.map((photo) => ({
+        const uploads = newUploadedPhotos.map((photo) => ({
           url: photo.url,
           attachmentId: photo.attachmentId,
           filename: photo.filename,
@@ -139,7 +155,15 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
           throw new Error(data.err || data.error || "Failed to store photos");
         }
 
-        // Refresh uploaded photos list
+        // Update local state immediately for better UX
+        setUploaded((prev) => [...prev, ...newUploadedPhotos.map((photo) => ({
+          url: photo.url,
+          label: photo.filename || "Uploaded photo",
+          notes: "",
+          attachmentId: photo.attachmentId,
+        }))]);
+        
+        // Refresh uploaded photos list to ensure consistency
         await fetchUploadedPhotos();
         setUploadError("");
       } catch (err) {
@@ -228,7 +252,19 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
               ))}
             </ul>
           ) : (
-            <EmptyPhotoState />
+            <EmptyPhotoState
+              onSelectFiles={() => {
+                // Switch to missing tab where PhotoUpload is rendered
+                setPhotoTab("missing");
+                // After a brief delay, trigger the file input
+                setTimeout(() => {
+                  if (photoUploadRef.current) {
+                    photoUploadRef.current.click();
+                  }
+                }, 100);
+              }}
+              onSkip={handleSkipPhotos}
+            />
           )
         ) : null}
 
@@ -246,6 +282,7 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
             <div className="flex flex-col gap-4 md:flex-row">
               {estimateId && locationId ? (
                 <PhotoUpload
+                  ref={photoUploadRef}
                   estimateId={estimateId}
                   locationId={locationId}
                   onUploadComplete={handleUploadComplete}
@@ -261,11 +298,16 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
                 <p className="text-sm text-muted-foreground">
                   That's okay—you can skip this step and we'll call to confirm details.
                 </p>
-                <Button variant="outline" className="mt-4">
+                <Button variant="outline" className="mt-4" onClick={handleSkipPhotos}>
                   Skip photos for now
                 </Button>
               </div>
             </div>
+            {photosSkipped && (
+              <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+                Photos skipped. We'll call you to confirm details before installation.
+              </div>
+            )}
           </div>
         ) : null}
 

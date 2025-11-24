@@ -4,34 +4,25 @@ import { AlertsStrip } from "@/components/admin/ui/AlertsStrip";
 import { CardStat } from "@/components/admin/ui/CardStat";
 import { ActivityList } from "@/components/admin/ui/ActivityList";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { getDashboardData, getDashboardErrorState } from "@/lib/admin/services/dashboard-data";
+import { isAuthError, isPermissionError, getPermissionErrorMessage } from "@/lib/admin/utils/error-handler";
 
-// This component should never render - getServerSideProps redirects to /admin/estimates
-export default function AdminOverview() {
-  const alerts = [
-    { title: "3 invites expiring in 48 hours", description: "Consider resending." },
-    { title: "API health degraded", description: "2 errors in the last hour." },
-  ];
-  const stats = [
-    { title: "Estimates pending", value: 12, hint: "5 awaiting photos" },
-    { title: "Installs this week", value: 7, hint: "2 unassigned" },
-    { title: "Payments due", value: "$1,240", hint: "4 invoices outstanding" },
-    { title: "Products", value: "5/12/3", hint: "base/addons/packages" },
-  ];
-  const activity = [
-    { title: "Invite resent", description: "to john@example.com", when: "2m ago" },
-    { title: "Package updated", description: "Residential Wireless Starter", when: "1h ago" },
-    { title: "New addon", description: "Outdoor MotionCam added", when: "3h ago" },
-  ];
-
+export default function AdminOverview({ stats, alerts, activity, error }) {
   return (
     <>
       <Head>
         <title>Superadmin • Overview</title>
       </Head>
       <AdminLayout title="Overview">
-        <AlertsStrip items={alerts} />
+        {error && (
+          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+            <p className="font-semibold">Error loading dashboard data</p>
+            <p className="mt-1">{error}</p>
+          </div>
+        )}
+        {alerts && alerts.length > 0 && <AlertsStrip items={alerts} />}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((s) => (
+          {stats?.map((s) => (
             <CardStat key={s.title} title={s.title} value={s.value} hint={s.hint} />
           ))}
         </section>
@@ -45,7 +36,14 @@ export default function AdminOverview() {
               <ActionLink label="Sync GHL" href="/admin/integrations" />
             </div>
           </div>
-          <ActivityList items={activity} />
+          {activity && activity.length > 0 ? (
+            <ActivityList items={activity} />
+          ) : (
+            <div className="rounded-xl border border-border/60 bg-card p-4 shadow-sm">
+              <p className="text-sm font-semibold text-foreground">Recent activity</p>
+              <p className="mt-2 text-sm text-muted-foreground">No recent activity</p>
+            </div>
+          )}
         </section>
       </AdminLayout>
     </>
@@ -61,7 +59,6 @@ function ActionLink({ label, href }) {
 }
 
 export async function getServerSideProps({ req }) {
-  // Check authentication first
   if (!isAuthenticated(req)) {
     return {
       redirect: {
@@ -71,5 +68,35 @@ export async function getServerSideProps({ req }) {
     };
   }
 
-  return { props: {} };
+  try {
+    const dashboardData = await getDashboardData(req);
+    return {
+      props: dashboardData,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Unknown error";
+
+    // Handle authentication errors - redirect to login
+    if (isAuthError(message)) {
+      return {
+        redirect: {
+          destination: getLoginRedirect("/admin"),
+          permanent: false,
+        },
+      };
+    }
+
+    // Handle permission errors (403) - show user-friendly message
+    if (isPermissionError(message)) {
+      return {
+        props: getDashboardErrorState(
+          getPermissionErrorMessage("the admin dashboard", "ca_view_estimates capability")
+        ),
+      };
+    }
+
+    return {
+      props: getDashboardErrorState(message),
+    };
+  }
 }

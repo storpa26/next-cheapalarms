@@ -1,15 +1,22 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { WP_API_BASE } from "@/lib/wp";
 
-export function PhotoUpload({ estimateId, locationId, onUploadComplete, onError }) {
+export const PhotoUpload = forwardRef(function PhotoUpload({ estimateId, locationId, onUploadComplete, onError }, ref) {
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef(null);
   const [uploadToken, setUploadToken] = useState(null);
   const [uploadedPhotos, setUploadedPhotos] = useState([]);
+
+  // Expose file input click method via ref
+  useImperativeHandle(ref, () => ({
+    click: () => {
+      fileInputRef.current?.click();
+    },
+  }));
 
   // Start upload session to get token
   const startUploadSession = useCallback(async () => {
@@ -264,5 +271,5 @@ export function PhotoUpload({ estimateId, locationId, onUploadComplete, onError 
       )}
     </div>
   );
-}
+});
 
