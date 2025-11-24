@@ -23,6 +23,7 @@ import { useState } from "react";
 import { getEstimates } from "@/lib/wp";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/components/ui/use-toast";
+import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
 export default function DashboardPage({ estimates, error }) {
   const [resending, setResending] = useState({});
@@ -168,6 +169,16 @@ export default function DashboardPage({ estimates, error }) {
 }
 
 export async function getServerSideProps({ req }) {
+  // Check authentication first
+  if (!isAuthenticated(req)) {
+    return {
+      redirect: {
+        destination: getLoginRedirect("/dashboard"),
+        permanent: false,
+      },
+    };
+  }
+
   if (req?.url?.includes("__mock=1")) {
     return {
       props: {
@@ -191,7 +202,7 @@ export async function getServerSideProps({ req }) {
     if (/401/.test(message) || /unauthor/i.test(message)) {
       return {
         redirect: {
-          destination: `/login?from=${encodeURIComponent("/dashboard")}`,
+          destination: getLoginRedirect("/dashboard"),
           permanent: false,
         },
       };

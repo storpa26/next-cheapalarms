@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { PhotoUpload } from "@/components/ui/photo-upload";
 import { getPortalStatus, getPortalDashboard } from "@/lib/wp";
+import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import Link from "next/link";
 
 const SECTION_CONFIG = [
@@ -155,6 +156,10 @@ export default function PortalPage({ initialStatus, initialError, initialSection
       });
   }, [router, status, initialEstimateId, initialLocationId]);
 
+  // Note: We don't check authentication here on client-side because the cookie is httpOnly
+  // and can't be read by JavaScript. Instead, we let API calls handle authentication.
+  // If API returns 401, we'll redirect to login in the catch block below.
+
   // Fetch dashboard if no estimateId (only on client-side if not provided via SSR)
   useEffect(() => {
     if (!router.isReady) return;
@@ -184,19 +189,23 @@ export default function PortalPage({ initialStatus, initialError, initialSection
         .catch((err) => {
           // Show the full error message including status codes
           const errorMessage = err.message || "Failed to load estimates";
-          setError(errorMessage);
           console.error("Dashboard fetch error:", err);
           
-          // If 401, provide helpful message
+          // If 401, redirect to login
           if (errorMessage.includes('401') || errorMessage.includes('Unauthorized')) {
-            setError("Please log in to view your estimates.");
+            const from = router.asPath;
+            router.push(getLoginRedirect(from));
+            return;
           }
+          
+          // For other errors, show the error message
+          setError(errorMessage);
         })
         .finally(() => {
           startTransition(() => setLoading(false));
         });
     }
-  }, [router.isReady, router.query.estimateId, estimates.length, loading]);
+  }, [router.isReady, router.query.estimateId, estimates.length, loading, router]);
 
   const view = useMemo(() => normaliseStatus(status), [status]);
   const inviteToken = useMemo(() => {
@@ -485,8 +494,14 @@ export default function PortalPage({ initialStatus, initialError, initialSection
 PortalPage.getInitialProps = async ({ query, req }) => {
   const estimateId = Array.isArray(query.estimateId) ? query.estimateId[0] : query.estimateId;
   const locationId = Array.isArray(query.locationId) ? query.locationId[0] : query.locationId;
+  const inviteToken = Array.isArray(query.inviteToken) ? query.inviteToken[0] : query.inviteToken;
   const initialSection =
     typeof query.section === "string" && query.section !== "" ? query.section : "overview";
+
+  // Check authentication: if no invite token and not authenticated, redirect to login
+  // Note: getInitialProps doesn't support redirects directly, so we'll handle this client-side
+  // But we can check here and pass a flag
+  const needsAuth = !inviteToken && req && !isAuthenticated(req);
 
   // If no estimateId, fetch dashboard
   if (!estimateId) {

@@ -8,6 +8,11 @@ export function SignOutButton({ className = "" }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
 
+  // Show button on protected pages (dashboard, portal) or if explicitly requested
+  // Since these pages require auth, if user is here, they're authenticated
+  const isProtectedPage = router.pathname?.startsWith("/dashboard") || 
+                         router.pathname?.startsWith("/portal");
+
   const handleLogout = async () => {
     try {
       setLoading(true);
@@ -22,13 +27,21 @@ export function SignOutButton({ className = "" }) {
         throw new Error("Logout failed");
       }
 
+      // Always redirect to login after logout
       router.push("/login");
     } catch (error) {
       console.error(error);
+      // Even if logout fails, redirect to login
+      router.push("/login");
     } finally {
       setLoading(false);
     }
   };
+
+  // Show button on protected pages, or always show if className includes "always-show"
+  if (!isProtectedPage && !className.includes("always-show")) {
+    return null;
+  }
 
   return (
     <Button

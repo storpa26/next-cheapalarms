@@ -35,7 +35,9 @@ export default function LoginPage() {
         throw new Error(result.err ?? "Login failed");
       }
 
-      router.push("/dashboard");
+      // Redirect to return URL or default to dashboard
+      const returnUrl = router.query.from || "/dashboard";
+      router.push(returnUrl);
     } catch (err) {
       setError(err.message);
       setLoading(false);
