@@ -36,10 +36,10 @@ export async function getWordPressUsers(req = null) {
  * Fetches GHL contacts
  * @param {Request} req - Next.js request object (for server-side)
  * @param {number} limit - Number of contacts to fetch
- * @param {number} offset - Offset for pagination
  * @returns {Promise<Array>} Array of GHL contacts
+ * @note GHL API doesn't support offset parameter for /contacts/ endpoint
  */
-export async function getGHLContacts(req = null, limit = 50, offset = 0) {
+export async function getGHLContacts(req = null, limit = 50) {
   const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE || "http://localhost:10013/wp-json";
   const headers = {
     "Content-Type": "application/json",
@@ -53,7 +53,7 @@ export async function getGHLContacts(req = null, limit = 50, offset = 0) {
 
   const params = new URLSearchParams();
   if (limit) params.set("limit", limit.toString());
-  if (offset) params.set("offset", offset.toString());
+  // Note: GHL API doesn't support 'offset' parameter for /contacts/ endpoint
   const queryString = params.toString() ? `?${params.toString()}` : "";
 
   const response = await fetch(`${wpBase}/ca/v1/ghl/contacts/list${queryString}`, {
@@ -64,21 +64,11 @@ export async function getGHLContacts(req = null, limit = 50, offset = 0) {
   const data = await response.json();
 
   if (!data.ok) {
-    console.error("GHL contacts API error:", data);
     throw new Error(data.error || "Failed to fetch GHL contacts");
-  }
-
-  // Debug logging
-  if (process.env.NODE_ENV === 'development') {
-    console.log("GHL contacts response:", data);
   }
 
   // Handle different response structures
   const contacts = data.contacts ?? data.contact ?? (Array.isArray(data) ? data : []);
-  
-  if (process.env.NODE_ENV === 'development' && contacts.length === 0 && data._debug) {
-    console.warn("GHL contacts debug info:", data._debug);
-  }
 
   return contacts;
 }

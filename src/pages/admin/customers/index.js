@@ -296,20 +296,12 @@ export async function getServerSideProps({ req }) {
   try {
     const [wpUsers, ghlContacts] = await Promise.all([
       getWordPressUsers(req).catch((err) => {
-        console.error("Failed to fetch WP users:", err);
         return [];
       }),
       getGHLContacts(req).catch((err) => {
-        console.error("Failed to fetch GHL contacts:", err);
-        console.error("Error details:", err.message, err);
         return [];
       }),
     ]);
-    
-    // Debug logging
-    if (process.env.NODE_ENV === 'development') {
-      console.log('GHL Contacts fetched:', ghlContacts.length, ghlContacts);
-    }
 
     return {
       props: {
