@@ -17,6 +17,7 @@ export function Sidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`block rounded-md px-3 py-2 text-sm font-medium transition ${
                 active ? "bg-background text-foreground shadow" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
               }`}

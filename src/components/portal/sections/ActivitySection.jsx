@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/components/portal/utils/portal-utils";
 
-export function ActivitySection({ entries }) {
+export const ActivitySection = memo(function ActivitySection({ entries }) {
   return (
     <Card>
       <CardHeader>
@@ -28,5 +29,5 @@ export function ActivitySection({ entries }) {
       </CardContent>
     </Card>
   );
-}
+});
 

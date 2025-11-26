@@ -3,14 +3,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { badgeVariant } from "@/components/portal/utils/portal-utils";
 import { Detail } from "@/components/portal/utils/Detail";
 import { formatDate } from "@/components/portal/utils/portal-utils";
+import { memo } from "react";
 
-export function EstimateSection({ view }) {
+export const EstimateSection = memo(function EstimateSection({ view }) {
   return (
     <div className="space-y-6">
       <EstimateCard view={view} />
     </div>
   );
-}
+});
 
 function EstimateCard({ view }) {
   return (

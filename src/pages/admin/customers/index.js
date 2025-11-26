@@ -3,20 +3,35 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import { getWordPressUsers, getGHLContacts, matchContactsToUsers, getStatusBadge } from "@/lib/admin/services/customers-data";
 import { toast } from "@/components/ui/use-toast";
 import { isAuthError, isPermissionError } from "@/lib/admin/utils/error-handler";
+import { useWordPressUsers, useGHLContacts } from "@/lib/react-query/hooks";
+import { useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function AdminCustomers({ initialWpUsers, initialGhlContacts, error, debugInfo }) {
   const [activeTab, setActiveTab] = useState("ghl"); // 'wp' | 'ghl'
   const [q, setQ] = useState("");
-  const [wpUsers, setWpUsers] = useState(initialWpUsers || []);
-  const [ghlContacts, setGhlContacts] = useState(initialGhlContacts || []);
-  const [loading, setLoading] = useState(false);
   const [inviting, setInviting] = useState({});
-  const [fetchError, setFetchError] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+
+  // Use React Query hooks for data fetching (with caching)
+  const { data: wpUsers = [], isLoading: loadingUsers, refetch: refetchUsers } = useWordPressUsers({
+    enabled: true,
+    initialData: initialWpUsers,
+  });
+
+  const { data: ghlContacts = [], isLoading: loadingContacts, refetch: refetchContacts } = useGHLContacts({
+    limit: 50,
+    enabled: true,
+    initialData: initialGhlContacts,
+  });
+
+  const loading = loadingUsers || loadingContacts || refreshing;
 
   // Match contacts to users
   const matchedContacts = matchContactsToUsers(ghlContacts, wpUsers);
@@ -45,11 +60,9 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
   });
 
   async function handleRefresh() {
-    setLoading(true);
+    setRefreshing(true);
     try {
-      const [users, contacts] = await Promise.all([getWordPressUsers(), getGHLContacts()]);
-      setWpUsers(users);
-      setGhlContacts(contacts);
+      await Promise.all([refetchUsers(), refetchContacts()]);
       toast({
         title: "Refreshed",
         description: "Customer data has been refreshed.",
@@ -61,7 +74,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      setRefreshing(false);
     }
   }
 
@@ -85,7 +98,9 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
         description: "Portal invite has been sent to the contact.",
       });
 
-      // Refresh data
+      // Invalidate and refetch customer data
+      queryClient.invalidateQueries({ queryKey: ['wp-users'] });
+      queryClient.invalidateQueries({ queryKey: ['ghl-contacts'] });
       await handleRefresh();
     } catch (err) {
       toast({
@@ -115,14 +130,6 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
             </CardHeader>
           </Card>
         )}
-        {fetchError && (
-          <Card className="mb-4 border border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200">
-            <CardHeader>
-              <CardTitle>Warning</CardTitle>
-              <CardDescription>{fetchError}</CardDescription>
-            </CardHeader>
-          </Card>
-        )}
 
         <Card>
           <CardHeader className="flex items-center justify-between gap-3">
@@ -138,7 +145,14 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                 onChange={(e) => setQ(e.target.value)}
               />
               <Button variant="outline" size="sm" onClick={handleRefresh} disabled={loading}>
-                {loading ? "Refreshing…" : "Refresh"}
+                {refreshing ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Refreshing…
+                  </span>
+                ) : (
+                  "Refresh"
+                )}
               </Button>
             </div>
           </CardHeader>
@@ -204,7 +218,14 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                                 onClick={() => handleInviteGhlContact(contact.id)}
                                 disabled={inviting[contact.id]}
                               >
-                                {inviting[contact.id] ? "Sending…" : "Send Portal Invite"}
+                                {inviting[contact.id] ? (
+                                  <span className="flex items-center gap-2">
+                                    <Spinner size="sm" />
+                                    Sending…
+                                  </span>
+                                ) : (
+                                  "Send Portal Invite"
+                                )}
                               </Button>
                             ) : contact.matchedUser?.hasPortal ? (
                               <Button variant="ghost" size="sm" disabled>

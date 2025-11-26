@@ -1,9 +1,10 @@
 /* eslint-disable @next/next/no-img-element */
-import { useState, useEffect, useCallback, useRef } from "react";
+import { memo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { PhotoUpload } from "@/components/ui/photo-upload";
 import { ProductPhotoUpload } from "./ProductPhotoUpload";
+import { useEstimatePhotos } from "@/lib/react-query/hooks";
+import { Spinner } from "@/components/ui/spinner";
 
 function EmptyPhotoState({ onSelectFiles, onSkip }) {
   return (
@@ -34,8 +35,26 @@ function EmptyPhotoState({ onSelectFiles, onSkip }) {
   );
 }
 
-export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locationId }) {
-  const [uploaded, setUploaded] = useState(photos.items ?? []);
+export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locationId }) {
+  // Use React Query hook for photos (with caching and automatic refetching)
+  const { data: photosData, isLoading: loadingPhotos } = useEstimatePhotos({
+    estimateId: estimateId || undefined,
+    enabled: !!estimateId,
+  });
+
+  // Transform stored uploads to match the expected format
+  const uploaded = photosData?.ok && photosData?.stored?.uploads && Array.isArray(photosData.stored.uploads)
+    ? photosData.stored.uploads.map((upload) => ({
+        url: upload.url || upload.urls?.[0] || "",
+        label: upload.label || upload.filename || "Uploaded photo",
+        notes: upload.notes || "",
+        attachmentId: upload.attachmentId,
+        itemName: upload.itemName,
+        slotIndex: upload.slotIndex,
+        photoIndex: upload.photoIndex,
+      }))
+    : photos.items ?? [];
+
   const samples = photos.samples ?? [];
   const missing = photos.missingCount ?? 0;
   const required = photos.required ?? 6;
@@ -44,42 +63,7 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
   const [emailError, setEmailError] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
   const [uploadError, setUploadError] = useState("");
-  const [loadingPhotos, setLoadingPhotos] = useState(false);
   const [photosSkipped, setPhotosSkipped] = useState(false);
-  const photoUploadRef = useRef(null);
-
-  // Fetch uploaded photos
-  const fetchUploadedPhotos = useCallback(async () => {
-    if (!estimateId) return;
-    setLoadingPhotos(true);
-    try {
-      const res = await fetch(`/api/estimate/photos?estimateId=${encodeURIComponent(estimateId)}`);
-      const data = await res.json();
-      if (data.ok && data.stored && data.stored.uploads && Array.isArray(data.stored.uploads)) {
-        // Transform stored uploads to match the expected format
-        const fetchedPhotos = data.stored.uploads.map((upload) => ({
-          url: upload.url || upload.urls?.[0] || "",
-          label: upload.label || upload.filename || "Uploaded photo",
-          notes: upload.notes || "",
-          attachmentId: upload.attachmentId,
-        }));
-        setUploaded(fetchedPhotos);
-      } else if (data.ok && data.stored && (!data.stored.uploads || data.stored.uploads.length === 0)) {
-        // No stored uploads - keep existing uploaded state or set to empty
-        setUploaded([]);
-      }
-    } catch (err) {
-      console.error("Failed to fetch photos:", err);
-      // Don't clear uploaded on error - keep existing state
-    } finally {
-      setLoadingPhotos(false);
-    }
-  }, [estimateId]);
-
-  // Fetch photos on mount and when estimateId changes
-  useEffect(() => {
-    fetchUploadedPhotos();
-  }, [fetchUploadedPhotos]);
 
   // Update tabs when uploaded count changes
   const tabs = [
@@ -124,54 +108,14 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
     }
   };
 
-  // Handle photo upload completion
+  // Handle photo upload completion (React Query mutation handles storage and cache invalidation)
   const handleUploadComplete = useCallback(
-    async (newUploadedPhotos) => {
-      if (!estimateId || !locationId) {
-        setUploadError("Missing estimate ID or location ID");
-        return;
-      }
-
-      try {
-        // Store photos linked to estimate
-        const uploads = newUploadedPhotos.map((photo) => ({
-          url: photo.url,
-          attachmentId: photo.attachmentId,
-          filename: photo.filename,
-          label: photo.filename,
-        }));
-
-        const res = await fetch("/api/estimate/photos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            estimateId,
-            locationId,
-            uploads,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok || !data.ok) {
-          throw new Error(data.err || data.error || "Failed to store photos");
-        }
-
-        // Update local state immediately for better UX
-        setUploaded((prev) => [...prev, ...newUploadedPhotos.map((photo) => ({
-          url: photo.url,
-          label: photo.filename || "Uploaded photo",
-          notes: "",
-          attachmentId: photo.attachmentId,
-        }))]);
-        
-        // Refresh uploaded photos list to ensure consistency
-        await fetchUploadedPhotos();
-        setUploadError("");
-      } catch (err) {
-        setUploadError(err.message || "Failed to save photos");
-      }
+    () => {
+      // React Query mutation automatically invalidates and refetches photos
+      // No need to manually update state or fetch
+      setUploadError("");
     },
-    [estimateId, locationId, fetchUploadedPhotos]
+    []
   );
 
   const handleUploadError = useCallback((error) => {
@@ -224,7 +168,14 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
                 disabled={sendingEmail}
               />
               <Button type="submit" disabled={sendingEmail || !email} variant="secondary" className="sm:w-auto">
-                {sendingEmail ? "Sending..." : "Send Login Link"}
+                {sendingEmail ? (
+                  <span className="flex items-center gap-2">
+                    <Spinner size="sm" />
+                    Sending...
+                  </span>
+                ) : (
+                  "Send Login Link"
+                )}
               </Button>
             </form>
           )}
@@ -288,7 +239,10 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
               />
             ) : (
               <div className="rounded-lg border-2 border-dashed border-border bg-muted/40 p-6 text-center">
-                <p className="font-medium text-foreground">Loading...</p>
+                <div className="flex items-center gap-2">
+                  <Spinner size="sm" />
+                  <p className="font-medium text-foreground">Loading...</p>
+                </div>
               </div>
             )}
             <div className="rounded-lg border border-border bg-background p-6">
@@ -329,5 +283,5 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
       </CardContent>
     </Card>
   );
-}
+});
 

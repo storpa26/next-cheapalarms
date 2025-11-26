@@ -1,8 +1,9 @@
+import { memo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatCurrency } from "@/components/portal/utils/portal-utils";
 
-export function PaymentSection({ payments }) {
+export const PaymentSection = memo(function PaymentSection({ payments }) {
   const outstanding = payments.outstanding ?? 0;
   return (
     <Card>
@@ -46,5 +47,5 @@ export function PaymentSection({ payments }) {
       </CardContent>
     </Card>
   );
-}
+});
 

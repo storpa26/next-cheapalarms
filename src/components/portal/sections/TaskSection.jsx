@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function TaskSection({ tasks, taskState, setTaskState }) {
+export const TaskSection = memo(function TaskSection({ tasks, taskState, setTaskState }) {
   const toggleTask = (id) => {
     setTaskState((prev) => ({ ...prev, [id]: !prev[id] }));
   };
@@ -45,5 +46,5 @@ export function TaskSection({ tasks, taskState, setTaskState }) {
       </CardContent>
     </Card>
   );
-}
+});
 

@@ -43,7 +43,7 @@ export function normaliseStatus(status) {
           (photos.required ?? 0) - (Array.isArray(photos.items) ? photos.items.length : 0)
         ),
       required: photos.required ?? 6,
-      samples: photos.samples ?? mockSamplePhotos(),
+      samples: photos.samples ?? [],
     },
     payments: status.payments ?? null,
     documents: status.documents ?? null,

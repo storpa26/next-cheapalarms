@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { startTransition, useEffect, useMemo, useState, useCallback, useRef } from "react";
+import { startTransition, useEffect, useMemo, useState, useCallback, useRef, memo } from "react";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { SignOutButton } from "@/components/ui/sign-out-button";
 import { Badge } from "@/components/ui/badge";
@@ -14,8 +14,11 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PhotoUpload } from "@/components/ui/photo-upload";
-import { getPortalStatus, getPortalDashboard } from "@/lib/wp";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { getPortalStatus, getPortalDashboard } from "@/lib/wp";
+import { usePortalStatus, usePortalDashboard } from "@/lib/react-query/hooks";
+import { Spinner } from "@/components/ui/spinner";
+import { SkeletonCard, SkeletonList } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { formatDate, formatCurrency, badgeVariant, cookieHeader } from "@/components/portal/utils/portal-utils";
 import { normaliseStatus } from "@/components/portal/utils/status-normalizer";
@@ -39,6 +42,17 @@ import { TaskSection } from "@/components/portal/sections/TaskSection";
 import { SupportSection } from "@/components/portal/sections/SupportSection";
 import { ActivitySection } from "@/components/portal/sections/ActivitySection";
 import { FAQSection, PortalAccountCard, AccountPreferences } from "@/components/portal/sections/AccountSection";
+
+// Memoize section components to prevent unnecessary re-renders (components are already memoized, this is for extra safety)
+const MemoizedOverviewSection = memo(OverviewSection);
+const MemoizedEstimateSection = memo(EstimateSection);
+const MemoizedInstallationSection = memo(InstallationSection);
+const MemoizedTaskSection = memo(TaskSection);
+const MemoizedPaymentSection = memo(PaymentSection);
+const MemoizedDocumentSection = memo(DocumentSection);
+const MemoizedPhotoSection = memo(PhotoSection);
+const MemoizedSupportSection = memo(SupportSection);
+const MemoizedActivitySection = memo(ActivitySection);
 
 const SECTION_CONFIG = [
   {
@@ -105,16 +119,9 @@ const SECTION_CONFIG = [
 
 export default function PortalPage({ initialStatus, initialError, initialSection, initialEstimateId, initialLocationId, initialEstimates }) {
   const router = useRouter();
-  const [status, setStatus] = useState(initialStatus);
-  const [error, setError] = useState(initialError);
-  const [loading, setLoading] = useState(false);
   const [activeSection, setActiveSection] = useState(initialSection ?? "overview");
   const [photoTab, setPhotoTab] = useState("uploaded");
   const [taskState, setTaskState] = useState({});
-  const [estimates, setEstimates] = useState(initialEstimates || []);
-  const [authChecking, setAuthChecking] = useState(true);
-  const hasTriedFetch = useRef(false);
-  const lastFetchedEstimateId = useRef(null);
 
   // Safely extract estimateId and locationId from router.query or use initial props
   const estimateId = useMemo(() => {
@@ -134,138 +141,75 @@ export default function PortalPage({ initialStatus, initialError, initialSection
   }, [router.isReady, router.query.locationId, initialLocationId]);
 
   const sections = SECTION_CONFIG;
-  const currentSectionId =
-    router.isReady && typeof router.query.section === "string" && router.query.section !== ""
-      ? router.query.section
-      : activeSection;
-  const currentSection =
-    sections.find((section) => section.id === currentSectionId) ?? sections[0];
+  // Use local state for section navigation (no router query updates to prevent re-renders)
+  const currentSectionId = activeSection;
+  // Memoize currentSection lookup to prevent array.find() on every render
+  const currentSection = useMemo(
+    () => sections.find((section) => section.id === currentSectionId) ?? sections[0],
+    [currentSectionId]
+  );
 
+  // Extract query params
+  const routerInviteToken = useMemo(() => {
+    if (!router.isReady) return null;
+    const val = router.query.inviteToken;
+    return Array.isArray(val) ? val[0] : val;
+  }, [router.isReady, router.query.inviteToken]);
+
+  // Normalize undefined values to null for stable query keys (prevents unnecessary query key changes)
+  const normalizedEstimateId = estimateId || null;
+  const normalizedLocationId = locationId || null;
+  const normalizedInviteToken = routerInviteToken || null;
+
+  // Use React Query for portal status (with SSR placeholderData to prevent refetches)
+  const {
+    data: statusData,
+    error: statusError,
+    isLoading: statusLoading,
+  } = usePortalStatus({
+    estimateId: normalizedEstimateId,
+    locationId: normalizedLocationId,
+    inviteToken: normalizedInviteToken,
+    enabled: !!estimateId && router.isReady,
+    initialData: initialStatus, // Will be converted to placeholderData in the hook
+  });
+
+  // Use React Query for dashboard (only when no estimateId)
+  const {
+    data: dashboardData,
+    error: dashboardError,
+    isLoading: dashboardLoading,
+  } = usePortalDashboard({
+    enabled: !estimateId && router.isReady && !routerInviteToken && initialEstimates === undefined,
+    initialData: initialEstimates ? { ok: true, estimates: initialEstimates } : undefined, // Use SSR data
+  });
+
+  // Determine which data/error/loading to use
+  const status = statusData || null;
+  const error = statusError?.message || dashboardError?.message || initialError || null;
+  const loading = statusLoading || dashboardLoading;
+  const estimates = dashboardData?.estimates || initialEstimates || [];
+
+  // Handle auth errors - redirect to login
   useEffect(() => {
     if (!router.isReady) return;
-    const routerEstimateId = Array.isArray(router.query.estimateId) 
-      ? router.query.estimateId[0] 
-      : router.query.estimateId;
-    const routerLocationId = Array.isArray(router.query.locationId)
-      ? router.query.locationId[0]
-      : router.query.locationId;
-    const routerInviteToken = Array.isArray(router.query.inviteToken)
-      ? router.query.inviteToken[0]
-      : router.query.inviteToken;
     
-    // Use router query estimateId or fall back to initialEstimateId
-    const effectiveEstimateId = routerEstimateId || initialEstimateId;
-    
-    // Skip if we already fetched this exact estimateId (prevents infinite loops)
-    if (!effectiveEstimateId || lastFetchedEstimateId.current === effectiveEstimateId) return;
-    
-    // Mark that we're fetching this estimateId
-    lastFetchedEstimateId.current = effectiveEstimateId;
-    
-    // Clear previous status when estimateId changes
-    setStatus(null);
-    setError(null);
-
-    startTransition(() => setLoading(true));
-    getPortalStatus(
-      {
-        estimateId: effectiveEstimateId,
-        locationId: routerLocationId || initialLocationId,
-        inviteToken: routerInviteToken,
-      },
-      {
-        credentials: "include",
+    const errorMessage = error;
+    if (
+      errorMessage &&
+      (errorMessage.includes('401') || 
+       errorMessage.includes('Unauthorized') ||
+       errorMessage.includes('Failed to fetch') ||
+       errorMessage.includes('Unable to connect') ||
+       errorMessage.includes('not configured'))
+    ) {
+      // Only redirect if we don't have an invite token
+      if (!routerInviteToken) {
+        const from = router.asPath;
+        router.push(getLoginRedirect(from));
       }
-    )
-      .then((result) => {
-        setStatus(result);
-        setError(null);
-      })
-      .catch((err) => {
-        setError(err.message);
-        // Reset ref on error so we can retry
-        if (lastFetchedEstimateId.current === effectiveEstimateId) {
-          lastFetchedEstimateId.current = null;
-        }
-      })
-      .finally(() => {
-        startTransition(() => setLoading(false));
-      });
-  }, [router.isReady, router.query.estimateId, router.query.locationId, router.query.inviteToken, initialEstimateId, initialLocationId]);
-
-  // Check authentication on mount - prevent flash of content for unauthenticated users
-  useEffect(() => {
-    if (!router.isReady) return;
-    
-    const routerInviteToken = Array.isArray(router.query.inviteToken) 
-      ? router.query.inviteToken[0] 
-      : router.query.inviteToken;
-    const routerEstimateId = Array.isArray(router.query.estimateId) 
-      ? router.query.estimateId[0] 
-      : router.query.estimateId;
-    
-    // If there's an invite token, allow rendering immediately
-    if (routerInviteToken) {
-      setAuthChecking(false);
-      return;
     }
-    
-    // If we have initialEstimates from SSR, user is authenticated
-    if (initialEstimates !== undefined) {
-      setAuthChecking(false);
-      return;
-    }
-    
-    // If we have initialStatus, user is authenticated (has estimateId)
-    if (initialStatus || routerEstimateId) {
-      setAuthChecking(false);
-      return;
-    }
-    
-    // No invite token and no initial data - need to check auth by fetching dashboard
-    // This will either succeed (auth OK) or fail with 401 (redirect to login)
-    if (!hasTriedFetch.current) {
-      hasTriedFetch.current = true;
-      startTransition(() => setLoading(true));
-      getPortalDashboard({
-        credentials: "include",
-      })
-        .then((result) => {
-          setAuthChecking(false);
-          if (result.ok && Array.isArray(result.estimates)) {
-            setEstimates(result.estimates);
-            setError(null);
-          } else {
-            const errorMsg = result.err || result.error || "Failed to load estimates";
-            setError(errorMsg);
-          }
-        })
-        .catch((err) => {
-          const errorMessage = err.message || "Failed to load estimates";
-          
-          // Handle auth errors and network errors - redirect to login
-          if (
-            errorMessage.includes('401') || 
-            errorMessage.includes('Unauthorized') ||
-            errorMessage.includes('Failed to fetch') ||
-            errorMessage.includes('Unable to connect') ||
-            errorMessage.includes('not configured')
-          ) {
-            const from = router.asPath;
-            router.push(getLoginRedirect(from));
-            return;
-          }
-          
-          // Only log and show other errors
-          console.error("Dashboard fetch error:", err);
-          setError(errorMessage);
-          setAuthChecking(false);
-        })
-        .finally(() => {
-          startTransition(() => setLoading(false));
-        });
-    }
-  }, [router.isReady, router.query.inviteToken, router.query.estimateId, initialEstimates, initialStatus, router]);
+  }, [error, router, routerInviteToken]);
 
   const view = useMemo(() => normaliseStatus(status), [status]);
   const inviteToken = useMemo(() => {
@@ -280,12 +224,13 @@ export default function PortalPage({ initialStatus, initialError, initialSection
       ? "You need a valid invite link or must log in with a WordPress account that has portal access."
       : null;
 
-  const paymentsData = view?.payments ?? mockPaymentHistory();
-  const documentsData = view?.documents ?? mockDocumentList();
-  const tasksData = view?.tasks ?? mockTaskList();
-  const supportData = view?.support ?? mockSupportInfo();
-  const timelineData = view?.timeline ?? mockTimelineSteps();
-  const activityData = view?.activity ?? mockActivityLog();
+  // Memoize mock data to prevent expensive function calls on every render
+  const paymentsData = useMemo(() => view?.payments ?? mockPaymentHistory(), [view?.payments]);
+  const documentsData = useMemo(() => view?.documents ?? mockDocumentList(), [view?.documents]);
+  const tasksData = useMemo(() => view?.tasks ?? mockTaskList(), [view?.tasks]);
+  const supportData = useMemo(() => view?.support ?? mockSupportInfo(), [view?.support]);
+  const timelineData = useMemo(() => view?.timeline ?? mockTimelineSteps(), [view?.timeline]);
+  const activityData = useMemo(() => view?.activity ?? mockActivityLog(), [view?.activity]);
   const alerts = useMemo(() => buildAlerts(view, paymentsData), [view, paymentsData]);
 
   const handleToggleTask = (id) => {
@@ -294,35 +239,17 @@ export default function PortalPage({ initialStatus, initialError, initialSection
 
   const handleNavigate = (sectionId) => {
     if (sectionId === currentSectionId) return;
-    setActiveSection(sectionId);
-    if (!router.isReady) return;
-    const nextQuery = { ...router.query };
-    if (sectionId === "overview") {
-      delete nextQuery.section;
-    } else {
-      nextQuery.section = sectionId;
-    }
-    router.replace({ pathname: router.pathname, query: nextQuery }, undefined, { shallow: true });
+    // Use startTransition to make section switching non-blocking (prevents UI freeze)
+    startTransition(() => {
+      setActiveSection(sectionId);
+    });
   };
 
   // Check if we have an estimateId
   const hasEstimateId = estimateId || initialEstimateId;
 
-  // Show loading state while checking authentication to prevent flash of content
-  if (authChecking) {
-    return (
-      <>
-        <Head>
-          <title>Customer Portal • CheapAlarms</title>
-        </Head>
-        <main className="flex min-h-screen items-center justify-center bg-background text-foreground">
-          <div className="text-center">
-            <p className="text-muted-foreground">Loading...</p>
-          </div>
-        </main>
-      </>
-    );
-  }
+  // Show loading state only if we're actually loading and have no initial data
+  const isInitialLoading = loading && !initialStatus && !initialEstimates && !routerInviteToken;
 
   return (
     <>
@@ -396,10 +323,15 @@ export default function PortalPage({ initialStatus, initialError, initialSection
               </div>
 
               {loading ? (
-                <Card className="mb-6 border-dashed border-border bg-muted/30 text-muted-foreground">
+                <Card className="mb-6 border-dashed border-border bg-muted/30">
                   <CardHeader>
-                    <CardTitle>Refreshing</CardTitle>
-                    <CardDescription>Loading the latest portal status…</CardDescription>
+                    <div className="flex items-center gap-3">
+                      <Spinner size="md" />
+                      <div>
+                        <CardTitle>Refreshing</CardTitle>
+                        <CardDescription>Loading the latest portal status…</CardDescription>
+                      </div>
+                    </div>
                   </CardHeader>
                 </Card>
               ) : null}
@@ -509,7 +441,7 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                           {estimates.slice(0, 3).map((estimate) => (
                             <Link 
                               key={estimate.estimateId}
-                              href={`/portal/estimate/${estimate.estimateId}${estimate.locationId ? `?locationId=${estimate.locationId}` : ''}`}
+                              href={`/portal?estimateId=${estimate.estimateId}${estimate.locationId ? `&locationId=${estimate.locationId}` : ''}`}
                               className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                             >
                               <div>
@@ -605,11 +537,10 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                       <h1 className="text-3xl font-bold">{currentSection.label}</h1>
                       <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
                     </header>
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-muted-foreground">Loading estimate data...</p>
-                      </CardContent>
-                    </Card>
+                    <div className="space-y-6">
+                      <SkeletonCard />
+                      <SkeletonCard />
+                    </div>
                   </div>
                 ) : error ? (
                   <div className="space-y-8">
@@ -627,83 +558,63 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                     </Card>
                   </div>
                 ) : view ? (
-                <div className="space-y-8">
-                  <header className="space-y-3">
-                    <Badge variant="outline" className="uppercase tracking-[0.35em]">
-                      {currentSection.badge}
-                    </Badge>
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-                      <h1 className="text-3xl font-bold">
-                        {currentSectionId === "overview"
-                          ? "Your installation at a glance"
-                          : currentSection.label}
-                      </h1>
-                      {currentSectionId !== "overview" ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleNavigate("overview")}
-                          className="self-start sm:self-auto"
-                        >
-                          Back to overview
-                        </Button>
-                      ) : null}
-                    </div>
-                    <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
-                    {inviteToken ? (
-                      <p className="text-xs text-muted-foreground">
-                        Invite token provided: <code>{inviteToken}</code>
-                      </p>
-                    ) : null}
-                  </header>
+                  <div className="space-y-6">
+                    {/* Only render active section - prevents React Query hooks from running in hidden sections */}
+                    {currentSectionId === "overview" && (
+                      <MemoizedOverviewSection
+                        view={view}
+                        payments={paymentsData}
+                        documents={documentsData}
+                        tasks={tasksData}
+                        taskState={taskState}
+                        onToggleTask={handleToggleTask}
+                        support={supportData}
+                        alerts={alerts}
+                        onNavigate={handleNavigate}
+                        timeline={timelineData}
+                      />
+                    )}
 
-                  {currentSectionId === "overview" ? (
-                    <OverviewSection
-                      view={view}
-                      payments={paymentsData}
-                      documents={documentsData}
-                      tasks={tasksData}
-                      taskState={taskState}
-                      onToggleTask={handleToggleTask}
-                      support={supportData}
-                      alerts={alerts}
-                      onNavigate={handleNavigate}
-                      timeline={timelineData}
-                    />
-                  ) : null}
+                    {currentSectionId === "estimate" && (
+                      <MemoizedEstimateSection view={view} />
+                    )}
 
-                  {currentSectionId === "estimate" ? <EstimateSection view={view} /> : null}
+                    {currentSectionId === "installation" && (
+                      <MemoizedInstallationSection view={view} timeline={timelineData} />
+                    )}
 
-                  {currentSectionId === "installation" ? (
-                    <InstallationSection view={view} timeline={timelineData} />
-                  ) : null}
+                    {currentSectionId === "tasks" && (
+                      <MemoizedTaskSection tasks={tasksData} taskState={taskState} setTaskState={setTaskState} />
+                    )}
 
-                  {currentSectionId === "tasks" ? (
-                    <TaskSection tasks={tasksData} taskState={taskState} setTaskState={setTaskState} />
-                  ) : null}
+                    {currentSectionId === "payments" && (
+                      <MemoizedPaymentSection payments={paymentsData} />
+                    )}
 
-                  {currentSectionId === "payments" ? <PaymentSection payments={paymentsData} /> : null}
+                    {currentSectionId === "documents" && (
+                      <MemoizedDocumentSection documents={documentsData} />
+                    )}
 
-                  {currentSectionId === "documents" ? <DocumentSection documents={documentsData} /> : null}
+                    {currentSectionId === "photos" && (
+                      <MemoizedPhotoSection
+                        photos={view.photos}
+                        photoTab={photoTab}
+                        setPhotoTab={setPhotoTab}
+                        estimateId={estimateId}
+                        locationId={locationId}
+                      />
+                    )}
 
-                  {currentSectionId === "photos" ? (
-                    <PhotoSection
-                      photos={view.photos}
-                      photoTab={photoTab}
-                      setPhotoTab={setPhotoTab}
-                      estimateId={estimateId}
-                      locationId={locationId}
-                    />
-                  ) : null}
+                    {currentSectionId === "support" && (
+                      <div className="space-y-6">
+                        <MemoizedSupportSection support={supportData} />
+                        <FAQSection />
+                      </div>
+                    )}
 
-                  {currentSectionId === "support" ? (
-                    <div className="space-y-6">
-                      <SupportSection support={supportData} />
-                      <FAQSection />
-                    </div>
-                  ) : null}
-
-                  {currentSectionId === "activity" ? <ActivitySection entries={activityData} /> : null}
+                    {currentSectionId === "activity" && (
+                      <MemoizedActivitySection entries={activityData} />
+                    )}
 
                   {currentSectionId === "account" ? (
                     <div className="space-y-6">
@@ -721,11 +632,10 @@ export default function PortalPage({ initialStatus, initialError, initialSection
                       <h1 className="text-3xl font-bold">{currentSection.label}</h1>
                       <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
                     </header>
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-muted-foreground">Loading estimate data...</p>
-                      </CardContent>
-                    </Card>
+                    <div className="space-y-6">
+                      <SkeletonCard />
+                      <SkeletonCard />
+                    </div>
                   </div>
                 )
               ) : null}

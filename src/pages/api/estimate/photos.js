@@ -35,6 +35,12 @@ export default async function handler(req, res) {
         credentials: "include",
       });
       const body = await resp.json();
+      
+      // Set cache headers for GET requests
+      // Photos can change, so shorter cache time
+      res.setHeader("Cache-Control", "private, max-age=30, stale-while-revalidate=60");
+      res.setHeader("Vary", "Authorization, Cookie");
+      
       return res.status(resp.status).json(body);
     } else {
       // Store photos for an estimate

@@ -1,6 +1,10 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { Camera, Image } from "lucide-react";
 import { WP_API_BASE } from "@/lib/wp";
+import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/react-query/hooks";
+import { useQueryClient } from "@tanstack/react-query";
+import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const MAX_PHOTOS_PER_SLOT = 2;
 
@@ -27,6 +31,8 @@ function ProductSlot({
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const isMobile = isMobileDevice();
+  const queryClient = useQueryClient();
+  const storePhotosMutation = useStoreEstimatePhotos();
 
   const handleFileSelect = useCallback(
     async (file) => {
@@ -41,7 +47,12 @@ function ProductSlot({
         return;
       }
 
+      // Set uploading state immediately - React will batch this but it should still render
       setUploading(true);
+      
+      // Use requestAnimationFrame to ensure spinner renders before async work
+      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      
       try {
         // Start upload session
         const sessionRes = await fetch("/api/upload/start", {
@@ -74,6 +85,12 @@ function ProductSlot({
           throw new Error(uploadData.err || uploadData.error || "Upload failed");
         }
 
+        // Get existing photos from React Query cache (no need to fetch again)
+        const cachedPhotos = queryClient.getQueryData(['estimate-photos', estimateId]);
+        const existingUploads = (cachedPhotos?.ok && cachedPhotos?.stored?.uploads) 
+          ? cachedPhotos.stored.uploads 
+          : [];
+
         // Store photo with metadata
         const photoMetadata = {
           url: uploadData.url,
@@ -85,39 +102,25 @@ function ProductSlot({
           photoIndex: photos.length + 1,
         };
 
-        // Fetch existing photos to append
-        const existingRes = await fetch(`/api/estimate/photos?estimateId=${encodeURIComponent(estimateId)}`);
-        const existingData = await existingRes.json();
-        const existingUploads = (existingData.ok && existingData.stored?.uploads) ? existingData.stored.uploads : [];
         const allUploads = [...existingUploads, photoMetadata];
 
-        // Store all photos
-        const storeRes = await fetch("/api/estimate/photos", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            estimateId,
-            locationId,
-            uploads: allUploads.map((p) => ({
-              url: p.url,
-              attachmentId: p.attachmentId,
-              filename: p.filename || p.label,
-              label: p.label || p.filename,
-              itemName: p.itemName,
-              slotIndex: p.slotIndex,
-              photoIndex: p.photoIndex,
-            })),
-          }),
+        // Store all photos using React Query mutation (automatically invalidates cache)
+        await storePhotosMutation.mutateAsync({
+          estimateId,
+          locationId,
+          uploads: allUploads.map((p) => ({
+            url: p.url,
+            attachmentId: p.attachmentId,
+            filename: p.filename || p.label,
+            label: p.label || p.filename,
+            itemName: p.itemName,
+            slotIndex: p.slotIndex,
+            photoIndex: p.photoIndex,
+          })),
         });
 
-        const storeData = await storeRes.json();
-        if (!storeRes.ok || !storeData.ok) {
-          throw new Error(storeData.err || storeData.error || "Failed to store photo");
-        }
-
         onUploadComplete?.([photoMetadata]);
-        // Refresh page to show new photo
-        window.location.reload();
+        // No need to reload - React Query will automatically refetch and update UI
       } catch (error) {
         const errorMsg = error.message || "Failed to upload photo";
         alert(errorMsg);
@@ -129,7 +132,7 @@ function ProductSlot({
         if (cameraInputRef.current) cameraInputRef.current.value = "";
       }
     },
-    [productName, slotIndex, photos.length, estimateId, locationId, onUploadComplete, onError]
+    [productName, slotIndex, photos.length, estimateId, locationId, onUploadComplete, onError, queryClient, storePhotosMutation]
   );
 
   const handleFileInput = useCallback(
@@ -174,7 +177,7 @@ function ProductSlot({
                   title="Take Photo"
                 >
                   {uploading ? (
-                    <span className="text-xs">...</span>
+                    <Spinner size="sm" />
                   ) : (
                     <Camera className="h-5 w-5 text-muted-foreground" />
                   )}
@@ -187,7 +190,7 @@ function ProductSlot({
                   title="Upload Photo"
                 >
                   {uploading ? (
-                    <span className="text-xs">...</span>
+                    <Spinner size="sm" />
                   ) : (
                     <Image className="h-5 w-5 text-muted-foreground" />
                   )}
@@ -203,7 +206,7 @@ function ProductSlot({
                 title="Add Photo"
               >
                 {uploading ? (
-                  <span className="text-xs">...</span>
+                  <Spinner size="sm" />
                 ) : (
                   <Image className="h-5 w-5 text-muted-foreground" />
                 )}
@@ -268,77 +271,49 @@ function ProductRow({ productName, quantity, slots, estimateId, locationId, onUp
 }
 
 export function ProductPhotoUpload({ estimateId, locationId, onUploadComplete, onError }) {
-  const [estimateItems, setEstimateItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [storedPhotos, setStoredPhotos] = useState({}); // { "ProductName": { slotIndex: [photos] } }
+  // Use React Query hooks for data fetching (with caching and deduplication)
+  const { data: estimateData, isLoading: loading, error: estimateError } = useEstimate({
+    estimateId: estimateId || undefined,
+    locationId: locationId || undefined,
+    enabled: !!estimateId && !!locationId,
+  });
 
-  // Fetch estimate items
-  useEffect(() => {
-    if (!estimateId || !locationId) {
-      setLoading(false);
-      return;
+  const { data: photosData } = useEstimatePhotos({
+    estimateId: estimateId || undefined,
+    enabled: !!estimateId,
+  });
+
+  // Extract estimate items
+  const estimateItems = estimateData?.items || [];
+  const error = estimateError?.message || null;
+
+  // Group stored photos by product and slot
+  const storedPhotos = useMemo(() => {
+    if (!photosData?.ok || !photosData?.stored?.uploads || !Array.isArray(photosData.stored.uploads)) {
+      return {};
     }
 
-    const fetchEstimate = async () => {
-      try {
-        const res = await fetch(`/api/estimate?estimateId=${encodeURIComponent(estimateId)}&locationId=${encodeURIComponent(locationId)}`);
-        const data = await res.json();
-        if (!res.ok || !data.ok) {
-          throw new Error(data.err || data.error || "Failed to fetch estimate");
-        }
-
-        const items = data.items || [];
-        setEstimateItems(items);
-      } catch (err) {
-        setError(err.message || "Failed to load estimate items");
-        onError?.(err.message);
-      } finally {
-        setLoading(false);
+    const grouped = {};
+    photosData.stored.uploads.forEach((upload) => {
+      const itemName = upload.itemName || (upload.label ? upload.label.split(' #')[0] : "Unknown");
+      const slotIndex = upload.slotIndex || 1;
+      if (!grouped[itemName]) {
+        grouped[itemName] = {};
       }
-    };
-
-    fetchEstimate();
-  }, [estimateId, locationId, onError]);
-
-  // Fetch stored photos
-  useEffect(() => {
-    if (!estimateId) return;
-
-    const fetchPhotos = async () => {
-      try {
-        const res = await fetch(`/api/estimate/photos?estimateId=${encodeURIComponent(estimateId)}`);
-        const data = await res.json();
-        if (data.ok && data.stored && data.stored.uploads && Array.isArray(data.stored.uploads)) {
-          // Group photos by product and slot
-          const grouped = {};
-          data.stored.uploads.forEach((upload) => {
-            const itemName = upload.itemName || (upload.label ? upload.label.split(' #')[0] : "Unknown");
-            const slotIndex = upload.slotIndex || 1;
-            if (!grouped[itemName]) {
-              grouped[itemName] = {};
-            }
-            if (!grouped[itemName][slotIndex]) {
-              grouped[itemName][slotIndex] = [];
-            }
-            grouped[itemName][slotIndex].push({
-              url: upload.url || upload.urls?.[0] || "",
-              attachmentId: upload.attachmentId,
-              filename: upload.filename || upload.label || "Photo",
-              itemName: upload.itemName || itemName,
-              slotIndex: upload.slotIndex || slotIndex,
-              photoIndex: upload.photoIndex || grouped[itemName][slotIndex].length + 1,
-            });
-          });
-          setStoredPhotos(grouped);
-        }
-      } catch (err) {
-        console.error("Failed to fetch photos:", err);
+      if (!grouped[itemName][slotIndex]) {
+        grouped[itemName][slotIndex] = [];
       }
-    };
-
-    fetchPhotos();
-  }, [estimateId]);
+      grouped[itemName][slotIndex].push({
+        url: upload.url || upload.urls?.[0] || "",
+        attachmentId: upload.attachmentId,
+        filename: upload.filename || upload.label || "Photo",
+        itemName: upload.itemName || itemName,
+        slotIndex: upload.slotIndex || slotIndex,
+        photoIndex: upload.photoIndex || grouped[itemName][slotIndex].length + 1,
+      });
+    });
+    return grouped;
+  }, [photosData]);
 
   // Group items by name
   const groupedItems = estimateItems.reduce((acc, item) => {
@@ -355,8 +330,11 @@ export function ProductPhotoUpload({ estimateId, locationId, onUploadComplete, o
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-border bg-muted/40 p-4 text-center">
-        <p className="text-sm text-muted-foreground">Loading products...</p>
+      <div className="rounded-lg border border-border bg-muted/40 p-6">
+        <div className="flex items-center justify-center gap-3">
+          <Spinner size="md" />
+          <p className="text-sm text-muted-foreground">Loading products...</p>
+        </div>
       </div>
     );
   }

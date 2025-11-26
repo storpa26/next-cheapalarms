@@ -3,8 +3,8 @@ import { parse as parseCookie } from "cookie";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
-    res.setHeader("Allow", ["GET"]);
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
+    res.setHeader("Allow", "GET");
+    return res.status(405).end();
   }
 
   const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
@@ -23,9 +23,9 @@ export default async function handler(req, res) {
     if (req.query.offset) params.set("offset", req.query.offset);
     const queryString = params.toString() ? `?${params.toString()}` : "";
 
-    const resp = await fetch(`${wpBase}/ca/v1/ghl/contacts/list${queryString}`, {
+    const resp = await fetch(`${wpBase}/ca/v1/estimate/list${queryString}`, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
         Cookie: req.headers.cookie ?? "",
         ...authHeader,
         ...devHeader,

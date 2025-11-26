@@ -2,8 +2,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatCurrency, badgeVariant } from "@/components/portal/utils/portal-utils";
+import { memo } from "react";
 
-export function OverviewSection({
+export const OverviewSection = memo(function OverviewSection({
   view,
   payments,
   documents,
@@ -252,5 +253,5 @@ export function OverviewSection({
       </Card>
     </div>
   );
-}
+});
 

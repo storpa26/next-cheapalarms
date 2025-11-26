@@ -13,16 +13,37 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useState } from "react";
-import { getEstimates } from "@/lib/wp";
 import Link from "next/link";
 import { toast } from "@/components/ui/use-toast";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import { isAuthError, isPermissionError, getPermissionErrorMessage } from "@/lib/admin/utils/error-handler";
+import { useEstimatesList } from "@/lib/react-query/hooks";
+import { getEstimates } from "@/lib/wp";
+import { Spinner } from "@/components/ui/spinner";
 
 export default function AdminEstimates({ estimates, error }) {
   const [q, setQ] = useState("");
   const [resending, setResending] = useState({});
-  const items = estimates?.items ?? [];
+  const [refreshing, setRefreshing] = useState(false);
+  
+  // Use React Query hook for data fetching (with caching)
+  const { data: estimatesData, isLoading: loadingEstimates, error: estimatesError, refetch: refetchEstimates } = useEstimatesList({
+    limit: 50,
+    enabled: true,
+    initialData: estimates,
+  });
+  
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await refetchEstimates();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Use initial data if React Query hasn't loaded yet or if there's an error
+  const items = estimatesData?.items ?? estimates?.items ?? [];
   const summary = buildSummary(items);
   
   // Filter estimates by search query
@@ -40,12 +61,12 @@ export default function AdminEstimates({ estimates, error }) {
         <title>Superadmin • Estimates</title>
       </Head>
       <AdminLayout title="Estimates">
-        {error ? (
+        {(error || estimatesError) ? (
           <Card className="border border-primary/40 bg-primary/5 text-primary">
             <CardHeader>
               <CardTitle>Could not load estimates</CardTitle>
               <CardDescription className="text-primary/80">
-                {error}
+                {error || estimatesError?.message || 'Unknown error'}
               </CardDescription>
             </CardHeader>
           </Card>
@@ -79,8 +100,15 @@ export default function AdminEstimates({ estimates, error }) {
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                   />
-                  <Button variant="outline" size="sm" onClick={() => window.location.reload()}>
-                    Refresh
+                  <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing || loadingEstimates}>
+                    {refreshing ? (
+                      <span className="flex items-center gap-2">
+                        <Spinner size="sm" />
+                        Refreshing…
+                      </span>
+                    ) : (
+                      "Refresh"
+                    )}
                   </Button>
                 </div>
               </CardHeader>
@@ -116,7 +144,7 @@ export default function AdminEstimates({ estimates, error }) {
                                     href={`/portal?estimateId=${encodeURIComponent(
                                       estimate.id ?? ""
                                     )}&locationId=${encodeURIComponent(
-                                      estimates.locationId ?? ""
+                                      estimatesData?.locationId ?? ""
                                     )}&inviteToken=${encodeURIComponent(
                                       estimate.inviteToken
                                     )}`}
@@ -133,7 +161,14 @@ export default function AdminEstimates({ estimates, error }) {
                                   disabled={Boolean(resending[estimate.id ?? ""])}
                                   onClick={() => handleResendInvite(estimate, setResending)}
                                 >
-                                  {resending[estimate.id ?? ""] ? "Resending…" : "Resend invite"}
+                                  {resending[estimate.id ?? ""] ? (
+                                    <span className="flex items-center gap-2">
+                                      <Spinner size="sm" />
+                                      Resending…
+                                    </span>
+                                  ) : (
+                                    "Resend invite"
+                                  )}
                                 </Button>
                               </div>
                             </TableCell>

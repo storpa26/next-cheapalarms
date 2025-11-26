@@ -1,9 +1,10 @@
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate } from "@/components/portal/utils/portal-utils";
 
-export function DocumentSection({ documents }) {
+export const DocumentSection = memo(function DocumentSection({ documents }) {
   return (
     <Card>
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -41,5 +42,5 @@ export function DocumentSection({ documents }) {
       </CardContent>
     </Card>
   );
-}
+});
 

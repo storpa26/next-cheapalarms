@@ -1,8 +1,9 @@
+import { memo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
-export function SupportSection({ support }) {
+export const SupportSection = memo(function SupportSection({ support }) {
   return (
     <Card>
       <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -38,5 +39,5 @@ export function SupportSection({ support }) {
       </CardContent>
     </Card>
   );
-}
+});
 

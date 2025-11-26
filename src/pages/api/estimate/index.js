@@ -39,6 +39,12 @@ export default async function handler(req, res) {
     });
 
     const body = await resp.json();
+    
+    // Set cache headers for GET requests (helps with browser caching)
+    // Use "private" since these are authenticated responses
+    res.setHeader("Cache-Control", "private, max-age=60, stale-while-revalidate=120");
+    res.setHeader("Vary", "Authorization, Cookie");
+    
     return res.status(resp.status).json(body);
   } catch (e) {
     return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
