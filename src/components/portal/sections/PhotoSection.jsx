@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { PhotoUpload } from "@/components/ui/photo-upload";
+import { ProductPhotoUpload } from "./ProductPhotoUpload";
 
 function EmptyPhotoState({ onSelectFiles, onSkip }) {
   return (
@@ -270,38 +271,34 @@ export function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locati
 
         {photoTab === "missing" ? (
           <div className="space-y-4">
-            <p>
-              We still need {missing} photo{missing === 1 ? "" : "s"} to finalise your estimate. You can
-              drag and drop them below or choose the "Skip for now" option.
+            <p className="text-sm text-muted-foreground">
+              Upload photos for each product in your estimate. Click on a slot to add photos (up to 2 per slot).
             </p>
             {uploadError && (
               <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
                 {uploadError}
               </div>
             )}
-            <div className="flex flex-col gap-4 md:flex-row">
-              {estimateId && locationId ? (
-                <PhotoUpload
-                  ref={photoUploadRef}
-                  estimateId={estimateId}
-                  locationId={locationId}
-                  onUploadComplete={handleUploadComplete}
-                  onError={handleUploadError}
-                />
-              ) : (
-                <div className="flex-1 rounded-lg border-2 border-dashed border-border bg-muted/40 p-6 text-center">
-                  <p className="font-medium text-foreground">Loading...</p>
-                </div>
-              )}
-              <div className="flex-1 rounded-lg border border-border bg-background p-6">
-                <p className="font-medium text-foreground">Can't share photos?</p>
-                <p className="text-sm text-muted-foreground">
-                  That's okay—you can skip this step and we'll call to confirm details.
-                </p>
-                <Button variant="outline" className="mt-4" onClick={handleSkipPhotos}>
-                  Skip photos for now
-                </Button>
+            {estimateId && locationId ? (
+              <ProductPhotoUpload
+                estimateId={estimateId}
+                locationId={locationId}
+                onUploadComplete={handleUploadComplete}
+                onError={handleUploadError}
+              />
+            ) : (
+              <div className="rounded-lg border-2 border-dashed border-border bg-muted/40 p-6 text-center">
+                <p className="font-medium text-foreground">Loading...</p>
               </div>
+            )}
+            <div className="rounded-lg border border-border bg-background p-6">
+              <p className="font-medium text-foreground">Can't share photos?</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                That's okay—you can skip this step and we'll call to confirm details.
+              </p>
+              <Button variant="outline" className="mt-4" onClick={handleSkipPhotos}>
+                Skip photos for now
+              </Button>
             </div>
             {photosSkipped && (
               <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">

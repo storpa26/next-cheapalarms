@@ -261,7 +261,11 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                             <span className="text-xs text-muted-foreground">Not linked</span>
                           )}
                         </td>
-                        <td className="px-3 py-2">{user.roles?.join(", ") || "—"}</td>
+                        <td className="px-3 py-2">
+                          {Array.isArray(user.roles) && user.roles.length > 0
+                            ? user.roles.join(", ")
+                            : "—"}
+                        </td>
                       </tr>
                     ))}
                     {filteredWpUsers.length === 0 && (

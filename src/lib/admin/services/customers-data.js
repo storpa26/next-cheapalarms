@@ -134,7 +134,7 @@ export function getStatusBadge(status) {
     linked: { label: "Linked", variant: "default" },
     has_account: { label: "Has Account", variant: "secondary" },
     needs_invite: { label: "Needs Invite", variant: "outline" },
-    no_account: { label: "No Account", variant: "destructive" },
+    no_account: { label: "No Account", variant: "outline" }, // Changed from destructive to outline for better visibility
   };
 
   return badges[status] || { label: "Unknown", variant: "outline" };
