@@ -1,8 +1,14 @@
 import { ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
 import { formatAddress } from "@/components/portal/utils/portal-utils";
 
 export function EstimateHeader({ estimate, progress, estimates, total, hasPhotos, onBackToList, onSelectEstimate, menuOpen, setMenuOpen }) {
   const needsPhotos = !hasPhotos && estimate.status !== "accepted";
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   return (
     <header className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
@@ -29,7 +35,9 @@ export function EstimateHeader({ estimate, progress, estimates, total, hasPhotos
             <div className="flex-1">
               <p className="text-xs uppercase tracking-[0.35em] text-slate-500">Estimated Total</p>
               <p className="mt-2 text-3xl font-semibold text-slate-900">
-                ${total.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {mounted
+                  ? `$${total.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                  : `$${total.toFixed(2)}`}
               </p>
               {needsPhotos ? (
                 <p className="mt-2 text-sm text-slate-600">

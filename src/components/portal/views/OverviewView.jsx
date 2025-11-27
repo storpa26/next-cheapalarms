@@ -1,8 +1,15 @@
 import { ArrowRight, Camera, AlertCircle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
 export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAll }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (!estimate) {
     return (
       <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center">
@@ -71,7 +78,9 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
               {needsPhotos ? "Estimated Total" : "Estimate Total"}
             </p>
             <p className="mt-2 text-4xl font-semibold text-slate-900">
-              ${total.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              {mounted
+                ? `$${total.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                : `$${total.toFixed(2)}`}
             </p>
             {needsPhotos && (
               <p className="mt-1 text-xs text-slate-500">Preliminary pricing • Updates after photo review</p>
@@ -86,14 +95,18 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
               <div className="flex justify-between">
                 <span className="text-slate-600">Subtotal</span>
                 <span className="font-semibold text-slate-900">
-                  ${subtotal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {mounted
+                    ? `$${subtotal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                    : `$${subtotal.toFixed(2)}`}
                 </span>
               </div>
               {taxTotal > 0 && (
                 <div className="flex justify-between">
                   <span className="text-slate-600">Tax</span>
                   <span className="font-semibold text-slate-900">
-                    ${taxTotal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {mounted
+                      ? `$${taxTotal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                      : `$${taxTotal.toFixed(2)}`}
                   </span>
                 </div>
               )}
@@ -126,10 +139,12 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
                     </p>
                     {item.amount && (
                       <p className="mt-1 text-sm text-slate-600">
-                        ${(item.amount * (item.qty || item.quantity || 1)).toLocaleString("en-AU", {
-                          minimumFractionDigits: 2,
-                          maximumFractionDigits: 2,
-                        })}
+                        {mounted
+                          ? `$${(item.amount * (item.qty || item.quantity || 1)).toLocaleString("en-AU", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}`
+                          : `$${((item.amount * (item.qty || item.quantity || 1))).toFixed(2)}`}
                       </p>
                     )}
                   </div>

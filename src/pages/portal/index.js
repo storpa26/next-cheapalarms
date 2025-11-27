@@ -182,6 +182,18 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
     router.push(`/portal?${params.toString()}`);
   }, [router, estimateId, inviteToken]);
 
+  // Helper to navigate to photos section (updates URL)
+  const handleNavigateToPhotos = useCallback(() => {
+    if (!estimateId) return;
+    const params = new URLSearchParams();
+    params.set("estimateId", estimateId);
+    params.set("section", "estimates");
+    if (inviteToken) {
+      params.set("inviteToken", inviteToken);
+    }
+    router.push(`/portal?${params.toString()}`, undefined, { shallow: true });
+  }, [router, estimateId, inviteToken]);
+
   // Build mission steps from view data
   const missionSteps = useMemo(() => {
     if (!view) return [];
@@ -351,7 +363,14 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                     estimate={overviewEstimate}
                     onUploadImages={handleUploadImages}
                     onViewDetails={handleViewDetails}
-                    onViewAll={!estimateId && estimates.length > 1 ? () => setActiveNav("estimates") : undefined}
+                    onViewAll={!estimateId && estimates.length > 1 ? () => {
+                      const params = new URLSearchParams();
+                      params.set("section", "estimates");
+                      if (inviteToken) {
+                        params.set("inviteToken", inviteToken);
+                      }
+                      router.push(`/portal?${params.toString()}`);
+                    } : undefined}
                   />
                 )}
               </>
@@ -390,7 +409,7 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                     estimateData={estimateData}
                     onBackToList={handleBackToList}
                     onSelectEstimate={handleSelectEstimate}
-                    onNavigateToPhotos={() => setActiveNav("estimates")}
+                    onNavigateToPhotos={handleNavigateToPhotos}
                   />
                 ) : (
                   <div className="rounded-[32px] border border-slate-100 bg-white p-8 text-center shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
@@ -485,7 +504,7 @@ export async function getServerSideProps({ query, req }) {
           initialStatus: null,
           initialError: null,
           initialEstimateId: null,
-          initialEstimates: undefined,
+          initialEstimates: null,
         },
       };
     }

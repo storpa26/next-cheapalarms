@@ -14,6 +14,7 @@ export function normaliseStatus(status) {
     estimateId: status.estimateId ?? quote.number ?? null,
     locationId: status.locationId ?? null,
     nextStep: status.nextStep ?? installation.message ?? "We'll keep you posted.",
+    invoice: status.invoice ?? null,
     quote: {
       status: quote.status ?? "pending",
       label: quote.statusLabel ?? "Awaiting approval",

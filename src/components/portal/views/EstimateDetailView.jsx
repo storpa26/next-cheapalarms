@@ -47,7 +47,15 @@ export function EstimateDetailView({
             if (onNavigateToPhotos) onNavigateToPhotos();
           }}
         />
-        <ApprovalCard view={view} />
+        <ApprovalCard
+          view={view}
+          estimateId={estimateId}
+          locationId={view?.locationId}
+          onUploadPhotos={() => {
+            setShowPhotoUploader(true);
+            if (onNavigateToPhotos) onNavigateToPhotos();
+          }}
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">
