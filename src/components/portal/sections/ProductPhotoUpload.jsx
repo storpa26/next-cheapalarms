@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useMemo } from "react";
+import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Camera, Image } from "lucide-react";
 import { WP_API_BASE } from "@/lib/wp";
 import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/react-query/hooks";
@@ -25,7 +25,8 @@ function ProductSlot({
   estimateId, 
   locationId,
   onUploadComplete,
-  onError 
+  onError,
+  registerSlotRef,
 }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -145,7 +146,7 @@ function ProductSlot({
   );
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1.5" ref={registerSlotRef}>
       <div className="text-xs font-medium text-muted-foreground">
         {productName} #{slotIndex}
       </div>
@@ -197,20 +198,21 @@ function ProductSlot({
                 </button>
               </>
             ) : (
-              // Desktop: Single button
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="w-16 h-16 rounded border-2 border-dashed border-border bg-muted/40 flex items-center justify-center hover:border-primary/60 transition-colors disabled:opacity-50 shrink-0"
-                title="Add Photo"
+              // Desktop: Clickable card area
+              <div
+                onClick={() => !uploading && fileInputRef.current?.click()}
+                className={`w-16 h-16 rounded border-2 border-dashed border-border bg-muted/40 flex flex-col items-center justify-center hover:border-primary/60 transition-colors shrink-0 ${uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                title="Click to choose photo"
               >
                 {uploading ? (
                   <Spinner size="sm" />
                 ) : (
-                  <Image className="h-5 w-5 text-muted-foreground" />
+                  <>
+                    <Image className="h-4 w-4 text-muted-foreground mb-0.5" />
+                    <span className="text-[10px] text-muted-foreground text-center leading-tight">Click here</span>
+                  </>
                 )}
-              </button>
+              </div>
             )}
           </>
         )}
@@ -241,7 +243,16 @@ function ProductSlot({
 }
 
 // Product row component - compact
-function ProductRow({ productName, quantity, slots, estimateId, locationId, onUploadComplete, onError }) {
+function ProductRow({
+  productName,
+  quantity,
+  slots,
+  estimateId,
+  locationId,
+  onUploadComplete,
+  onError,
+  registerProductRef,
+}) {
   return (
     <div className="space-y-2">
       <h3 className="text-sm font-semibold text-foreground">{productName}</h3>
@@ -250,19 +261,24 @@ function ProductRow({ productName, quantity, slots, estimateId, locationId, onUp
           const slotIndex = index + 1;
           const slotPhotos = slots[slotIndex] || [];
           const canAddMore = slotPhotos.length < MAX_PHOTOS_PER_SLOT;
+          const isFirstSlot = index === 0;
 
           return (
-            <ProductSlot
-              key={slotIndex}
-              productName={productName}
-              slotIndex={slotIndex}
-              photos={slotPhotos}
-              canAddMore={canAddMore}
-              estimateId={estimateId}
-              locationId={locationId}
-              onUploadComplete={onUploadComplete}
-              onError={onError}
-            />
+            <div key={slotIndex}>
+              <ProductSlot
+                productName={productName}
+                slotIndex={slotIndex}
+                photos={slotPhotos}
+                canAddMore={canAddMore}
+                estimateId={estimateId}
+                locationId={locationId}
+                onUploadComplete={onUploadComplete}
+                onError={onError}
+                registerSlotRef={
+                  isFirstSlot ? (element) => registerProductRef(productName, element) : undefined
+                }
+              />
+            </div>
           );
         })}
       </div>
@@ -270,7 +286,25 @@ function ProductRow({ productName, quantity, slots, estimateId, locationId, onUp
   );
 }
 
-export function ProductPhotoUpload({ estimateId, locationId, onUploadComplete, onError }) {
+export function ProductPhotoUpload({
+  estimateId,
+  locationId,
+  initialAction,
+  initialItemName,
+  onInitialActionHandled,
+  onUploadComplete,
+  onError,
+}) {
+  const productSlotRefs = useRef({});
+  const registerProductRef = useCallback((productName, element) => {
+    if (!productName) return;
+    if (element) {
+      productSlotRefs.current[productName] = element;
+    } else {
+      delete productSlotRefs.current[productName];
+    }
+  }, []);
+  
   // Use React Query hooks for data fetching (with caching and deduplication)
   const { data: estimateData, isLoading: loading, error: estimateError } = useEstimate({
     estimateId: estimateId || undefined,
@@ -286,6 +320,45 @@ export function ProductPhotoUpload({ estimateId, locationId, onUploadComplete, o
   // Extract estimate items
   const estimateItems = estimateData?.items || [];
   const error = estimateError?.message || null;
+
+  // Trigger first slot input when initialAction is set (for mobile buttons)
+  useEffect(() => {
+    if (!initialAction || !initialItemName) return;
+    const targetElement = productSlotRefs.current[initialItemName];
+    if (!targetElement) return;
+
+    const timer = setTimeout(() => {
+      if (initialAction === "camera") {
+        const cameraButton = targetElement.querySelector('button[title="Take Photo"]');
+        if (cameraButton) {
+          cameraButton.click();
+        } else {
+          const cameraInput = targetElement.querySelector('input[type="file"][capture="environment"]');
+          if (cameraInput) {
+            cameraInput.click();
+          }
+        }
+      } else if (initialAction === "upload") {
+        const uploadButton = targetElement.querySelector('button[title="Upload Photo"]');
+        if (uploadButton) {
+          uploadButton.click();
+        } else {
+          const fileButton = targetElement.querySelector('button[title="Add Photo"]');
+          if (fileButton) {
+            fileButton.click();
+          } else {
+            const fileInput = targetElement.querySelector('input[type="file"]:not([capture])');
+            if (fileInput) {
+              fileInput.click();
+            }
+          }
+        }
+      }
+      onInitialActionHandled?.();
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [initialAction, initialItemName, onInitialActionHandled]);
 
   // Group stored photos by product and slot
   const storedPhotos = useMemo(() => {
@@ -358,7 +431,7 @@ export function ProductPhotoUpload({ estimateId, locationId, onUploadComplete, o
 
   return (
     <div className="space-y-4">
-      {productGroups.map((product) => (
+      {productGroups.map((product, groupIndex) => (
         <ProductRow
           key={product.name}
           productName={product.name}
@@ -368,6 +441,7 @@ export function ProductPhotoUpload({ estimateId, locationId, onUploadComplete, o
           locationId={locationId}
           onUploadComplete={onUploadComplete}
           onError={onError}
+          registerProductRef={registerProductRef}
         />
       ))}
     </div>

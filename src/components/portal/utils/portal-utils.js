@@ -41,3 +41,22 @@ export function cookieHeader(req) {
   return cookie ? { Cookie: cookie } : {};
 }
 
+/**
+ * Format address object to string
+ * Handles both string addresses and address objects with {addressLine1, city, state, postalCode, countryCode}
+ */
+export function formatAddress(addr) {
+  if (typeof addr === "string") return addr;
+  if (!addr) return "";
+  
+  const parts = [
+    addr.addressLine1,
+    addr.city,
+    addr.state,
+    addr.postalCode,
+    addr.countryCode
+  ].filter(Boolean);
+  
+  return parts.join(", ");
+}
+

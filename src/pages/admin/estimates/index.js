@@ -143,8 +143,6 @@ export default function AdminEstimates({ estimates, error }) {
                                   <Link
                                     href={`/portal?estimateId=${encodeURIComponent(
                                       estimate.id ?? ""
-                                    )}&locationId=${encodeURIComponent(
-                                      estimatesData?.locationId ?? ""
                                     )}&inviteToken=${encodeURIComponent(
                                       estimate.inviteToken
                                     )}`}

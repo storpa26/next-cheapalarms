@@ -12,6 +12,7 @@ export function normaliseStatus(status) {
 
   return {
     estimateId: status.estimateId ?? quote.number ?? null,
+    locationId: status.locationId ?? null,
     nextStep: status.nextStep ?? installation.message ?? "We'll keep you posted.",
     quote: {
       status: quote.status ?? "pending",

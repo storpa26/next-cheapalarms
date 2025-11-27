@@ -7,7 +7,7 @@ import { TOKEN_COOKIE } from "@/lib/wp";
 
 export default function SetPasswordPage() {
   const router = useRouter();
-  const { key, login, estimateId, locationId } = router.query;
+  const { key, login, estimateId } = router.query;
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -98,7 +98,6 @@ export default function SetPasswordPage() {
           login: decodedLogin, 
           password,
           estimateId: estimateId || undefined,
-          locationId: locationId || undefined,
         }),
       });
       const json = await res.json();
@@ -113,10 +112,8 @@ export default function SetPasswordPage() {
 
       // Redirect to portal/photos section with estimate
       if (estimateId) {
-        const portalUrl = `/portal?estimateId=${estimateId}${locationId ? `&locationId=${locationId}` : ''}#photos`;
-        router.push(portalUrl);
+        router.push(`/portal?estimateId=${estimateId}#photos`);
       } else {
-        // Fallback to portal
         router.push("/portal");
       }
     } catch (err) {

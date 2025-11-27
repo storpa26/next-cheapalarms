@@ -1,129 +1,21 @@
-/* eslint-disable @next/next/no-img-element */
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { startTransition, useEffect, useMemo, useState, useCallback, useRef, memo } from "react";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { SignOutButton } from "@/components/ui/sign-out-button";
-import { Badge } from "@/components/ui/badge";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { PhotoUpload } from "@/components/ui/photo-upload";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { getPortalStatus, getPortalDashboard } from "@/lib/wp";
-import { usePortalStatus, usePortalDashboard } from "@/lib/react-query/hooks";
-import { Spinner } from "@/components/ui/spinner";
-import { SkeletonCard, SkeletonList } from "@/components/ui/skeleton";
-import Link from "next/link";
-import { formatDate, formatCurrency, badgeVariant, cookieHeader } from "@/components/portal/utils/portal-utils";
+import { usePortalStatus, usePortalDashboard, useEstimate } from "@/lib/react-query/hooks";
 import { normaliseStatus } from "@/components/portal/utils/status-normalizer";
-import {
-  mockPortalStatus,
-  mockPaymentHistory,
-  mockDocumentList,
-  mockTaskList,
-  mockSupportInfo,
-  mockTimelineSteps,
-  mockActivityLog,
-} from "@/components/portal/utils/mock-data";
-import { buildAlerts } from "@/components/portal/utils/build-alerts";
-import { OverviewSection } from "@/components/portal/sections/OverviewSection";
-import { EstimateSection } from "@/components/portal/sections/EstimateSection";
-import { InstallationSection } from "@/components/portal/sections/InstallationSection";
-import { PhotoSection } from "@/components/portal/sections/PhotoSection";
-import { DocumentSection } from "@/components/portal/sections/DocumentSection";
-import { PaymentSection } from "@/components/portal/sections/PaymentSection";
-import { TaskSection } from "@/components/portal/sections/TaskSection";
-import { SupportSection } from "@/components/portal/sections/SupportSection";
-import { ActivitySection } from "@/components/portal/sections/ActivitySection";
-import { FAQSection, PortalAccountCard, AccountPreferences } from "@/components/portal/sections/AccountSection";
+import { cookieHeader, formatAddress } from "@/components/portal/utils/portal-utils";
+import { PortalSidebar } from "@/components/portal/layout/PortalSidebar";
+import { OverviewView } from "@/components/portal/views/OverviewView";
+import { EstimatesListView } from "@/components/portal/views/EstimatesListView";
+import { EstimateDetailView } from "@/components/portal/views/EstimateDetailView";
+import { Spinner } from "@/components/ui/spinner";
+import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
-// Memoize section components to prevent unnecessary re-renders (components are already memoized, this is for extra safety)
-const MemoizedOverviewSection = memo(OverviewSection);
-const MemoizedEstimateSection = memo(EstimateSection);
-const MemoizedInstallationSection = memo(InstallationSection);
-const MemoizedTaskSection = memo(TaskSection);
-const MemoizedPaymentSection = memo(PaymentSection);
-const MemoizedDocumentSection = memo(DocumentSection);
-const MemoizedPhotoSection = memo(PhotoSection);
-const MemoizedSupportSection = memo(SupportSection);
-const MemoizedActivitySection = memo(ActivitySection);
-
-const SECTION_CONFIG = [
-  {
-    id: "overview",
-    label: "Overview",
-    badge: "Portal overview",
-    description: "Quick snapshot of your project across estimate, install, and support.",
-  },
-  {
-    id: "estimate",
-    label: "Estimate",
-    badge: "Estimate",
-    description: "Review your proposal details and next actions.",
-  },
-  {
-    id: "installation",
-    label: "Installation",
-    badge: "Installation",
-    description: "Track scheduling milestones and what happens next.",
-  },
-  {
-    id: "tasks",
-    label: "Tasks",
-    badge: "Checklist",
-    description: "Mark off the steps we need before installation.",
-  },
-  {
-    id: "payments",
-    label: "Payments",
-    badge: "Payments",
-    description: "See outstanding balances and payment history.",
-  },
-  {
-    id: "documents",
-    label: "Documents",
-    badge: "Documents",
-    description: "Access your proposal, contract, and supporting paperwork.",
-  },
-  {
-    id: "photos",
-    label: "Photos",
-    badge: "Site photos",
-    description: "Upload or review the photos our install team needs.",
-  },
-  {
-    id: "support",
-    label: "Support",
-    badge: "Support",
-    description: "Reach your CheapAlarms specialist for help or questions.",
-  },
-  {
-    id: "activity",
-    label: "Activity",
-    badge: "Activity log",
-    description: "Timeline of everything that’s happened so far.",
-  },
-  {
-    id: "account",
-    label: "Account",
-    badge: "Account",
-    description: "Manage portal access and notification preferences.",
-  },
-];
-
-export default function PortalPage({ initialStatus, initialError, initialSection, initialEstimateId, initialLocationId, initialEstimates }) {
+export default function PortalPage({ initialStatus, initialError, initialEstimateId, initialEstimates }) {
   const router = useRouter();
-  const [activeSection, setActiveSection] = useState(initialSection ?? "overview");
-  const [photoTab, setPhotoTab] = useState("uploaded");
-  const [taskState, setTaskState] = useState({});
-
-  // Safely extract estimateId and locationId from router.query or use initial props
+  
+  // Extract estimateId from URL
   const estimateId = useMemo(() => {
     if (router.isReady && router.query.estimateId) {
       const val = router.query.estimateId;
@@ -132,86 +24,29 @@ export default function PortalPage({ initialStatus, initialError, initialSection
     return initialEstimateId || null;
   }, [router.isReady, router.query.estimateId, initialEstimateId]);
 
-  const locationId = useMemo(() => {
-    if (router.isReady && router.query.locationId) {
-      const val = router.query.locationId;
+  // Extract section from URL
+  const sectionFromUrl = useMemo(() => {
+    if (router.isReady && router.query.section) {
+      const val = router.query.section;
       return Array.isArray(val) ? val[0] : val;
     }
-    return initialLocationId || null;
-  }, [router.isReady, router.query.locationId, initialLocationId]);
+    return null;
+  }, [router.isReady, router.query.section]);
 
-  const sections = SECTION_CONFIG;
-  // Use local state for section navigation (no router query updates to prevent re-renders)
-  const currentSectionId = activeSection;
-  // Memoize currentSection lookup to prevent array.find() on every render
-  const currentSection = useMemo(
-    () => sections.find((section) => section.id === currentSectionId) ?? sections[0],
-    [currentSectionId]
-  );
-
-  // Extract query params
-  const routerInviteToken = useMemo(() => {
-    if (!router.isReady) return null;
-    const val = router.query.inviteToken;
-    return Array.isArray(val) ? val[0] : val;
-  }, [router.isReady, router.query.inviteToken]);
-
-  // Normalize undefined values to null for stable query keys (prevents unnecessary query key changes)
-  const normalizedEstimateId = estimateId || null;
-  const normalizedLocationId = locationId || null;
-  const normalizedInviteToken = routerInviteToken || null;
-
-  // Use React Query for portal status (with SSR placeholderData to prevent refetches)
-  const {
-    data: statusData,
-    error: statusError,
-    isLoading: statusLoading,
-  } = usePortalStatus({
-    estimateId: normalizedEstimateId,
-    locationId: normalizedLocationId,
-    inviteToken: normalizedInviteToken,
-    enabled: !!estimateId && router.isReady,
-    initialData: initialStatus, // Will be converted to placeholderData in the hook
-  });
-
-  // Use React Query for dashboard (only when no estimateId)
-  const {
-    data: dashboardData,
-    error: dashboardError,
-    isLoading: dashboardLoading,
-  } = usePortalDashboard({
-    enabled: !estimateId && router.isReady && !routerInviteToken && initialEstimates === undefined,
-    initialData: initialEstimates ? { ok: true, estimates: initialEstimates } : undefined, // Use SSR data
-  });
-
-  // Determine which data/error/loading to use
-  const status = statusData || null;
-  const error = statusError?.message || dashboardError?.message || initialError || null;
-  const loading = statusLoading || dashboardLoading;
-  const estimates = dashboardData?.estimates || initialEstimates || [];
-
-  // Handle auth errors - redirect to login
-  useEffect(() => {
-    if (!router.isReady) return;
-    
-    const errorMessage = error;
-    if (
-      errorMessage &&
-      (errorMessage.includes('401') || 
-       errorMessage.includes('Unauthorized') ||
-       errorMessage.includes('Failed to fetch') ||
-       errorMessage.includes('Unable to connect') ||
-       errorMessage.includes('not configured'))
-    ) {
-      // Only redirect if we don't have an invite token
-      if (!routerInviteToken) {
-        const from = router.asPath;
-        router.push(getLoginRedirect(from));
-      }
+  // Derive activeNav from URL - URL is the source of truth
+  const activeNav = useMemo(() => {
+    if (sectionFromUrl) {
+      return sectionFromUrl;
     }
-  }, [error, router, routerInviteToken]);
+    // If estimateId exists but no section, default to estimates detail view
+    // (This handles legacy URLs or direct navigation to estimate without section)
+    if (estimateId) {
+      return "estimates";
+    }
+    // Otherwise default to overview
+    return "overview";
+  }, [sectionFromUrl, estimateId]);
 
-  const view = useMemo(() => normaliseStatus(status), [status]);
   const inviteToken = useMemo(() => {
     if (router.isReady && router.query.inviteToken) {
       const val = router.query.inviteToken;
@@ -219,493 +54,451 @@ export default function PortalPage({ initialStatus, initialError, initialSection
     }
     return null;
   }, [router.isReady, router.query.inviteToken]);
-  const errorHint =
-    error && /401|unauthor/i.test(error)
-      ? "You need a valid invite link or must log in with a WordPress account that has portal access."
-      : null;
 
-  // Memoize mock data to prevent expensive function calls on every render
-  const paymentsData = useMemo(() => view?.payments ?? mockPaymentHistory(), [view?.payments]);
-  const documentsData = useMemo(() => view?.documents ?? mockDocumentList(), [view?.documents]);
-  const tasksData = useMemo(() => view?.tasks ?? mockTaskList(), [view?.tasks]);
-  const supportData = useMemo(() => view?.support ?? mockSupportInfo(), [view?.support]);
-  const timelineData = useMemo(() => view?.timeline ?? mockTimelineSteps(), [view?.timeline]);
-  const activityData = useMemo(() => view?.activity ?? mockActivityLog(), [view?.activity]);
-  const alerts = useMemo(() => buildAlerts(view, paymentsData), [view, paymentsData]);
+  // Fetch portal status when estimateId exists
+  const {
+    data: statusData,
+    error: statusError,
+    isLoading: statusLoading,
+  } = usePortalStatus({
+    estimateId: estimateId || null,
+    inviteToken: inviteToken || null,
+    enabled: !!estimateId && router.isReady,
+    initialData: initialStatus,
+  });
 
-  const handleToggleTask = (id) => {
-    setTaskState((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  // Fetch full estimate data for Overview (with items/pricing)
+  const {
+    data: estimateData,
+    error: estimateError,
+    isLoading: estimateLoading,
+  } = useEstimate({
+    estimateId: estimateId || null,
+    inviteToken: inviteToken || null,
+    enabled: !!estimateId && router.isReady,
+    initialData: null,
+  });
 
-  const handleNavigate = (sectionId) => {
-    if (sectionId === currentSectionId) return;
-    // Use startTransition to make section switching non-blocking (prevents UI freeze)
-    startTransition(() => {
-      setActiveSection(sectionId);
+  // Fetch dashboard when no estimateId
+  const {
+    data: dashboardData,
+    error: dashboardError,
+    isLoading: dashboardLoading,
+  } = usePortalDashboard({
+    enabled: !estimateId && router.isReady,
+    initialData: initialEstimates ? { ok: true, estimates: initialEstimates } : undefined,
+  });
+
+  const view = useMemo(() => normaliseStatus(statusData), [statusData]);
+  const estimates = useMemo(() => {
+    if (estimateId) return [];
+    if (dashboardData?.ok && Array.isArray(dashboardData.estimates)) {
+      return dashboardData.estimates;
+    }
+    if (Array.isArray(initialEstimates)) {
+      return initialEstimates;
+    }
+    return [];
+  }, [estimateId, dashboardData, initialEstimates]);
+
+  const loading = estimateId ? statusLoading : dashboardLoading;
+  const error = estimateId ? statusError?.message : dashboardError?.message || initialError;
+
+  // Get last viewed estimate from localStorage
+  const lastViewedEstimateId = useMemo(() => {
+    if (estimateId) return estimateId;
+    if (typeof window !== "undefined") {
+      return window.localStorage.getItem("ca_last_estimate");
+    }
+    return null;
+  }, [estimateId]);
+
+  // Save estimateId to localStorage when it changes
+  useEffect(() => {
+    if (typeof window === "undefined" || !estimateId) return;
+    window.localStorage.setItem("ca_last_estimate", String(estimateId));
+  }, [estimateId]);
+
+  const handleSelectEstimate = useCallback(
+    (nextEstimateId) => {
+      if (!nextEstimateId) return;
+      const params = new URLSearchParams();
+      params.set("estimateId", nextEstimateId);
+      params.set("section", "estimates"); // Navigate to estimates detail view
+      if (inviteToken) {
+        params.set("inviteToken", inviteToken);
+      }
+      router.push(`/portal?${params.toString()}`);
+    },
+    [router, inviteToken]
+  );
+
+  const handleBackToList = useCallback(() => {
+    const params = new URLSearchParams();
+    if (inviteToken) {
+      params.set("inviteToken", inviteToken);
+    }
+    router.push(`/portal${params.toString() ? `?${params.toString()}` : ""}`);
+  }, [router, inviteToken]);
+
+  // Resume estimate (last viewed or first) - moved before callbacks that use it
+  const resumeEstimate = useMemo(() => {
+    if (estimates.length === 0) return null;
+    if (lastViewedEstimateId) {
+      const found = estimates.find(
+        (e) => (e?.estimateId ?? e?.id)?.toString() === lastViewedEstimateId.toString()
+      );
+      if (found) return found;
+    }
+    return estimates[0];
+  }, [estimates, lastViewedEstimateId]);
+
+  const handleUploadImages = useCallback(() => {
+    if (!estimateId) {
+      // If no estimateId, select the resume estimate first
+      if (resumeEstimate) {
+        handleSelectEstimate(resumeEstimate.estimateId || resumeEstimate.id);
+      }
+      return;
+    }
+    // Navigate to estimates detail view (photos will be shown there)
+    const params = new URLSearchParams();
+    params.set("estimateId", estimateId);
+    params.set("section", "estimates");
+    if (inviteToken) {
+      params.set("inviteToken", inviteToken);
+    }
+    router.push(`/portal?${params.toString()}`);
+  }, [router, estimateId, inviteToken, resumeEstimate, handleSelectEstimate]);
+
+  const handleViewDetails = useCallback(() => {
+    if (!estimateId) return;
+    const params = new URLSearchParams();
+    params.set("estimateId", estimateId);
+    params.set("section", "estimates");
+    if (inviteToken) {
+      params.set("inviteToken", inviteToken);
+    }
+    router.push(`/portal?${params.toString()}`);
+  }, [router, estimateId, inviteToken]);
+
+  // Build mission steps from view data
+  const missionSteps = useMemo(() => {
+    if (!view) return [];
+    const quoteAccepted = view.quote?.status === "accepted";
+    const photosUploaded = (view.photos?.items?.length || 0) > 0;
+    return [
+      { label: "Select Project", caption: "Choose the site you're working on", done: true },
+      { label: "Review & Adjust", caption: "Confirm devices + notes", done: true },
+      { label: "Upload Photos", caption: "Snap the highlighted areas", done: photosUploaded },
+      { label: "Approve & Pay", caption: "Unlock once pricing updated", done: quoteAccepted },
+      { label: "Install Day", caption: "Crew waits for your approval", done: false },
+    ];
+  }, [view]);
+
+  // Build photo items from estimate items (all addons/products)
+  const photoItems = useMemo(() => {
+    // Get items from estimateData (full estimate) or fallback to view
+    const items = estimateData?.ok ? estimateData.items || [] : [];
+    
+    if (items.length === 0) return [];
+    
+    // Get uploaded photos count per item
+    const uploadedPhotos = view?.photos?.items || [];
+    const photoCountsByItem = {};
+    uploadedPhotos.forEach((photo) => {
+      const itemName = photo.itemName || "Unknown";
+      photoCountsByItem[itemName] = (photoCountsByItem[itemName] || 0) + 1;
     });
-  };
+    
+    // Build items list with status
+    const grouped = {};
+    items.forEach((item) => {
+      const itemName = item.name || "Unknown Item";
+      const qty = item.qty || item.quantity || 1;
+      if (!grouped[itemName]) {
+        const uploadedCount = photoCountsByItem[itemName] || 0;
+        grouped[itemName] = {
+          label: itemName,
+          quantity: 0,
+          status: uploadedCount > 0 ? "Uploaded" : "Pending",
+          uploadedCount: uploadedCount,
+        };
+      }
+      grouped[itemName].quantity += qty;
+    });
+    
+    return Object.values(grouped);
+  }, [estimateData, view]);
 
-  // Check if we have an estimateId
-  const hasEstimateId = estimateId || initialEstimateId;
+  // Build activity feed from view data
+  const activityFeed = useMemo(() => {
+    if (!view?.activity) return [];
+    return Array.isArray(view.activity) ? view.activity.slice(0, 5) : [];
+  }, [view]);
 
-  // Show loading state only if we're actually loading and have no initial data
-  const isInitialLoading = loading && !initialStatus && !initialEstimates && !routerInviteToken;
+  // Get active estimate summary for detail view
+  const activeEstimate = useMemo(() => {
+    if (!estimateId || !view) return null;
+    const hasPhotos = (view.photos?.items?.length || 0) > 0;
+    return {
+      id: estimateId,
+      label: view.quote?.number || `Estimate #${estimateId}`,
+      status: view.quote?.statusLabel || view.quote?.status || "Pending",
+      progress: view.quote?.status === "accepted" ? 82 : hasPhotos ? 56 : 32,
+      total: estimateData?.ok ? estimateData.total : view.quote?.total || null,
+      hasPhotos,
+      meta: {
+        address: formatAddress(view.installation?.address) || "Site address pending",
+        package: view.quote?.packageName || "Base package",
+        customer: view.account?.email || "Customer",
+      },
+    };
+  }, [estimateId, view, estimateData]);
+
+  // Get estimate for Overview (with full data)
+  const overviewEstimate = useMemo(() => {
+    if (!estimateId || !estimateData?.ok) {
+      // Fallback to first estimate from list if no estimateId
+      if (estimates.length > 0) {
+        const first = estimates[0];
+        return {
+          estimateId: first.estimateId || first.id,
+          number: first.number || first.estimateNumber,
+          statusLabel: first.statusLabel || first.status,
+          status: first.status,
+          address: first.address || first.meta?.address,
+          photosCount: first.photosCount || 0,
+          items: [],
+          subtotal: 0,
+          taxTotal: 0,
+          total: 0,
+        };
+      }
+      return null;
+    }
+    return {
+      estimateId: estimateData.estimateId,
+      number: estimateData.estimateNumber || estimateData.estimateId,
+      statusLabel: estimateData.status || "Pending",
+      status: estimateData.status,
+      address: formatAddress(estimateData.contact?.address) || "Site address pending",
+      photosCount: view?.photos?.items?.length || 0,
+      items: estimateData.items || [],
+      subtotal: estimateData.subtotal || 0,
+      taxTotal: estimateData.taxTotal || 0,
+      total: estimateData.total || 0,
+      label: estimateData.title || `Estimate #${estimateData.estimateNumber || estimateData.estimateId}`,
+    };
+  }, [estimateId, estimateData, estimates, view]);
+
+  // Calculate progress percentage
+  const progress = useMemo(() => {
+    if (!view) return 0;
+    let p = 0;
+    if (view.quote?.status === "accepted") p = 82;
+    else if (view.photos?.items?.length > 0) p = 56;
+    else if (view.quote) p = 32;
+    return p;
+  }, [view]);
 
   return (
     <>
       <Head>
         <title>Customer Portal • CheapAlarms</title>
       </Head>
-      <main className="bg-background text-foreground">
-        <div className="flex min-h-screen">
-          <aside className="hidden w-64 flex-col border-r border-border/60 bg-card/40 backdrop-blur md:flex">
-            <div className="border-b border-border/60 px-6 py-6">
-              <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">CheapAlarms</p>
-              <p className="mt-3 text-lg font-semibold text-foreground">Customer Portal</p>
-            </div>
-            <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-              {hasEstimateId && (
-                <Link href="/portal">
-                  <button
-                    type="button"
-                    className="mb-2 w-full rounded-md px-3 py-2 text-left text-sm font-medium text-muted-foreground transition hover:bg-muted/60 hover:text-foreground"
-                  >
-                    ← Back to Estimates
-                  </button>
-                </Link>
-              )}
-              {sections.map((section) => (
-                <button
-                  key={section.id}
-                  type="button"
-                  onClick={() => handleNavigate(section.id)}
-                  className={`w-full rounded-md px-3 py-2 text-left text-sm font-medium transition ${
-                    section.id === currentSectionId
-                      ? "bg-background text-foreground shadow"
-                      : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-                  }`}
-                >
-                  {section.label}
-                </button>
-              ))}
-            </nav>
-            <div className="hidden items-center justify-between gap-3 border-t border-border/60 px-6 py-4 md:flex">
-              <ThemeToggle />
-              <SignOutButton />
-            </div>
-          </aside>
-          <div className="flex-1">
-            <div className="flex items-center justify-between border-b border-border/60 px-6 py-4 md:hidden">
-              <div className="text-sm font-medium text-muted-foreground">{currentSection.label}</div>
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <SignOutButton />
-              </div>
-            </div>
-            <div className="px-4 py-8 sm:px-6 lg:px-10">
-              <div className="mb-6 overflow-x-auto md:hidden">
-                <div className="flex gap-2">
-                  {sections.map((section) => (
-                    <button
-                      key={section.id}
-                      type="button"
-                      onClick={() => handleNavigate(section.id)}
-                      className={`whitespace-nowrap rounded-full px-4 py-2 text-sm transition ${
-                        section.id === currentSectionId
-                          ? "bg-primary text-primary-foreground shadow"
-                          : "bg-muted/80 text-muted-foreground hover:bg-muted hover:text-foreground"
-                      }`}
-                    >
-                      {section.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
+      <main className="min-h-screen bg-[#f7f8fd] text-slate-900">
+        <div className="absolute inset-0 -z-10">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,83,117,0.15),transparent_45%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,rgba(47,182,201,0.18),transparent_50%)]" />
+        </div>
+        <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-6 py-10">
+          <PortalSidebar
+            activeNav={activeNav}
+            onNavChange={(nav) => {
+              // Update URL to reflect navigation change
+              const params = new URLSearchParams();
+              if (estimateId) {
+                params.set("estimateId", estimateId);
+              }
+              // Always set section, even for overview, so URL is explicit
+              params.set("section", nav);
+              if (inviteToken) {
+                params.set("inviteToken", inviteToken);
+              }
+              const queryString = params.toString();
+              router.push(`/portal${queryString ? `?${queryString}` : ""}`, undefined, { shallow: true });
+            }}
+            estimateId={estimateId}
+            onBackToList={handleBackToList}
+          />
 
-              {loading ? (
-                <Card className="mb-6 border-dashed border-border bg-muted/30">
-                  <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Spinner size="md" />
-                      <div>
-                        <CardTitle>Refreshing</CardTitle>
-                        <CardDescription>Loading the latest portal status…</CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
-              ) : null}
-
-              {error ? (
-                <Card className="mb-6 border border-primary/40 bg-primary/10 text-primary">
-                  <CardHeader>
-                    <CardTitle>We hit a snag</CardTitle>
-                    <CardDescription className="text-primary/80">{error}</CardDescription>
-                    {errorHint ? <p className="text-xs text-primary/60">{errorHint}</p> : null}
-                  </CardHeader>
-                </Card>
-              ) : null}
-
-              {/* Show overview dashboard when no estimateId */}
-              {!hasEstimateId && currentSectionId === "overview" && (
-                <div className="space-y-6">
-                  <header className="space-y-3">
-                    <h1 className="text-3xl font-bold">Welcome to Your Portal</h1>
-                    <p className="text-muted-foreground">Get a quick overview of your projects and activity</p>
-                  </header>
-
-                  {/* Overview stats cards */}
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Total Estimates</CardTitle>
-                        <CardDescription className="text-2xl font-bold mt-2">
-                          {estimates.length} estimate{estimates.length !== 1 ? 's' : ''}
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Active Projects</CardTitle>
-                        <CardDescription className="text-2xl font-bold mt-2">
-                          {estimates.filter(e => e.status === 'accepted').length} active
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Pending Review</CardTitle>
-                        <CardDescription className="text-2xl font-bold mt-2">
-                          {estimates.filter(e => e.status !== 'accepted').length} pending
-                        </CardDescription>
-                      </CardHeader>
-                    </Card>
+          <section className="flex-1 space-y-6">
+            {/* Overview View */}
+            {activeNav === "overview" && (
+              <>
+                {loading || estimateLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Spinner size="lg" />
                   </div>
+                ) : error || estimateError?.message ? (
+                  <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+                    <p className="text-lg font-semibold">Error loading estimate</p>
+                    <p className="text-sm text-red-600">{error || estimateError?.message}</p>
+                  </div>
+                ) : (
+                  <OverviewView
+                    estimate={overviewEstimate}
+                    onUploadImages={handleUploadImages}
+                    onViewDetails={handleViewDetails}
+                    onViewAll={!estimateId && estimates.length > 1 ? () => setActiveNav("estimates") : undefined}
+                  />
+                )}
+              </>
+            )}
 
-                  {/* Quick actions */}
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Quick Actions</CardTitle>
-                      <CardDescription>Navigate to different sections of your portal</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-wrap gap-2">
-                        <Button 
-                          variant="outline" 
-                          onClick={() => handleNavigate("estimate")}
-                        >
-                          View All Estimates
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => handleNavigate("payments")}
-                        >
-                          Payment History
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => handleNavigate("documents")}
-                        >
-                          Documents
-                        </Button>
-                        <Button 
-                          variant="outline" 
-                          onClick={() => handleNavigate("support")}
-                        >
-                          Get Support
-                        </Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Recent estimates preview */}
-                  {estimates.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <CardTitle>Recent Estimates</CardTitle>
-                            <CardDescription>Your most recent estimates</CardDescription>
-                          </div>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handleNavigate("estimate")}
-                          >
-                            View All
-                          </Button>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2">
-                          {estimates.slice(0, 3).map((estimate) => (
-                            <Link 
-                              key={estimate.estimateId}
-                              href={`/portal?estimateId=${estimate.estimateId}${estimate.locationId ? `&locationId=${estimate.locationId}` : ''}`}
-                              className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                            >
-                              <div>
-                                <p className="font-medium">Estimate #{estimate.number || estimate.estimateId}</p>
-                                <p className="text-sm text-muted-foreground">{estimate.statusLabel}</p>
-                              </div>
-                              <Button variant="ghost" size="sm">View</Button>
-                            </Link>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {estimates.length === 0 && !loading && (
-                    <Card>
-                      <CardContent className="p-6 text-center">
-                        <p className="text-muted-foreground">No estimates found. Check back later for updates.</p>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-
-              {/* Show estimates list on Estimate tab when no estimateId */}
-              {!hasEstimateId && currentSectionId === "estimate" && (
-                <div className="space-y-6">
-                  <header className="space-y-3">
-                    <Badge variant="outline" className="uppercase tracking-[0.35em]">
-                      {currentSection.badge}
-                    </Badge>
-                    <h1 className="text-3xl font-bold">My Estimates</h1>
-                    <p className="text-muted-foreground">Select an estimate to view details</p>
-                  </header>
-
-                  {!loading && !error && estimates.length === 0 && (
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-muted-foreground">No estimates found.</p>
-                      </CardContent>
-                    </Card>
-                  )}
-
-                  {!loading && !error && estimates.length > 0 && (
-                    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                      {estimates.map((estimate) => (
-                        <Card key={estimate.estimateId} className="hover:shadow-lg transition-shadow">
-                          <CardHeader>
-                            <CardTitle>Estimate #{estimate.number || estimate.estimateId}</CardTitle>
-                            <CardDescription>
-                              <Badge variant={estimate.status === 'accepted' ? 'default' : 'secondary'}>
-                                {estimate.statusLabel}
-                              </Badge>
-                            </CardDescription>
-                          </CardHeader>
-                          <CardContent>
-                            <Link href={`/portal/estimate/${estimate.estimateId}${estimate.locationId ? `?locationId=${estimate.locationId}` : ''}`}>
-                              <Button className="w-full">View Details</Button>
-                            </Link>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Show empty state for other sections when no estimateId */}
-              {!hasEstimateId && currentSectionId !== "overview" && currentSectionId !== "estimate" && (
-                <div className="space-y-8">
-                  <header className="space-y-3">
-                    <Badge variant="outline" className="uppercase tracking-[0.35em]">
-                      {currentSection.badge}
-                    </Badge>
-                    <h1 className="text-3xl font-bold">{currentSection.label}</h1>
-                    <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
-                  </header>
-                  <Card>
-                    <CardContent className="p-6">
-                      <p className="text-muted-foreground">Please select an estimate to view {currentSection.label.toLowerCase()}.</p>
-                    </CardContent>
-                  </Card>
-                </div>
-              )}
-
-              {hasEstimateId ? (
-                loading ? (
-                  <div className="space-y-8">
-                    <header className="space-y-3">
-                      <Badge variant="outline" className="uppercase tracking-[0.35em]">
-                        {currentSection.badge}
-                      </Badge>
-                      <h1 className="text-3xl font-bold">{currentSection.label}</h1>
-                      <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
-                    </header>
-                    <div className="space-y-6">
-                      <SkeletonCard />
-                      <SkeletonCard />
-                    </div>
+            {/* Estimates View */}
+            {activeNav === "estimates" && (
+              <>
+                {!estimateId ? (
+                  <EstimatesListView
+                    estimates={estimates}
+                    loading={loading}
+                    error={error}
+                    onSelectEstimate={handleSelectEstimate}
+                    resumeEstimate={resumeEstimate}
+                  />
+                ) : loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Spinner size="lg" />
                   </div>
                 ) : error ? (
-                  <div className="space-y-8">
-                    <header className="space-y-3">
-                      <Badge variant="outline" className="uppercase tracking-[0.35em]">
-                        {currentSection.badge}
-                      </Badge>
-                      <h1 className="text-3xl font-bold">{currentSection.label}</h1>
-                      <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
-                    </header>
-                    <Card>
-                      <CardContent className="p-6">
-                        <p className="text-muted-foreground">Error loading estimate: {error}</p>
-                      </CardContent>
-                    </Card>
+                  <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+                    <p className="text-lg font-semibold">Error loading estimate</p>
+                    <p className="text-sm text-red-600">{error}</p>
                   </div>
-                ) : view ? (
-                  <div className="space-y-6">
-                    {/* Only render active section - prevents React Query hooks from running in hidden sections */}
-                    {currentSectionId === "overview" && (
-                      <MemoizedOverviewSection
-                        view={view}
-                        payments={paymentsData}
-                        documents={documentsData}
-                        tasks={tasksData}
-                        taskState={taskState}
-                        onToggleTask={handleToggleTask}
-                        support={supportData}
-                        alerts={alerts}
-                        onNavigate={handleNavigate}
-                        timeline={timelineData}
-                      />
-                    )}
-
-                    {currentSectionId === "estimate" && (
-                      <MemoizedEstimateSection view={view} />
-                    )}
-
-                    {currentSectionId === "installation" && (
-                      <MemoizedInstallationSection view={view} timeline={timelineData} />
-                    )}
-
-                    {currentSectionId === "tasks" && (
-                      <MemoizedTaskSection tasks={tasksData} taskState={taskState} setTaskState={setTaskState} />
-                    )}
-
-                    {currentSectionId === "payments" && (
-                      <MemoizedPaymentSection payments={paymentsData} />
-                    )}
-
-                    {currentSectionId === "documents" && (
-                      <MemoizedDocumentSection documents={documentsData} />
-                    )}
-
-                    {currentSectionId === "photos" && (
-                      <MemoizedPhotoSection
-                        photos={view.photos}
-                        photoTab={photoTab}
-                        setPhotoTab={setPhotoTab}
-                        estimateId={estimateId}
-                        locationId={locationId}
-                      />
-                    )}
-
-                    {currentSectionId === "support" && (
-                      <div className="space-y-6">
-                        <MemoizedSupportSection support={supportData} />
-                        <FAQSection />
-                      </div>
-                    )}
-
-                    {currentSectionId === "activity" && (
-                      <MemoizedActivitySection entries={activityData} />
-                    )}
-
-                  {currentSectionId === "account" ? (
-                    <div className="space-y-6">
-                      <PortalAccountCard view={view} />
-                      <AccountPreferences />
-                    </div>
-                  ) : null}
-                </div>
+                ) : activeEstimate ? (
+                  <EstimateDetailView
+                    estimate={activeEstimate}
+                    progress={progress}
+                    view={view}
+                    photoItems={photoItems}
+                    missionSteps={missionSteps}
+                    activityFeed={activityFeed}
+                    estimates={estimates}
+                    estimateId={estimateId}
+                    estimateData={estimateData}
+                    onBackToList={handleBackToList}
+                    onSelectEstimate={handleSelectEstimate}
+                    onNavigateToPhotos={() => setActiveNav("estimates")}
+                  />
                 ) : (
-                  <div className="space-y-8">
-                    <header className="space-y-3">
-                      <Badge variant="outline" className="uppercase tracking-[0.35em]">
-                        {currentSection.badge}
-                      </Badge>
-                      <h1 className="text-3xl font-bold">{currentSection.label}</h1>
-                      <p className="max-w-2xl text-muted-foreground">{currentSection.description}</p>
-                    </header>
-                    <div className="space-y-6">
-                      <SkeletonCard />
-                      <SkeletonCard />
-                    </div>
+                  <div className="rounded-[32px] border border-slate-100 bg-white p-8 text-center shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+                    <h2 className="text-2xl font-semibold text-slate-900">Estimate unavailable</h2>
+                    <p className="mt-2 text-sm text-slate-500">
+                      We couldn’t load that estimate. Refresh the page or request a new invite link from your concierge.
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      (If you see this often, check that you’re logged in or that the invite token is still valid.)
+                    </p>
                   </div>
-                )
-              ) : null}
-            </div>
-          </div>
+                )}
+              </>
+            )}
+
+            {/* Payments View - Placeholder */}
+            {activeNav === "payments" && (
+              <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center">
+                <h2 className="text-2xl font-semibold text-slate-900">Payments</h2>
+                <p className="mt-2 text-slate-500">Payment history and balances coming soon.</p>
+              </div>
+            )}
+
+            {/* Support View - Placeholder */}
+            {activeNav === "support" && (
+              <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center">
+                <h2 className="text-2xl font-semibold text-slate-900">Support</h2>
+                <p className="mt-2 text-slate-500">Support resources coming soon.</p>
+              </div>
+            )}
+          </section>
         </div>
       </main>
     </>
   );
 }
 
-PortalPage.getInitialProps = async ({ query, req }) => {
+export async function getServerSideProps({ query, req }) {
   const estimateId = Array.isArray(query.estimateId) ? query.estimateId[0] : query.estimateId;
-  const locationId = Array.isArray(query.locationId) ? query.locationId[0] : query.locationId;
   const inviteToken = Array.isArray(query.inviteToken) ? query.inviteToken[0] : query.inviteToken;
-  const initialSection =
-    typeof query.section === "string" && query.section !== "" ? query.section : "overview";
 
-  // Check authentication: if no invite token and not authenticated, redirect to login
-  // Note: getInitialProps doesn't support redirects directly, so we'll handle this client-side
-  // But we can check here and pass a flag
-  const needsAuth = !inviteToken && req && !isAuthenticated(req);
+  const hasAuth = isAuthenticated(req);
 
-  // If no estimateId, fetch dashboard
+  // If no estimateId (dashboard view), require authentication
   if (!estimateId) {
+    if (!hasAuth) {
+      // Redirect to login if not authenticated
+      return {
+        redirect: {
+          destination: getLoginRedirect("/portal"),
+          permanent: false,
+        },
+      };
+    }
+
+    // User is authenticated, fetch dashboard
     try {
       const dashboard = await getPortalDashboard({
         headers: cookieHeader(req),
       });
-      // If dashboard fetch succeeded, return the estimates
       if (dashboard.ok && Array.isArray(dashboard.estimates)) {
         return {
-          initialStatus: null,
-          initialError: null,
-          initialSection,
-          initialEstimateId: null,
-          initialLocationId: null,
-          initialEstimates: dashboard.estimates,
+          props: {
+            initialStatus: null,
+            initialError: null,
+            initialEstimateId: null,
+            initialEstimates: dashboard.estimates,
+          },
         };
       }
-      // If dashboard returned but not ok, return empty (client will retry)
       return {
-        initialStatus: null,
-        initialError: null,
-        initialSection,
-        initialEstimateId: null,
-        initialLocationId: null,
-        initialEstimates: [],
+        props: {
+          initialStatus: null,
+          initialError: null,
+          initialEstimateId: null,
+          initialEstimates: [],
+        },
       };
     } catch (error) {
-      // If SSR fetch fails (e.g., 401, 404), let client-side handle it
-      // Return undefined for initialEstimates so client-side will retry
+      // Check if it's an authentication error
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      if (errorMsg.includes("401") || errorMsg.includes("Authentication")) {
+        return {
+          redirect: {
+            destination: getLoginRedirect("/portal"),
+            permanent: false,
+          },
+        };
+      }
       return {
-        initialStatus: null,
-        initialError: null,
-        initialSection,
-        initialEstimateId: null,
-        initialLocationId: null,
-        initialEstimates: undefined, // undefined triggers client-side retry
+        props: {
+          initialStatus: null,
+          initialError: null,
+          initialEstimateId: null,
+          initialEstimates: undefined,
+        },
       };
     }
   }
 
-  if (query.__mock === "1") {
+  // If estimateId exists, allow access with either auth OR inviteToken
+  // If neither is present, redirect to login
+  if (!hasAuth && !inviteToken) {
     return {
-      initialStatus: mockPortalStatus(estimateId, locationId),
-      initialError: null,
-      initialSection,
-      initialEstimateId: estimateId,
-      initialLocationId: locationId || null,
+      redirect: {
+        destination: getLoginRedirect(`/portal?estimateId=${estimateId}`),
+        permanent: false,
+      },
     };
   }
 
@@ -713,32 +506,40 @@ PortalPage.getInitialProps = async ({ query, req }) => {
     const status = await getPortalStatus(
       {
         estimateId,
-        locationId: locationId || undefined,
-        inviteToken: Array.isArray(query.inviteToken) ? query.inviteToken[0] : query.inviteToken,
+        inviteToken,
       },
       {
         headers: cookieHeader(req),
       }
     );
-    return { 
-      initialStatus: status, 
-      initialError: null, 
-      initialSection,
-      initialEstimateId: estimateId,
-      initialLocationId: locationId || null,
+    return {
+      props: {
+        initialStatus: status,
+        initialError: null,
+        initialEstimateId: estimateId,
+        initialEstimates: null,
+      },
     };
   } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : "Unknown error";
+    
+    // Check if it's an authentication error
+    if (errorMsg.includes("401") || errorMsg.includes("Authentication")) {
+      return {
+        redirect: {
+          destination: getLoginRedirect(`/portal?estimateId=${estimateId}`),
+          permanent: false,
+        },
+      };
+    }
+    
     return {
-      initialStatus: null,
-      initialError: error instanceof Error ? error.message : "Unknown error",
-      initialSection,
-      initialEstimateId: estimateId,
-      initialLocationId: locationId || null,
+      props: {
+        initialStatus: null,
+        initialError: errorMsg,
+        initialEstimateId: estimateId,
+        initialEstimates: null,
+      },
     };
   }
-};
-
-
-
-
-
+}
