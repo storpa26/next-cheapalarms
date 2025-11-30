@@ -12,7 +12,10 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
 
   if (!estimate) {
     return (
-      <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center">
+      <div 
+        className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center"
+        suppressHydrationWarning
+      >
         <h1 className="text-3xl font-semibold text-slate-900">Welcome to Your Portal</h1>
         <p className="mt-2 text-slate-500">Request a quote to get started.</p>
       </div>

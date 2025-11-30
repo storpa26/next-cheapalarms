@@ -253,14 +253,18 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   }, [estimateId, view, estimateData]);
 
   const overviewEstimate = useMemo(() => {
-    if (!estimateId || !estimateData?.ok) {
-      if (estimates.length > 0) {
+    // During SSR, if estimateData isn't available, return null consistently
+    // Don't fall back to estimates[0] during SSR as it may not be available
+    if (!estimateId) {
+      // No estimateId - check if we have estimates for fallback
+      // But only use this on client-side to avoid hydration mismatch
+      if (typeof window !== 'undefined' && estimates.length > 0) {
         const first = estimates[0];
         return {
           estimateId: first.estimateId || first.id,
           number: first.number || first.estimateNumber,
-          statusLabel: first.statusLabel || first.status,
-          status: first.status,
+          statusLabel: first.statusLabel || first.status || "Pending",
+          status: first.status || "pending",
           address: first.address || first.meta?.address,
           photosCount: first.photosCount || 0,
           items: [],
@@ -271,11 +275,18 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
       }
       return null;
     }
+    
+    // If estimateId exists but estimateData isn't loaded yet, return null
+    // This ensures consistent rendering between server and client
+    if (!estimateData?.ok) {
+      return null;
+    }
+    
     return {
       estimateId: estimateData.estimateId,
       number: estimateData.estimateNumber || estimateData.estimateId,
-      statusLabel: estimateData.status || "Pending",
-      status: estimateData.status,
+      statusLabel: view?.quote?.statusLabel || view?.quote?.status || "Pending",
+      status: view?.quote?.status || "pending", // Use portal status, not GHL status
       address: formatAddress(estimateData.contact?.address) || "Site address pending",
       photosCount: view?.photos?.items?.length || 0,
       items: estimateData.items || [],
