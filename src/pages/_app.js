@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { ToastProvider } from "@/components/ui/use-toast";
+import { Toaster } from "@/components/ui/sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/react-query/query-client";
 import { Spinner } from "@/components/ui/spinner";
@@ -63,6 +64,7 @@ export default function App({ Component, pageProps }) {
         <ToastProvider>
           <RouteProgressOverlay />
           <Component {...pageProps} />
+          <Toaster />
         </ToastProvider>
       </ThemeProvider>
     </QueryClientProvider>
