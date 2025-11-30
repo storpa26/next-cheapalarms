@@ -1,42 +1,6 @@
-import { WP_API_BASE } from "@/lib/wp";
-import { parse as parseCookie } from "cookie";
+import { createWpProxyHandler } from "@/lib/api/wp-proxy";
 
-export default async function handler(req, res) {
-  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
-  if (!wpBase) {
-    return res.status(500).json({ ok: false, error: "WP API base not configured" });
-  }
-
-  const cookies = parseCookie(req.headers.cookie || "");
-  const token = cookies.ca_jwt || null;
-  const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
-  const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
-
-  if (req.method === "GET") {
-    try {
-      const params = new URLSearchParams();
-      if (req.query.limit) params.append("limit", req.query.limit);
-
-      const queryString = params.toString();
-      const url = `${wpBase}/ca/v1/servicem8/jobs/links${queryString ? `?${queryString}` : ""}`;
-
-      const resp = await fetch(url, {
-        headers: {
-          "Content-Type": "application/json",
-          Cookie: req.headers.cookie ?? "",
-          ...authHeader,
-          ...devHeader,
-        },
-        credentials: "include",
-      });
-      const body = await resp.json();
-      return res.status(resp.status).json(body);
-    } catch (e) {
-      return res.status(500).json({ ok: false, error: e instanceof Error ? e.message : "Failed" });
-    }
-  }
-
-  res.setHeader("Allow", "GET");
-  return res.status(405).end();
-}
+export default createWpProxyHandler("/ca/v1/servicem8/jobs/links", {
+  allowedMethods: ["GET"],
+});
 
