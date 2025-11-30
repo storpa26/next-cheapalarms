@@ -14,11 +14,11 @@ export function usePortalStatus({ estimateId, locationId, inviteToken, enabled =
     ),
     enabled: enabled && !!estimateId,
     initialData,
-    // Set staleTime to Infinity when we have SSR data to prevent ANY refetches
-    // This is the KEY fix - prevents React Query from thinking data is stale and refetching
-    staleTime: initialData ? Infinity : 2 * 60 * 1000, // Infinity if SSR data exists, else 2 minutes
+    // Allow refetching when explicitly invalidated (e.g., after acceptance)
+    // But prevent automatic refetches to avoid unnecessary API calls
+    staleTime: 0, // Always allow refetch when invalidated
     gcTime: 10 * 60 * 1000, // 10 minutes
-    // Prevent all automatic refetches
+    // Prevent automatic refetches (but allow manual invalidation)
     refetchOnMount: false,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,

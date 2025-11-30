@@ -3,7 +3,10 @@ import { useState, useEffect } from "react";
 import { formatAddress } from "@/components/portal/utils/portal-utils";
 
 export function EstimateHeader({ estimate, progress, estimates, total, hasPhotos, onBackToList, onSelectEstimate, menuOpen, setMenuOpen }) {
-  const needsPhotos = !hasPhotos && estimate.status !== "accepted";
+  // Use statusValue if available (actual status), otherwise use status (display label)
+  const statusValue = estimate?.statusValue || estimate?.status || "pending";
+  const statusDisplay = estimate?.status || "Pending";
+  const needsPhotos = !hasPhotos && statusValue !== "accepted";
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -23,8 +26,12 @@ export function EstimateHeader({ estimate, progress, estimates, total, hasPhotos
         </div>
         <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 text-right shadow-inner">
           <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Status</p>
-          <p className="mt-1 text-2xl font-semibold text-slate-900">{estimate.status}</p>
-          <p className="text-xs text-slate-500">Progress {progress}%</p>
+          <p className="mt-1 text-2xl font-semibold text-slate-900" suppressHydrationWarning>
+            {statusDisplay}
+          </p>
+          <p className="text-xs text-slate-500" suppressHydrationWarning>
+            Progress {progress}%
+          </p>
         </div>
       </div>
 

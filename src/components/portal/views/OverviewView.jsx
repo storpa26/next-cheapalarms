@@ -10,6 +10,9 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
     setMounted(true);
   }, []);
 
+  // Ensure consistent rendering between server and client
+  // During SSR, if estimate is null, always render the welcome message
+  // On client, wait until mounted to avoid hydration mismatch
   if (!estimate) {
     return (
       <div 
@@ -30,8 +33,10 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
   const taxTotal = estimate.taxTotal || 0;
   const total = estimate.total || subtotal + taxTotal;
 
+  // Wrap the estimate view in a div with suppressHydrationWarning to prevent
+  // hydration errors when estimate data loads asynchronously
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" suppressHydrationWarning>
       {/* Hero Section */}
       <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
         <div className="flex flex-wrap items-start justify-between gap-6">

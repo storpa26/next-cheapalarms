@@ -23,10 +23,88 @@ export function useAcceptEstimate() {
 
       return res.json();
     },
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
+
+      // Snapshot the previous value for rollback
+      const previousQueries = [];
+      queryClient.getQueryCache().findAll({
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      }).forEach(query => {
+        previousQueries.push({
+          queryKey: query.queryKey,
+          data: queryClient.getQueryData(query.queryKey)
+        });
+      });
+
+      // Optimistically update all matching queries
+      queryClient.getQueryCache().findAll({
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      }).forEach(query => {
+        const currentData = queryClient.getQueryData(query.queryKey);
+        if (currentData) {
+          // Create a new object to ensure React detects the change
+          // Format: YYYY-MM-DD HH:MM:SS (WordPress MySQL format)
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          const seconds = String(now.getSeconds()).padStart(2, '0');
+          const acceptedAt = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+          
+          // Create a completely new object to ensure React Query detects the change
+          const updatedData = {
+            ...currentData,
+            quote: {
+              ...(currentData.quote || {}),
+              status: 'accepted',
+              statusLabel: 'Accepted',
+              acceptedAt: acceptedAt,
+              canAccept: false,
+            }
+          };
+          
+          queryClient.setQueryData(query.queryKey, updatedData);
+        }
+      });
+
+      return { previousQueries };
+    },
+    onError: (err, variables, context) => {
+      // Rollback optimistic updates on error
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
     onSuccess: (data, variables) => {
-      // Invalidate portal status to refetch
-      queryClient.invalidateQueries({ queryKey: ['portal-status', variables.estimateId] });
+      // Invalidate and refetch to ensure we have the latest data from server
+      // This ensures we get the invoice data and any other server-side updates
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
+      // Force refetch immediately
+      queryClient.refetchQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
       queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
+      queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
     },
   });
 }
@@ -54,10 +132,85 @@ export function useRejectEstimate() {
 
       return res.json();
     },
+    onMutate: async (variables) => {
+      // Cancel any outgoing refetches
+      await queryClient.cancelQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
+
+      // Snapshot the previous value for rollback
+      const previousQueries = [];
+      queryClient.getQueryCache().findAll({
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      }).forEach(query => {
+        previousQueries.push({
+          queryKey: query.queryKey,
+          data: queryClient.getQueryData(query.queryKey)
+        });
+      });
+
+      // Optimistically update
+      queryClient.getQueryCache().findAll({
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      }).forEach(query => {
+        const currentData = queryClient.getQueryData(query.queryKey);
+        if (currentData) {
+          // Format: YYYY-MM-DD HH:MM:SS (WordPress MySQL format)
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, '0');
+          const day = String(now.getDate()).padStart(2, '0');
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          const seconds = String(now.getSeconds()).padStart(2, '0');
+          const rejectedAt = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+          
+          const updatedData = {
+            ...currentData,
+            quote: {
+              ...(currentData.quote || {}),
+              status: 'rejected',
+              statusLabel: 'Rejected',
+              rejectedAt: rejectedAt,
+              canAccept: false,
+            }
+          };
+          
+          queryClient.setQueryData(query.queryKey, updatedData);
+        }
+      });
+
+      return { previousQueries };
+    },
+    onError: (err, variables, context) => {
+      // Rollback optimistic updates on error
+      if (context?.previousQueries) {
+        context.previousQueries.forEach(({ queryKey, data }) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
     onSuccess: (data, variables) => {
-      // Invalidate portal status to refetch
-      queryClient.invalidateQueries({ queryKey: ['portal-status', variables.estimateId] });
+      // Invalidate and refetch to ensure we have the latest data from server
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
+      // Force refetch immediately
+      queryClient.refetchQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
       queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
+      queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
     },
   });
 }

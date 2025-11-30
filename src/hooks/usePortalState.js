@@ -237,11 +237,18 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   const activeEstimate = useMemo(() => {
     if (!estimateId || !view) return null;
     const hasPhotos = (view.photos?.items?.length || 0) > 0;
+    // Use status first (actual value), then statusLabel (display text), then fallback
+    const quoteStatus = view.quote?.status || "pending";
+    const statusDisplay = view.quote?.statusLabel || 
+      (quoteStatus === "accepted" ? "Accepted" : 
+       quoteStatus === "rejected" ? "Rejected" : 
+       "Pending");
     return {
       id: estimateId,
       label: view.quote?.number || `Estimate #${estimateId}`,
-      status: view.quote?.statusLabel || view.quote?.status || "Pending",
-      progress: view.quote?.status === "accepted" ? 82 : hasPhotos ? 56 : 32,
+      status: statusDisplay, // Display label for UI
+      statusValue: quoteStatus, // Actual status value for logic
+      progress: quoteStatus === "accepted" ? 82 : hasPhotos ? 56 : 32,
       total: estimateData?.ok ? estimateData.total : view.quote?.total || null,
       hasPhotos,
       meta: {
@@ -276,25 +283,31 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
       return null;
     }
     
-    // If estimateId exists but estimateData isn't loaded yet, return null
-    // This ensures consistent rendering between server and client
-    if (!estimateData?.ok) {
+    // If estimateId exists, we can build from view (status) even if estimateData isn't loaded
+    // This ensures consistent rendering - use view as primary source
+    if (!view) {
       return null;
     }
     
-    return {
-      estimateId: estimateData.estimateId,
-      number: estimateData.estimateNumber || estimateData.estimateId,
+    // Build from view (portal status) - this is always available if estimateId exists
+    // estimateData is optional and can be loaded later
+    const baseEstimate = {
+      estimateId: estimateId,
+      number: view?.quote?.number || estimateId,
       statusLabel: view?.quote?.statusLabel || view?.quote?.status || "Pending",
       status: view?.quote?.status || "pending", // Use portal status, not GHL status
-      address: formatAddress(estimateData.contact?.address) || "Site address pending",
+      address: formatAddress(view?.installation?.address) || "Site address pending",
       photosCount: view?.photos?.items?.length || 0,
-      items: estimateData.items || [],
-      subtotal: estimateData.subtotal || 0,
-      taxTotal: estimateData.taxTotal || 0,
-      total: estimateData.total || 0,
-      label: estimateData.title || `Estimate #${estimateData.estimateNumber || estimateData.estimateId}`,
+      items: estimateData?.ok ? (estimateData.items || []) : [],
+      subtotal: estimateData?.ok ? (estimateData.subtotal || 0) : 0,
+      taxTotal: estimateData?.ok ? (estimateData.taxTotal || 0) : 0,
+      total: estimateData?.ok ? (estimateData.total || 0) : (view?.quote?.total || 0),
+      label: estimateData?.ok 
+        ? (estimateData.title || `Estimate #${estimateData.estimateNumber || estimateId}`)
+        : `Estimate #${view?.quote?.number || estimateId}`,
     };
+    
+    return baseEstimate;
   }, [estimateId, estimateData, estimates, view]);
 
   const progress = useMemo(() => {
