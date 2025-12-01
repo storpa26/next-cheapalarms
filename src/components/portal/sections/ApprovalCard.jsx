@@ -1,15 +1,16 @@
 import { ArrowRight, Shield, Sparkles, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAcceptEstimate, useRejectEstimate } from "@/lib/react-query/hooks";
+import { useAcceptEstimate, useRejectEstimate, useRetryInvoice } from "@/lib/react-query/hooks";
 import { Spinner } from "@/components/ui/spinner";
 
 export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
-  const quoteStatus = view?.quote?.status || "pending";
+  const quoteStatus = view?.quote?.status || "sent";
   const hasPhotos = (view?.photos?.items?.length || 0) > 0;
   const total = view?.quote?.total || 0;
   const scheduledFor = view?.installation?.scheduledFor;
   const invoice = view?.invoice;
-  const isPending = quoteStatus === "pending";
+  const invoiceError = view?.invoiceError; // Invoice creation error from API
+  const isPending = quoteStatus === "sent" || quoteStatus === "pending"; // Support both for backward compatibility
   const isAccepted = quoteStatus === "accepted";
   const isRejected = quoteStatus === "rejected";
   const acceptedAt = view?.quote?.acceptedAt;
@@ -25,8 +26,9 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
 
   const acceptMutation = useAcceptEstimate();
   const rejectMutation = useRejectEstimate();
+  const retryInvoiceMutation = useRetryInvoice();
 
-  const isProcessing = acceptMutation.isPending || rejectMutation.isPending;
+  const isProcessing = acceptMutation.isPending || rejectMutation.isPending || retryInvoiceMutation.isPending;
 
   const handleAccept = async () => {
     if (!hasPhotos) {
@@ -69,6 +71,20 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       setRejectReason("");
     } catch (error) {
       alert(error.message || "Failed to reject estimate");
+    }
+  };
+
+  const handleRetryInvoice = async () => {
+    if (!estimateId || !locationId) return;
+    try {
+      await retryInvoiceMutation.mutateAsync({ 
+        estimateId, 
+        locationId,
+        inviteToken: view?.account?.inviteToken 
+      });
+    } catch (error) {
+      // Error is already handled by the mutation hook
+      console.error("Retry invoice error:", error);
     }
   };
 
@@ -179,8 +195,29 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           </div>
         )}
 
-        {/* Action Buttons - Only show when pending */}
-        {isPending && (
+        {/* Invoice Error - Show retry option */}
+        {isAccepted && invoiceError && (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800">Invoice Creation Failed</p>
+                <p className="mt-1 text-xs text-amber-700">{invoiceError}</p>
+                <button
+                  type="button"
+                  onClick={handleRetryInvoice}
+                  disabled={isProcessing}
+                  className="mt-3 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? "Retrying..." : "Retry Invoice Creation"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Action Buttons - Only show when pending and not rejected */}
+        {isPending && !isRejected && (
           <div className="mt-5 grid gap-3 md:grid-cols-2">
             <button
               type="button"

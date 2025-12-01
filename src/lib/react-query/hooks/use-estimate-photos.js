@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 /**
  * React Query hook for fetching estimate photos
@@ -61,8 +62,14 @@ export function useStoreEstimatePhotos() {
       return res.json();
     },
     onSuccess: (data, variables) => {
-      // Invalidate and refetch photos for this estimate
+      // Invalidate queries (this automatically triggers refetch for active queries)
       queryClient.invalidateQueries({ queryKey: ['estimate-photos', variables.estimateId] });
+      toast.success('Photo uploaded successfully');
+    },
+    onError: (error) => {
+      toast.error('Failed to upload photo', {
+        description: error.message || 'Please try again or contact support if the problem persists.',
+      });
     },
   });
 }

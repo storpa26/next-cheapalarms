@@ -90,15 +90,33 @@ export function useAcceptEstimate() {
       }
     },
     onSuccess: (data, variables) => {
-      // Invalidate and refetch to ensure we have the latest data from server
-      // This ensures we get the invoice data and any other server-side updates
-      queryClient.invalidateQueries({ 
+      // Update cache with invoice error if present (for retry functionality)
+      // Or clear invoiceError if invoice was successfully created
+      queryClient.getQueryCache().findAll({
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
           query.queryKey[1] === variables.estimateId
+      }).forEach(query => {
+        const currentData = queryClient.getQueryData(query.queryKey);
+        if (currentData) {
+          const updatedData = { ...currentData };
+          
+          // If invoice exists, clear any previous error
+          if (data.invoice) {
+            updatedData.invoice = data.invoice;
+            updatedData.invoiceError = undefined;
+          }
+          // If invoiceError exists, store it for retry functionality
+          else if (data.invoiceError) {
+            updatedData.invoiceError = data.invoiceError;
+          }
+          
+          queryClient.setQueryData(query.queryKey, updatedData);
+        }
       });
-      // Force refetch immediately
-      queryClient.refetchQueries({ 
+      
+      // Invalidate queries (this automatically triggers refetch for active queries)
+      queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
           query.queryKey[1] === variables.estimateId
@@ -197,14 +215,8 @@ export function useRejectEstimate() {
       }
     },
     onSuccess: (data, variables) => {
-      // Invalidate and refetch to ensure we have the latest data from server
+      // Invalidate queries (this automatically triggers refetch for active queries)
       queryClient.invalidateQueries({ 
-        predicate: (query) => 
-          query.queryKey[0] === 'portal-status' && 
-          query.queryKey[1] === variables.estimateId
-      });
-      // Force refetch immediately
-      queryClient.refetchQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
           query.queryKey[1] === variables.estimateId

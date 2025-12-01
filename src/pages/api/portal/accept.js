@@ -26,7 +26,21 @@ export default async function handler(req, res) {
       credentials: "include",
       body: JSON.stringify(payload),
     });
-    const body = await resp.json();
+    
+    let body;
+    try {
+      const text = await resp.text();
+      if (!text) {
+        return res.status(500).json({ ok: false, error: "Empty response from WordPress API" });
+      }
+      body = JSON.parse(text);
+    } catch (parseError) {
+      return res.status(500).json({ 
+        ok: false, 
+        error: "Failed to parse response from WordPress API",
+        details: parseError instanceof Error ? parseError.message : "Unknown parsing error"
+      });
+    }
 
     if (resp.ok && payload.skipInvoice !== true) {
       try {
@@ -45,7 +59,19 @@ export default async function handler(req, res) {
             force: payload.forceInvoice === true,
           }),
         });
-        const invoiceBody = await invoiceResp.json();
+        let invoiceBody;
+        try {
+          const invoiceText = await invoiceResp.text();
+          if (!invoiceText) {
+            body.invoiceError = "Empty response from invoice creation endpoint";
+            return res.status(resp.status).json(body);
+          }
+          invoiceBody = JSON.parse(invoiceText);
+        } catch (parseError) {
+          body.invoiceError = "Failed to parse invoice creation response";
+          return res.status(resp.status).json(body);
+        }
+        
         if (invoiceResp.ok) {
           body.invoice = invoiceBody.invoice ?? null;
           body.invoiceExists = invoiceBody.exists ?? false;

@@ -5,4 +5,5 @@ export { usePortalDashboard } from './use-portal-dashboard';
 export { useWordPressUsers, useGHLContacts } from './use-customers';
 export { useEstimatesList } from './use-estimates-list';
 export { useAcceptEstimate, useRejectEstimate } from './use-portal-accept';
+export { useRetryInvoice } from './use-portal-retry-invoice';
 

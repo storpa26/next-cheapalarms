@@ -124,7 +124,7 @@ function ProductSlot({
         // No need to reload - React Query will automatically refetch and update UI
       } catch (error) {
         const errorMsg = error.message || "Failed to upload photo";
-        alert(errorMsg);
+        // Error feedback is handled by the mutation's onError handler
         onError?.(errorMsg);
       } finally {
         setUploading(false);
