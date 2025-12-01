@@ -34,3 +34,33 @@ export function useSyncInvoice() {
   });
 }
 
+/**
+ * React Query mutation for sending an invoice
+ */
+export function useSendInvoice() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ invoiceId, locationId, method = 'email' }) => {
+      const res = await fetch(`${WP_API_BASE}/ca/v1/admin/invoices/${invoiceId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ locationId, method }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.err || error.error || 'Failed to send invoice');
+      }
+
+      return res.json();
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate invoice queries to refresh
+      queryClient.invalidateQueries({ queryKey: ['admin-invoice', variables.invoiceId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+    },
+  });
+}
+

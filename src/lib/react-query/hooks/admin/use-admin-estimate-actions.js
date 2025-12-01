@@ -5,6 +5,8 @@ const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || 'http://localhost:8882/wp-
 /**
  * React Query mutation for syncing an estimate from GHL
  */
+import { toast } from 'sonner';
+
 export function useSyncEstimate() {
   const queryClient = useQueryClient();
 
@@ -64,6 +66,36 @@ export function useCreateInvoiceFromEstimate() {
       if (data?.invoice?.id) {
         queryClient.invalidateQueries({ queryKey: ['admin-invoice', data.invoice.id] });
       }
+    },
+  });
+}
+
+/**
+ * React Query mutation for sending an estimate
+ */
+export function useSendEstimate() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ estimateId, locationId, method = 'email' }) => {
+      const res = await fetch(`${WP_API_BASE}/ca/v1/admin/estimates/${estimateId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ locationId, method }),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.err || error.error || 'Failed to send estimate');
+      }
+
+      return res.json();
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate estimate queries to refresh
+      queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
     },
   });
 }

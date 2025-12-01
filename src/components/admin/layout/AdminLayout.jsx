@@ -3,12 +3,12 @@ import { Topbar } from "./Topbar";
 
 export default function AdminLayout({ title = "Admin", children }) {
   return (
-    <main className="bg-background text-foreground">
+    <main className="bg-gray-50 text-gray-900 min-h-screen">
       <div className="flex min-h-screen">
         <Sidebar />
-        <div className="flex-1">
+        <div className="flex-1 flex flex-col">
           <Topbar title={title} />
-          <div className="px-4 py-8 sm:px-6 lg:px-10">{children}</div>
+          <div className="flex-1 px-4 py-8 sm:px-6 lg:px-10">{children}</div>
         </div>
       </div>
     </main>
