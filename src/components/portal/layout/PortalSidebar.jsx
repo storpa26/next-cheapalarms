@@ -1,4 +1,4 @@
-import { Sparkles, ListChecks, CreditCard, MessageCircle } from "lucide-react";
+import { Sparkles, ListChecks, CreditCard, MessageCircle, Settings } from "lucide-react";
 import { SignOutButton } from "@/components/ui/sign-out-button";
 
 const NAV_ITEMS = [
@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: "Estimates", icon: ListChecks, id: "estimates" },
   { label: "Payments", icon: CreditCard, id: "payments" },
   { label: "Support", icon: MessageCircle, id: "support" },
+  { label: "Preferences", icon: Settings, id: "preferences" },
 ];
 
 export function PortalSidebar({ activeNav, onNavChange, estimateId, onBackToList }) {

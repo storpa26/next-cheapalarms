@@ -10,7 +10,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const scheduledFor = view?.installation?.scheduledFor;
   const invoice = view?.invoice;
   const invoiceError = view?.invoiceError; // Invoice creation error from API
-  const isPending = quoteStatus === "sent" || quoteStatus === "pending"; // Support both for backward compatibility
+  const isPending = quoteStatus === "sent"; // Portal uses: sent, accepted, rejected
   const isAccepted = quoteStatus === "accepted";
   const isRejected = quoteStatus === "rejected";
   const acceptedAt = view?.quote?.acceptedAt;

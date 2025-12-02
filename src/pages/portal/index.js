@@ -6,6 +6,10 @@ import { PortalSidebar } from "@/components/portal/layout/PortalSidebar";
 import { OverviewView } from "@/components/portal/views/OverviewView";
 import { EstimatesListView } from "@/components/portal/views/EstimatesListView";
 import { EstimateDetailView } from "@/components/portal/views/EstimateDetailView";
+import { PaymentsView } from "@/components/portal/views/PaymentsView";
+import { SupportView } from "@/components/portal/views/SupportView";
+import { PreferencesView } from "@/components/portal/views/PreferencesView";
+import { InviteTokenBanner } from "@/components/portal/InviteTokenBanner";
 import { Spinner } from "@/components/ui/spinner";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import { usePortalState } from "@/hooks/usePortalState";
@@ -58,6 +62,11 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
           />
 
           <section className="flex-1 space-y-6">
+            {/* Invite Token Banner */}
+            {inviteToken && (
+              <InviteTokenBanner />
+            )}
+
             {/* Overview View */}
             {activeNav === "overview" && (
               <>
@@ -130,21 +139,14 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
               </>
             )}
 
-            {/* Payments View - Placeholder */}
-            {activeNav === "payments" && (
-              <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center">
-                <h2 className="text-2xl font-semibold text-slate-900">Payments</h2>
-                <p className="mt-2 text-slate-500">Payment history and balances coming soon.</p>
-              </div>
-            )}
+            {/* Payments View */}
+            {activeNav === "payments" && <PaymentsView view={view} />}
 
-            {/* Support View - Placeholder */}
-            {activeNav === "support" && (
-              <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center">
-                <h2 className="text-2xl font-semibold text-slate-900">Support</h2>
-                <p className="mt-2 text-slate-500">Support resources coming soon.</p>
-              </div>
-            )}
+            {/* Support View */}
+            {activeNav === "support" && <SupportView view={view} />}
+
+            {/* Preferences View */}
+            {activeNav === "preferences" && <PreferencesView view={view} />}
           </section>
         </div>
       </main>

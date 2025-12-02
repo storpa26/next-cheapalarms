@@ -237,12 +237,12 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   const activeEstimate = useMemo(() => {
     if (!estimateId || !view) return null;
     const hasPhotos = (view.photos?.items?.length || 0) > 0;
-    // Use status first (actual value), then statusLabel (display text), then fallback
-    const quoteStatus = view.quote?.status || "pending";
+    // Use portal status (sent/accepted/rejected) - portal is source of truth
+    const quoteStatus = view.quote?.status || "sent";
     const statusDisplay = view.quote?.statusLabel || 
       (quoteStatus === "accepted" ? "Accepted" : 
        quoteStatus === "rejected" ? "Rejected" : 
-       "Pending");
+       "Sent");
     return {
       id: estimateId,
       label: view.quote?.number || `Estimate #${estimateId}`,
@@ -261,17 +261,21 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
 
   const overviewEstimate = useMemo(() => {
     // During SSR, if estimateData isn't available, return null consistently
-    // Don't fall back to estimates[0] during SSR as it may not be available
+    // Use initialEstimates if available (from SSR) to ensure server/client consistency
     if (!estimateId) {
       // No estimateId - check if we have estimates for fallback
-      // But only use this on client-side to avoid hydration mismatch
-      if (typeof window !== 'undefined' && estimates.length > 0) {
-        const first = estimates[0];
+      // Use initialEstimates first (from SSR), then fall back to client-side estimates
+      const estimatesToUse = Array.isArray(initialEstimates) && initialEstimates.length > 0 
+        ? initialEstimates 
+        : estimates;
+      
+      if (estimatesToUse.length > 0) {
+        const first = estimatesToUse[0];
         return {
           estimateId: first.estimateId || first.id,
           number: first.number || first.estimateNumber,
-          statusLabel: first.statusLabel || first.status || "Pending",
-          status: first.status || "pending",
+          statusLabel: first.statusLabel || first.status || "Sent",
+          status: first.status || "sent",
           address: first.address || first.meta?.address,
           photosCount: first.photosCount || 0,
           items: [],
@@ -294,8 +298,8 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     const baseEstimate = {
       estimateId: estimateId,
       number: view?.quote?.number || estimateId,
-      statusLabel: view?.quote?.statusLabel || view?.quote?.status || "Pending",
-      status: view?.quote?.status || "pending", // Use portal status, not GHL status
+      statusLabel: view?.quote?.statusLabel || view?.quote?.status || "Sent",
+      status: view?.quote?.status || "sent", // Use portal status (sent/accepted/rejected), not GHL status
       address: formatAddress(view?.installation?.address) || "Site address pending",
       photosCount: view?.photos?.items?.length || 0,
       items: estimateData?.ok ? (estimateData.items || []) : [],
@@ -308,7 +312,7 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     };
     
     return baseEstimate;
-  }, [estimateId, estimateData, estimates, view]);
+  }, [estimateId, estimateData, estimates, initialEstimates, view]);
 
   const progress = useMemo(() => {
     if (!view) return 0;

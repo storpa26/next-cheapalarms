@@ -19,6 +19,7 @@ export function PhotoMissionCard({
   const [isMobile, setIsMobile] = useState(false);
   const [uploadAction, setUploadAction] = useState(null);
   const [activeItem, setActiveItem] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     setIsMobile(isMobileDevice());
@@ -53,6 +54,26 @@ export function PhotoMissionCard({
           <Camera className="h-6 w-6 text-primary" />
         </div>
       </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="mt-4 rounded-2xl border-2 border-red-200 bg-red-50 p-4 shadow-sm">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-red-800">Upload Error</p>
+              <p className="mt-1 text-sm text-red-700">{error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              className="rounded-full p-1 text-red-600 transition hover:bg-red-100"
+              aria-label="Dismiss error"
+            >
+              <span className="text-lg">×</span>
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="mt-6 max-h-64 space-y-3 overflow-y-auto pr-1">
         {totalCount > 0 ? (
@@ -166,7 +187,7 @@ export function PhotoMissionCard({
       )}
 
       {showUploader && estimateId ? (
-        <div className="hidden" aria-hidden="true">
+        <div className="sr-only" aria-hidden="true">
           <ProductPhotoUpload
             estimateId={estimateId}
             locationId={locationId}
@@ -179,8 +200,10 @@ export function PhotoMissionCard({
             onUploadComplete={() => {
               setUploadAction(null);
               setActiveItem(null);
+              setError(null); // Clear error on success
             }}
-            onError={() => {
+            onError={(errorMsg) => {
+              setError(errorMsg); // Display error to user
               setUploadAction(null);
               setActiveItem(null);
             }}

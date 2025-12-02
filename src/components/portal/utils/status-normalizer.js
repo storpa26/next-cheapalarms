@@ -16,8 +16,8 @@ export function normaliseStatus(status) {
     nextStep: status.nextStep ?? installation.message ?? "We'll keep you posted.",
     invoice: status.invoice ?? null,
     quote: {
-      status: quote.status ?? "pending",
-      label: quote.statusLabel ?? "Awaiting approval",
+      status: quote.status ?? "sent", // Portal uses: sent, accepted, rejected
+      label: quote.statusLabel ?? "Sent", // Default label matches backend
       number: quote.number ?? status.estimateId ?? "—",
       acceptedAt: quote.acceptedAt ?? null,
     },

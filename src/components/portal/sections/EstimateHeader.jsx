@@ -4,8 +4,9 @@ import { formatAddress } from "@/components/portal/utils/portal-utils";
 
 export function EstimateHeader({ estimate, progress, estimates, total, hasPhotos, onBackToList, onSelectEstimate, menuOpen, setMenuOpen }) {
   // Use statusValue if available (actual status), otherwise use status (display label)
-  const statusValue = estimate?.statusValue || estimate?.status || "pending";
-  const statusDisplay = estimate?.status || "Pending";
+  // Portal uses: sent, accepted, rejected (not pending)
+  const statusValue = estimate?.statusValue || estimate?.status || "sent";
+  const statusDisplay = estimate?.status || "Sent";
   const needsPhotos = !hasPhotos && statusValue !== "accepted";
   const [mounted, setMounted] = useState(false);
 

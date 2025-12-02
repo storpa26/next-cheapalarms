@@ -43,7 +43,7 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
           {estimates.map((estimate) => {
             const estId = estimate.estimateId || estimate.id;
             const estNumber = estimate.number || estimate.estimateNumber || estId;
-            const estStatus = estimate.statusLabel || estimate.status || "Pending";
+            const estStatus = estimate.statusLabel || estimate.status || "Sent";
             return (
               <div
                 key={estId}

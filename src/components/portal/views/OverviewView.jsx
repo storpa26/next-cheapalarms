@@ -26,17 +26,26 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
   }
 
   const hasPhotos = (estimate.photosCount || 0) > 0;
-  const needsPhotos = !hasPhotos && estimate.status !== "accepted";
+  // Use statusValue (portal status: sent/accepted/rejected) not display status
+  const statusValue = estimate.statusValue || estimate.status || "sent";
+  const needsPhotos = !hasPhotos && statusValue !== "accepted";
 
   // Calculate totals
   const subtotal = estimate.subtotal || 0;
   const taxTotal = estimate.taxTotal || 0;
   const total = estimate.total || subtotal + taxTotal;
 
-  // Wrap the estimate view in a div with suppressHydrationWarning to prevent
-  // hydration errors when estimate data loads asynchronously
+  // Format currency consistently - use toFixed for SSR, toLocaleString after mount
+  // This ensures server and client render the same initial value
+  const formatCurrency = (amount) => {
+    if (mounted) {
+      return `$${amount.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `$${amount.toFixed(2)}`;
+  };
+
   return (
-    <div className="space-y-6" suppressHydrationWarning>
+    <div className="space-y-6">
       {/* Hero Section */}
       <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
         <div className="flex flex-wrap items-start justify-between gap-6">
@@ -85,10 +94,8 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
               {needsPhotos ? "Estimated Total" : "Estimate Total"}
             </p>
-            <p className="mt-2 text-4xl font-semibold text-slate-900">
-              {mounted
-                ? `$${total.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                : `$${total.toFixed(2)}`}
+            <p className="mt-2 text-4xl font-semibold text-slate-900" suppressHydrationWarning>
+              {formatCurrency(total)}
             </p>
             {needsPhotos && (
               <p className="mt-1 text-xs text-slate-500">Preliminary pricing • Updates after photo review</p>
@@ -102,19 +109,15 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-slate-600">Subtotal</span>
-                <span className="font-semibold text-slate-900">
-                  {mounted
-                    ? `$${subtotal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                    : `$${subtotal.toFixed(2)}`}
+                <span className="font-semibold text-slate-900" suppressHydrationWarning>
+                  {formatCurrency(subtotal)}
                 </span>
               </div>
               {taxTotal > 0 && (
                 <div className="flex justify-between">
                   <span className="text-slate-600">Tax</span>
-                  <span className="font-semibold text-slate-900">
-                    {mounted
-                      ? `$${taxTotal.toLocaleString("en-AU", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-                      : `$${taxTotal.toFixed(2)}`}
+                  <span className="font-semibold text-slate-900" suppressHydrationWarning>
+                    {formatCurrency(taxTotal)}
                   </span>
                 </div>
               )}
@@ -146,13 +149,8 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
                       Qty: {item.qty || item.quantity || 1}
                     </p>
                     {item.amount && (
-                      <p className="mt-1 text-sm text-slate-600">
-                        {mounted
-                          ? `$${(item.amount * (item.qty || item.quantity || 1)).toLocaleString("en-AU", {
-                              minimumFractionDigits: 2,
-                              maximumFractionDigits: 2,
-                            })}`
-                          : `$${((item.amount * (item.qty || item.quantity || 1))).toFixed(2)}`}
+                      <p className="mt-1 text-sm text-slate-600" suppressHydrationWarning>
+                        {formatCurrency(item.amount * (item.qty || item.quantity || 1))}
                       </p>
                     )}
                   </div>

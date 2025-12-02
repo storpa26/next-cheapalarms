@@ -1,6 +1,5 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Camera, Image } from "lucide-react";
-import { WP_API_BASE } from "@/lib/wp";
 import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/react-query/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
@@ -27,6 +26,8 @@ function ProductSlot({
   onUploadComplete,
   onError,
   registerSlotRef,
+  registerFileInputRef,
+  registerCameraInputRef,
 }) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -59,6 +60,7 @@ function ProductSlot({
         const sessionRes = await fetch("/api/upload/start", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          credentials: "include",
           body: JSON.stringify({ estimateId, locationId }),
         });
         const sessionData = await sessionRes.json();
@@ -66,19 +68,25 @@ function ProductSlot({
           throw new Error(sessionData.err || sessionData.error || "Failed to start upload session");
         }
 
-        // Upload file
+        // Upload file - Use Next.js proxy instead of direct WordPress call
         const formData = new FormData();
         formData.append("file", file);
 
-        const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE || "http://localhost:10013/wp-json";
-        const uploadRes = await fetch(`${wpBase}/ca/v1/upload?token=${encodeURIComponent(sessionData.token)}`, {
+        // Use Next.js proxy endpoint which handles cookies and authentication
+        const uploadRes = await fetch(`/api/upload?token=${encodeURIComponent(sessionData.token)}`, {
           method: "POST",
+          credentials: "include",
           body: formData,
         });
 
         if (!uploadRes.ok) {
           const errorData = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
-          throw new Error(errorData.err || errorData.error || "Upload failed");
+          const statusText = uploadRes.status === 403 
+            ? "Access denied. Please ensure you're logged in and have permission to upload photos."
+            : uploadRes.status === 401
+            ? "Authentication failed. Please refresh the page and try again."
+            : "Upload failed";
+          throw new Error(errorData.err || errorData.error || `${statusText} (${uploadRes.status})`);
         }
 
         const uploadData = await uploadRes.json();
@@ -144,6 +152,30 @@ function ProductSlot({
     },
     [handleFileSelect]
   );
+
+  // Register file input refs when component mounts (only for first slot)
+  // Register immediately - refs will be populated when React attaches them
+  useEffect(() => {
+    if (slotIndex === 1) {
+      if (registerFileInputRef) {
+        registerFileInputRef(fileInputRef);
+      }
+      if (registerCameraInputRef) {
+        registerCameraInputRef(cameraInputRef);
+      }
+    }
+    // Cleanup: unregister when component unmounts
+    return () => {
+      if (slotIndex === 1) {
+        if (registerFileInputRef) {
+          registerFileInputRef(null);
+        }
+        if (registerCameraInputRef) {
+          registerCameraInputRef(null);
+        }
+      }
+    };
+  }, [slotIndex, registerFileInputRef, registerCameraInputRef]);
 
   return (
     <div className="space-y-1.5" ref={registerSlotRef}>
@@ -252,6 +284,8 @@ function ProductRow({
   onUploadComplete,
   onError,
   registerProductRef,
+  registerFileInputRef,
+  registerCameraInputRef,
 }) {
   return (
     <div className="space-y-2">
@@ -277,6 +311,12 @@ function ProductRow({
                 registerSlotRef={
                   isFirstSlot ? (element) => registerProductRef(productName, element) : undefined
                 }
+                registerFileInputRef={
+                  isFirstSlot ? (ref) => registerFileInputRef(productName, ref) : undefined
+                }
+                registerCameraInputRef={
+                  isFirstSlot ? (ref) => registerCameraInputRef(productName, ref) : undefined
+                }
               />
             </div>
           );
@@ -296,12 +336,33 @@ export function ProductPhotoUpload({
   onError,
 }) {
   const productSlotRefs = useRef({});
+  const fileInputRefs = useRef({}); // Store file input refs directly
+  const cameraInputRefs = useRef({}); // Store camera input refs directly
+  
   const registerProductRef = useCallback((productName, element) => {
     if (!productName) return;
     if (element) {
       productSlotRefs.current[productName] = element;
     } else {
       delete productSlotRefs.current[productName];
+    }
+  }, []);
+
+  const registerFileInputRef = useCallback((productName, inputRef) => {
+    if (!productName) return;
+    if (inputRef) {
+      fileInputRefs.current[productName] = inputRef;
+    } else {
+      delete fileInputRefs.current[productName];
+    }
+  }, []);
+
+  const registerCameraInputRef = useCallback((productName, inputRef) => {
+    if (!productName) return;
+    if (inputRef) {
+      cameraInputRefs.current[productName] = inputRef;
+    } else {
+      delete cameraInputRefs.current[productName];
     }
   }, []);
   
@@ -321,41 +382,73 @@ export function ProductPhotoUpload({
   const estimateItems = estimateData?.items || [];
   const error = estimateError?.message || null;
 
-  // Trigger first slot input when initialAction is set (for mobile buttons)
+  // Trigger file input when initialAction is set
   useEffect(() => {
     if (!initialAction || !initialItemName) return;
-    const targetElement = productSlotRefs.current[initialItemName];
-    if (!targetElement) return;
 
     const timer = setTimeout(() => {
-      if (initialAction === "camera") {
-        const cameraButton = targetElement.querySelector('button[title="Take Photo"]');
-        if (cameraButton) {
-          cameraButton.click();
-        } else {
-          const cameraInput = targetElement.querySelector('input[type="file"][capture="environment"]');
-          if (cameraInput) {
-            cameraInput.click();
-          }
+      if (initialAction === "upload") {
+        // Try direct ref first (most reliable)
+        const fileInput = fileInputRefs.current[initialItemName];
+        if (fileInput && fileInput.current) {
+          fileInput.current.click();
+          onInitialActionHandled?.();
+          return;
         }
-      } else if (initialAction === "upload") {
-        const uploadButton = targetElement.querySelector('button[title="Upload Photo"]');
-        if (uploadButton) {
-          uploadButton.click();
-        } else {
+        
+        // Fallback: try to find via querySelector
+        const targetElement = productSlotRefs.current[initialItemName];
+        if (targetElement) {
+          const uploadButton = targetElement.querySelector('button[title="Upload Photo"]');
+          if (uploadButton) {
+            uploadButton.click();
+            onInitialActionHandled?.();
+            return;
+          }
           const fileButton = targetElement.querySelector('button[title="Add Photo"]');
           if (fileButton) {
             fileButton.click();
-          } else {
-            const fileInput = targetElement.querySelector('input[type="file"]:not([capture])');
-            if (fileInput) {
-              fileInput.click();
-            }
+            onInitialActionHandled?.();
+            return;
+          }
+          const fileInputElement = targetElement.querySelector('input[type="file"]:not([capture])');
+          if (fileInputElement) {
+            fileInputElement.click();
+            onInitialActionHandled?.();
+            return;
+          }
+        }
+      } else if (initialAction === "camera") {
+        // Try direct ref first
+        const cameraInput = cameraInputRefs.current[initialItemName];
+        if (cameraInput && cameraInput.current) {
+          cameraInput.current.click();
+          onInitialActionHandled?.();
+          return;
+        }
+        
+        // Fallback: try to find via querySelector
+        const targetElement = productSlotRefs.current[initialItemName];
+        if (targetElement) {
+          const cameraButton = targetElement.querySelector('button[title="Take Photo"]');
+          if (cameraButton) {
+            cameraButton.click();
+            onInitialActionHandled?.();
+            return;
+          }
+          const cameraInputElement = targetElement.querySelector('input[type="file"][capture="environment"]');
+          if (cameraInputElement) {
+            cameraInputElement.click();
+            onInitialActionHandled?.();
+            return;
           }
         }
       }
+      
+      // If we get here, we couldn't trigger the input
+      console.warn(`Could not trigger ${initialAction} for ${initialItemName}`);
       onInitialActionHandled?.();
-    }, 200);
+    }, 300); // Increased timeout to ensure refs are registered
 
     return () => clearTimeout(timer);
   }, [initialAction, initialItemName, onInitialActionHandled]);
@@ -432,17 +525,19 @@ export function ProductPhotoUpload({
   return (
     <div className="space-y-4">
       {productGroups.map((product, groupIndex) => (
-        <ProductRow
-          key={product.name}
-          productName={product.name}
-          quantity={product.quantity}
-          slots={storedPhotos[product.name] || {}}
-          estimateId={estimateId}
-          locationId={locationId}
-          onUploadComplete={onUploadComplete}
-          onError={onError}
-          registerProductRef={registerProductRef}
-        />
+         <ProductRow
+           key={product.name}
+           productName={product.name}
+           quantity={product.quantity}
+           slots={storedPhotos[product.name] || {}}
+           estimateId={estimateId}
+           locationId={locationId}
+           onUploadComplete={onUploadComplete}
+           onError={onError}
+           registerProductRef={registerProductRef}
+           registerFileInputRef={registerFileInputRef}
+           registerCameraInputRef={registerCameraInputRef}
+         />
       ))}
     </div>
   );

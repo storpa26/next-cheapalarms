@@ -31,20 +31,62 @@ test.describe("headless surface smoke test", () => {
     await expect(page.getByText(/estimateid is required/i)).toBeVisible();
   });
 
-  test("portal mock renders data", async ({ page }) => {
+  test("portal mock renders overview with estimate data", async ({ page }) => {
     await page.goto("/portal?estimateId=TEST&locationId=LOC&__mock=1");
-    await expect(page.getByRole("heading", { name: /your installation at a glance/i })).toBeVisible();
-    await expect(page.getByText(/estimate test/i)).toBeVisible();
-    await expect(page.getByText(/site photos/i)).toBeVisible();
-    await expect(page.getByText(/checklist/i)).toBeVisible();
-    await expect(page.getByText(/documents/i)).toBeVisible();
+    
+    // Check overview renders
+    await expect(page.getByText(/your estimate/i)).toBeVisible();
+    await expect(page.getByText(/estimate #test/i)).toBeVisible();
+    
+    // Check navigation sidebar
+    await expect(page.getByRole("button", { name: /overview/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /estimates/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /payments/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /support/i })).toBeVisible();
+    await expect(page.getByRole("button", { name: /preferences/i })).toBeVisible();
+  });
 
-    await page.locator("aside").getByRole("button", { name: /^Photos$/i }).click();
-    await page.getByRole("button", { name: /missing \(6\)/i }).click();
-    await expect(page.getByText(/skip photos for now/i)).toBeVisible();
+  test("portal navigates to payments view", async ({ page }) => {
+    await page.goto("/portal?estimateId=TEST&locationId=LOC&__mock=1");
+    
+    // Navigate to payments
+    await page.getByRole("button", { name: /payments/i }).click();
+    await expect(page.getByText(/financial overview/i)).toBeVisible();
+    await expect(page.getByText(/payments & documents/i)).toBeVisible();
+    await expect(page.getByText(/outstanding balance/i)).toBeVisible();
+  });
 
-    await page.locator("aside").getByRole("button", { name: /^Support$/i }).click();
-    await expect(page.getByText(/your CheapAlarms specialist/i)).toBeVisible();
+  test("portal navigates to support view", async ({ page }) => {
+    await page.goto("/portal?estimateId=TEST&locationId=LOC&__mock=1");
+    
+    // Navigate to support
+    await page.getByRole("button", { name: /support/i }).click();
+    await expect(page.getByText(/customer care/i)).toBeVisible();
+    await expect(page.getByText(/support & help/i)).toBeVisible();
+    await expect(page.getByText(/assigned specialist/i)).toBeVisible();
+  });
+
+  test("portal navigates to preferences view", async ({ page }) => {
+    await page.goto("/portal?estimateId=TEST&locationId=LOC&__mock=1");
+    
+    // Navigate to preferences
+    await page.getByRole("button", { name: /preferences/i }).click();
+    await expect(page.getByText(/your account/i)).toBeVisible();
+    await expect(page.getByText(/preferences & activity/i)).toBeVisible();
+    await expect(page.getByText(/account preferences/i)).toBeVisible();
+  });
+
+  test("portal shows invite token banner for guest access", async ({ page }) => {
+    await page.goto("/portal?estimateId=TEST&inviteToken=abc123&__mock=1");
+    
+    // Check for invite token banner
+    await expect(page.getByText(/guest access/i)).toBeVisible();
+    await expect(page.getByText(/temporary invite link/i)).toBeVisible();
+    
+    // Dismiss banner
+    const dismissButton = page.getByRole("button", { name: /dismiss banner/i });
+    await dismissButton.click();
+    await expect(page.getByText(/guest access/i)).not.toBeVisible();
   });
 
   test("admin products form renders and lists items (mocked auth)", async ({ page }) => {

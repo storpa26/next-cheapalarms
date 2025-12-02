@@ -8,8 +8,8 @@ export function mockPortalStatus(estimateId, locationId) {
     locationId,
     nextStep: "Our team will confirm shortly.",
     quote: {
-      status: "pending",
-      statusLabel: "Awaiting approval",
+      status: "sent", // Portal uses: sent, accepted, rejected
+      statusLabel: "Sent",
       number: estimateId,
       acceptedAt: null,
     },
