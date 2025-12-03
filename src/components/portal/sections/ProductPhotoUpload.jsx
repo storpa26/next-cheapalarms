@@ -1,10 +1,12 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
-import { Camera, Image } from "lucide-react";
+import { Camera, Image, X, Eye, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/react-query/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getErrorMessage } from "@/lib/api/error-messages";
+import { toast } from "sonner";
+import { startUploadSession, uploadFile, compressImage, getCurrentSession } from "@/lib/uploadApi";
 
 const MAX_PHOTOS_PER_SLOT = 2;
 
@@ -31,6 +33,9 @@ function ProductSlot({
   registerCameraInputRef,
 }) {
   const [uploading, setUploading] = useState(false);
+  const [uploadState, setUploadState] = useState('idle'); // idle | uploading | success | error
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [previewPhoto, setPreviewPhoto] = useState(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const isMobile = isMobileDevice();
@@ -44,7 +49,9 @@ function ProductSlot({
       // Validate file type
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
       if (!file.type.startsWith("image/") || !allowedTypes.includes(file.type.toLowerCase())) {
-        onError?.(getErrorMessage(415, `${file.name} is not a supported image type. Please use JPG, PNG, GIF, or WEBP.`));
+        toast.error('Invalid file type', {
+          description: `${file.name} is not supported. Please use JPG, PNG, GIF, or WEBP.`,
+        });
         return;
       }
       
@@ -52,105 +59,112 @@ function ProductSlot({
       const maxSize = 10 * 1024 * 1024;
       if (file.size > maxSize) {
         const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-        onError?.(getErrorMessage(413, `${file.name} is too large (${sizeMB}MB). Maximum size is 10MB.`));
+        toast.error('File too large', {
+          description: `${file.name} is ${sizeMB}MB. Maximum size is 10MB.`,
+        });
         return;
       }
 
-      // Set uploading state immediately - React will batch this but it should still render
+      // Set uploading state
       setUploading(true);
-      
-      // Use requestAnimationFrame to ensure spinner renders before async work
-      await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+      setUploadState('uploading');
+      setUploadProgress(0);
       
       try {
-        // Start upload session
-        const sessionRes = await fetch("/api/upload/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ estimateId, locationId }),
-        });
-        if (!sessionRes.ok) {
-          const errorMessage = getErrorMessage(sessionRes.status, "Failed to start upload session");
-          throw new Error(errorMessage);
-        }
-        
-        const sessionData = await sessionRes.json();
-        if (!sessionData.ok) {
-          throw new Error(sessionData.err || sessionData.error || "Failed to start upload session");
+        // Ensure upload session exists
+        let session = getCurrentSession();
+        if (!session || session.estimateId !== estimateId) {
+          setUploadProgress(10);
+          session = await startUploadSession(estimateId, locationId);
         }
 
-        // Upload file - Use Next.js proxy instead of direct WordPress call
-        const formData = new FormData();
-        formData.append("file", file);
+        // Compress image
+        setUploadProgress(20);
+        const compressedFile = await compressImage(file);
 
-        // Use Next.js proxy endpoint which handles cookies and authentication
-        const uploadRes = await fetch(`/api/upload?token=${encodeURIComponent(sessionData.token)}`, {
-          method: "POST",
-          credentials: "include",
-          body: formData,
-        });
-
-        if (!uploadRes.ok) {
-          const errorData = await uploadRes.json().catch(() => ({}));
-          const userMessage = getErrorMessage(uploadRes.status, "Failed to upload photo");
-          const detailMessage = errorData.err || errorData.error || userMessage;
-          throw new Error(detailMessage);
-        }
-
-        const uploadData = await uploadRes.json();
-        if (!uploadData.ok) {
-          throw new Error(uploadData.err || uploadData.error || "Upload failed");
-        }
-
-        // Get existing photos from React Query cache (no need to fetch again)
+        // Get existing photos to calculate correct photoIndex
         const cachedPhotos = queryClient.getQueryData(['estimate-photos', estimateId]);
         const existingUploads = (cachedPhotos?.ok && cachedPhotos?.stored?.uploads) 
           ? cachedPhotos.stored.uploads 
           : [];
 
-        // Store photo with metadata
-        const photoMetadata = {
-          url: uploadData.url,
-          attachmentId: uploadData.attachmentId,
-          filename: file.name,
-          label: `${productName} #${slotIndex} - Photo ${photos.length + 1}`,
+        const existingInSlot = existingUploads.filter(
+          p => p.itemName === productName && p.slotIndex === slotIndex
+        );
+
+        // Prepare metadata
+        const photoIndex = existingInSlot.length + 1;
+        const metadata = {
           itemName: productName,
           slotIndex: slotIndex,
-          photoIndex: photos.length + 1,
+          photoIndex: photoIndex,
+          label: `${productName} #${slotIndex} - Photo ${photoIndex}`,
+        };
+
+        // Upload file with progress tracking
+        const uploadResult = await uploadFile(compressedFile, metadata, (progressData) => {
+          setUploadProgress(20 + (progressData.progress * 0.6)); // 20-80%
+        });
+
+        // Store photo metadata
+        setUploadProgress(90);
+        const photoMetadata = {
+          url: uploadResult.url,
+          attachmentId: uploadResult.attachmentId,
+          filename: compressedFile.name,
+          label: metadata.label,
+          itemName: productName,
+          slotIndex: slotIndex,
+          photoIndex: photoIndex,
         };
 
         const allUploads = [...existingUploads, photoMetadata];
 
-        // Store all photos using React Query mutation (automatically invalidates cache)
         await storePhotosMutation.mutateAsync({
           estimateId,
           locationId,
-          uploads: allUploads.map((p) => ({
-            url: p.url,
-            attachmentId: p.attachmentId,
-            filename: p.filename || p.label,
-            label: p.label || p.filename,
-            itemName: p.itemName,
-            slotIndex: p.slotIndex,
-            photoIndex: p.photoIndex,
-          })),
+          uploads: allUploads,
         });
 
+        // Force cache refresh
+        setUploadProgress(100);
+        await queryClient.invalidateQueries(['estimate-photos', estimateId]);
+        await queryClient.refetchQueries(['estimate-photos', estimateId]);
+
+        // Show success
+        setUploadState('success');
+        toast.success('Photo uploaded', {
+          description: `${productName} #${slotIndex} - ${compressedFile.name}`,
+          duration: 3000,
+        });
+        
+        setTimeout(() => {
+          setUploadState('idle');
+          setUploadProgress(0);
+        }, 1500);
+
         onUploadComplete?.([photoMetadata]);
-        // No need to reload - React Query will automatically refetch and update UI
       } catch (error) {
-        // Provide user-friendly error message
-        const errorMsg = error.message || getErrorMessage('upload_failed');
+        setUploadState('error');
+        const errorMsg = error.message || 'Upload failed';
+        toast.error('Upload failed', {
+          description: errorMsg,
+          duration: 5000,
+        });
+        
+        setTimeout(() => {
+          setUploadState('idle');
+          setUploadProgress(0);
+        }, 2000);
+        
         onError?.(errorMsg);
       } finally {
         setUploading(false);
-        // Reset inputs
         if (fileInputRef.current) fileInputRef.current.value = "";
         if (cameraInputRef.current) cameraInputRef.current.value = "";
       }
     },
-    [productName, slotIndex, photos.length, estimateId, locationId, onUploadComplete, onError, queryClient, storePhotosMutation]
+    [productName, slotIndex, estimateId, locationId, queryClient, storePhotosMutation, onUploadComplete, onError]
   );
 
   const handleFileInput = useCallback(
@@ -160,6 +174,46 @@ function ProductSlot({
       }
     },
     [handleFileSelect]
+  );
+
+  const handleDeletePhoto = useCallback(
+    async (photoToDelete) => {
+      if (!confirm(`Delete this photo?`)) return;
+
+      try {
+        // Get current photos from cache
+        const cachedPhotos = queryClient.getQueryData(['estimate-photos', estimateId]);
+        const existingUploads = (cachedPhotos?.ok && cachedPhotos?.stored?.uploads) 
+          ? cachedPhotos.stored.uploads 
+          : [];
+
+        // Remove the photo
+        const updatedUploads = existingUploads.filter(
+          p => p.attachmentId !== photoToDelete.attachmentId
+        );
+
+        // Update the store
+        await storePhotosMutation.mutateAsync({
+          estimateId,
+          locationId,
+          uploads: updatedUploads,
+        });
+
+        // Force refetch
+        await queryClient.invalidateQueries(['estimate-photos', estimateId]);
+        await queryClient.refetchQueries(['estimate-photos', estimateId]);
+
+        toast.success('Photo deleted', {
+          duration: 2000,
+        });
+      } catch (error) {
+        toast.error('Failed to delete photo', {
+          description: error.message,
+          duration: 3000,
+        });
+      }
+    },
+    [estimateId, locationId, queryClient, storePhotosMutation]
   );
 
   // Register file input refs when component mounts (only for first slot)
@@ -187,73 +241,153 @@ function ProductSlot({
   }, [slotIndex, registerFileInputRef, registerCameraInputRef]);
 
   return (
-    <div className="space-y-1.5" ref={registerSlotRef}>
-      <div className="text-xs font-medium text-muted-foreground">
-        {productName} #{slotIndex}
+    <div className="space-y-2" ref={registerSlotRef}>
+      {/* Header with slot number and photo count */}
+      <div className="flex items-center justify-between">
+        <div className="text-xs font-medium text-muted-foreground">
+          Unit #{slotIndex}
+        </div>
+        <div className="text-[10px] text-muted-foreground">
+          {photos.length} / {MAX_PHOTOS_PER_SLOT} photos
+        </div>
       </div>
       
-      {/* Compact photo grid with upload buttons */}
-      <div className="flex gap-1.5 flex-wrap">
-        {/* Display uploaded photos */}
-        {photos.map((photo, photoIndex) => (
-          <div key={photoIndex} className="relative w-16 h-16 rounded border border-border bg-muted overflow-hidden shrink-0">
+      {/* Photo grid with upload buttons */}
+      <div className="flex gap-2 flex-wrap">
+        {/* Display uploaded photos with hover actions */}
+        {photos.map((photo) => (
+          <div 
+            key={photo.attachmentId || photo.url} 
+            className="relative w-20 h-20 rounded-lg border-2 border-border overflow-hidden shrink-0 group"
+          >
             <img
               src={photo.url}
-              alt={`${productName} #${slotIndex} - Photo ${photoIndex + 1}`}
+              alt={photo.filename || `Photo ${photo.photoIndex}`}
               className="h-full w-full object-cover"
             />
+            
+            {/* Photo label overlay */}
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-1">
+              <p className="text-[9px] text-white truncate">
+                Photo {photo.photoIndex}
+              </p>
+            </div>
+            
+            {/* Delete button - appears on hover */}
+            <button
+              type="button"
+              onClick={() => handleDeletePhoto(photo)}
+              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center shadow-lg z-10"
+              title="Delete photo"
+            >
+              <X className="h-3 w-3" />
+            </button>
+            
+            {/* Preview button - appears on hover */}
+            <button
+              type="button"
+              onClick={() => setPreviewPhoto(photo)}
+              className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center"
+              title="Preview photo"
+            >
+              <Eye className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+            </button>
           </div>
         ))}
 
-        {/* Upload buttons - inline, no dialog */}
+        {/* Upload buttons with state feedback */}
         {canAddMore && (
           <>
             {isMobile ? (
-              // Mobile: Two icons side by side
+              // Mobile: Two buttons side by side
               <>
                 <button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-16 h-16 rounded border-2 border-dashed border-border bg-muted/40 flex items-center justify-center hover:border-primary/60 transition-colors disabled:opacity-50 shrink-0"
+                  className={`w-20 h-20 rounded-lg flex flex-col items-center justify-center transition-all shrink-0 ${
+                    uploadState === 'idle' ? 'border-2 border-dashed border-border bg-muted/40 hover:border-primary/60' :
+                    uploadState === 'uploading' ? 'border-2 border-solid border-blue-500 bg-blue-50 animate-pulse' :
+                    uploadState === 'success' ? 'border-2 border-solid border-green-500 bg-green-50' :
+                    'border-2 border-solid border-red-500 bg-red-50'
+                  } disabled:opacity-50`}
                   title="Take Photo"
                 >
-                  {uploading ? (
-                    <Spinner size="sm" />
+                  {uploadState === 'uploading' ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span className="text-[9px] mt-1 text-blue-600">{uploadProgress}%</span>
+                    </>
+                  ) : uploadState === 'success' ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : uploadState === 'error' ? (
+                    <XCircle className="h-5 w-5 text-red-600" />
                   ) : (
-                    <Camera className="h-5 w-5 text-muted-foreground" />
+                    <>
+                      <Camera className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-[9px] mt-1 text-muted-foreground">Camera</span>
+                    </>
                   )}
                 </button>
                 <button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
-                  className="w-16 h-16 rounded border-2 border-dashed border-border bg-muted/40 flex items-center justify-center hover:border-primary/60 transition-colors disabled:opacity-50 shrink-0"
+                  className={`w-20 h-20 rounded-lg flex flex-col items-center justify-center transition-all shrink-0 ${
+                    uploadState === 'idle' ? 'border-2 border-dashed border-border bg-muted/40 hover:border-primary/60' :
+                    uploadState === 'uploading' ? 'border-2 border-solid border-blue-500 bg-blue-50 animate-pulse' :
+                    uploadState === 'success' ? 'border-2 border-solid border-green-500 bg-green-50' :
+                    'border-2 border-solid border-red-500 bg-red-50'
+                  } disabled:opacity-50`}
                   title="Upload Photo"
                 >
-                  {uploading ? (
-                    <Spinner size="sm" />
+                  {uploadState === 'uploading' ? (
+                    <>
+                      <Spinner size="sm" />
+                      <span className="text-[9px] mt-1 text-blue-600">{uploadProgress}%</span>
+                    </>
+                  ) : uploadState === 'success' ? (
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  ) : uploadState === 'error' ? (
+                    <XCircle className="h-5 w-5 text-red-600" />
                   ) : (
-                    <Image className="h-5 w-5 text-muted-foreground" />
+                    <>
+                      <Image className="h-5 w-5 text-muted-foreground" />
+                      <span className="text-[9px] mt-1 text-muted-foreground">Upload</span>
+                    </>
                   )}
                 </button>
               </>
             ) : (
-              // Desktop: Clickable card area
-              <div
-                onClick={() => !uploading && fileInputRef.current?.click()}
-                className={`w-16 h-16 rounded border-2 border-dashed border-border bg-muted/40 flex flex-col items-center justify-center hover:border-primary/60 transition-colors shrink-0 ${uploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-                title="Click to choose photo"
+              // Desktop: Single upload button
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploading}
+                className={`w-20 h-20 rounded-lg flex flex-col items-center justify-center transition-all shrink-0 ${
+                  uploadState === 'idle' ? 'border-2 border-dashed border-border bg-muted/40 hover:border-primary/60' :
+                  uploadState === 'uploading' ? 'border-2 border-solid border-blue-500 bg-blue-50 animate-pulse' :
+                  uploadState === 'success' ? 'border-2 border-solid border-green-500 bg-green-50' :
+                  'border-2 border-solid border-red-500 bg-red-50'
+                } disabled:opacity-50`}
+                title="Add Photo"
               >
-                {uploading ? (
-                  <Spinner size="sm" />
+                {uploadState === 'uploading' ? (
+                  <>
+                    <Spinner size="sm" />
+                    <span className="text-[9px] mt-1 text-blue-600">{uploadProgress}%</span>
+                  </>
+                ) : uploadState === 'success' ? (
+                  <CheckCircle className="h-5 w-5 text-green-600" />
+                ) : uploadState === 'error' ? (
+                  <XCircle className="h-5 w-5 text-red-600" />
                 ) : (
                   <>
-                    <Image className="h-4 w-4 text-muted-foreground mb-0.5" />
-                    <span className="text-[10px] text-muted-foreground text-center leading-tight">Click here</span>
+                    <Camera className="h-5 w-5 text-muted-foreground" />
+                    <span className="text-[9px] mt-1 text-muted-foreground">Add</span>
                   </>
                 )}
-              </div>
+              </button>
             )}
           </>
         )}
@@ -278,6 +412,37 @@ function ProductSlot({
           className="hidden"
           disabled={uploading}
         />
+      )}
+
+      {/* Photo preview modal */}
+      {previewPhoto && (
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4"
+          onClick={() => setPreviewPhoto(null)}
+        >
+          <div className="relative max-w-4xl max-h-[90vh]">
+            <img 
+              src={previewPhoto.url} 
+              alt={previewPhoto.filename}
+              className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
+            />
+            <button 
+              className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewPhoto(null);
+              }}
+            >
+              <X className="h-5 w-5 text-gray-600" />
+            </button>
+            <div className="absolute bottom-4 left-4 right-4 bg-black/60 text-white p-3 rounded-lg backdrop-blur-sm">
+              <p className="text-sm font-medium">{previewPhoto.filename}</p>
+              <p className="text-xs text-gray-300 mt-1">
+                {productName} #{slotIndex} - Photo {previewPhoto.photoIndex}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
