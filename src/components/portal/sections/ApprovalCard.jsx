@@ -43,9 +43,6 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       alert("Missing estimate ID");
       return;
     }
-    if (!locationId) {
-      console.warn("locationId not provided, proceeding without it");
-    }
     try {
       const result = await acceptMutation.mutateAsync({ 
         estimateId, 
@@ -54,7 +51,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       setShowPhotoWarning(false);
       // Success - the mutation will automatically refetch and update the UI
     } catch (error) {
-      console.error("Accept estimate error:", error);
+      // Error is handled by React Query's onError callback
       alert(error.message || "Failed to accept estimate. Please try again.");
     }
   };
@@ -84,7 +81,6 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       });
     } catch (error) {
       // Error is already handled by the mutation hook
-      console.error("Retry invoice error:", error);
     }
   };
 

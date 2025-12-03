@@ -13,6 +13,7 @@ import { InviteTokenBanner } from "@/components/portal/InviteTokenBanner";
 import { Spinner } from "@/components/ui/spinner";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import { usePortalState } from "@/hooks/usePortalState";
+import { ExpiredInviteMessage } from "@/components/portal/ExpiredInviteMessage";
 
 export default function PortalPage({ initialStatus, initialError, initialEstimateId, initialEstimates }) {
   const router = useRouter();
@@ -75,10 +76,26 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                     <Spinner size="lg" />
                   </div>
                 ) : error || estimateError?.message ? (
-                  <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-                    <p className="text-lg font-semibold">Error loading estimate</p>
-                    <p className="text-sm text-red-600">{error || estimateError?.message}</p>
-                  </div>
+                  // Check if error is about expired invite token
+                  (error?.includes?.('invalid_invite') || 
+                   error?.includes?.('expired') || 
+                   error?.includes?.('no longer valid') ||
+                   estimateError?.message?.includes?.('invalid_invite') ||
+                   estimateError?.message?.includes?.('expired') ||
+                   estimateError?.message?.includes?.('no longer valid')) ? (
+                    <ExpiredInviteMessage 
+                      estimateId={estimateId}
+                      onRequestNewInvite={async () => {
+                        // User would need to contact support
+                        // In future, could add API endpoint to request new invite
+                      }}
+                    />
+                  ) : (
+                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+                      <p className="text-lg font-semibold">Error loading estimate</p>
+                      <p className="text-sm text-red-600">{error || estimateError?.message}</p>
+                    </div>
+                  )
                 ) : (
                   <OverviewView
                     estimate={overviewEstimate}
@@ -106,10 +123,22 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                     <Spinner size="lg" />
                   </div>
                 ) : error ? (
-                  <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-                    <p className="text-lg font-semibold">Error loading estimate</p>
-                    <p className="text-sm text-red-600">{error}</p>
-                  </div>
+                  // Check if error is about expired invite token
+                  (error?.includes?.('invalid_invite') || 
+                   error?.includes?.('expired') || 
+                   error?.includes?.('no longer valid')) ? (
+                    <ExpiredInviteMessage 
+                      estimateId={estimateId}
+                      onRequestNewInvite={async () => {
+                        // User would need to contact support
+                      }}
+                    />
+                  ) : (
+                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+                      <p className="text-lg font-semibold">Error loading estimate</p>
+                      <p className="text-sm text-red-600">{error}</p>
+                    </div>
+                  )
                 ) : activeEstimate ? (
                   <EstimateDetailView
                     estimate={activeEstimate}

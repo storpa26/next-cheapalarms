@@ -241,7 +241,97 @@ export default function InvoicesListPage() {
             </div>
           ) : (
             <>
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {invoices.map((invoice) => (
+                  <div
+                    key={invoice.id}
+                    onClick={() => handleRowClick(invoice.id)}
+                    className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                          Invoice #{invoice.invoiceNumber || invoice.id}
+                        </h3>
+                        {invoice.linkedEstimateId && (
+                          <p className="text-xs text-blue-600">
+                            Estimate: {invoice.linkedEstimateId}
+                          </p>
+                        )}
+                      </div>
+                      <span
+                        className={`
+                          inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                          ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
+                        `}
+                      >
+                        {invoice.portalStatus || invoice.ghlStatus || "sent"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mb-3">
+                      <Avatar
+                        name={invoice.contactName}
+                        email={invoice.contactEmail}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {invoice.contactName || "N/A"}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {invoice.contactEmail || ""}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-gray-100">
+                      <div>
+                        <p className="text-xs text-gray-500">Total</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {invoice.total > 0
+                            ? `${invoice.currency || "AU$"} ${invoice.total.toFixed(2)}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Amount Due</p>
+                        <p className="text-sm font-semibold text-emerald-600">
+                          {invoice.amountDue !== undefined
+                            ? `${invoice.currency || "AU$"} ${invoice.amountDue.toFixed(2)}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Created</p>
+                        <p className="text-sm text-gray-900">
+                          {invoice.createdAt
+                            ? new Date(invoice.createdAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Updated</p>
+                        <p className="text-sm text-gray-900">
+                          {invoice.updatedAt
+                            ? new Date(invoice.updatedAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">

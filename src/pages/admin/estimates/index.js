@@ -258,7 +258,76 @@ export default function EstimatesListPage() {
             </div>
           ) : (
             <>
-              <div className="bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              {/* Mobile Card View */}
+              <div className="lg:hidden space-y-4">
+                {estimates.map((estimate) => (
+                  <div
+                    key={estimate.id}
+                    onClick={() => handleRowClick(estimate.id)}
+                    className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                          {estimate.title || "ESTIMATE"}
+                        </h3>
+                        <p className="text-xs text-gray-500">
+                          #{estimate.estimateNumber || estimate.id}
+                        </p>
+                      </div>
+                      <span
+                        className={`
+                          inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                          ${getStatusBadgeClass(estimate.portalStatus || "sent")}
+                        `}
+                      >
+                        {estimate.portalStatus || "sent"}
+                      </span>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 mb-3">
+                      <Avatar
+                        name={estimate.contactName}
+                        email={estimate.contactEmail}
+                        size="sm"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">
+                          {estimate.contactName || "N/A"}
+                        </p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {estimate.contactEmail || ""}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                      <div>
+                        <p className="text-xs text-gray-500">Value</p>
+                        <p className="text-sm font-semibold text-gray-900">
+                          {estimate.total > 0
+                            ? `${estimate.currency || "AU$"} ${estimate.total.toFixed(2)}`
+                            : "—"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-500">Created</p>
+                        <p className="text-sm text-gray-900">
+                          {estimate.createdAt
+                            ? new Date(estimate.createdAt).toLocaleDateString("en-US", {
+                                month: "short",
+                                day: "numeric",
+                              })
+                            : "—"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Desktop Table View */}
+              <div className="hidden lg:block bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
                     <thead className="bg-gray-50 border-b border-gray-200">

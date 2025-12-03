@@ -4,6 +4,7 @@ import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/re
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getErrorMessage } from "@/lib/api/error-messages";
 
 const MAX_PHOTOS_PER_SLOT = 2;
 
@@ -40,12 +41,18 @@ function ProductSlot({
     async (file) => {
       if (!file) return;
 
-      if (!file.type.startsWith("image/")) {
-        alert(`${file.name} is not an image file`);
+      // Validate file type
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+      if (!file.type.startsWith("image/") || !allowedTypes.includes(file.type.toLowerCase())) {
+        onError?.(getErrorMessage(415, `${file.name} is not a supported image type. Please use JPG, PNG, GIF, or WEBP.`));
         return;
       }
-      if (file.size > 10 * 1024 * 1024) {
-        alert(`${file.name} exceeds 10MB limit`);
+      
+      // Validate file size (10MB limit)
+      const maxSize = 10 * 1024 * 1024;
+      if (file.size > maxSize) {
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        onError?.(getErrorMessage(413, `${file.name} is too large (${sizeMB}MB). Maximum size is 10MB.`));
         return;
       }
 
@@ -63,8 +70,13 @@ function ProductSlot({
           credentials: "include",
           body: JSON.stringify({ estimateId, locationId }),
         });
+        if (!sessionRes.ok) {
+          const errorMessage = getErrorMessage(sessionRes.status, "Failed to start upload session");
+          throw new Error(errorMessage);
+        }
+        
         const sessionData = await sessionRes.json();
-        if (!sessionRes.ok || !sessionData.ok) {
+        if (!sessionData.ok) {
           throw new Error(sessionData.err || sessionData.error || "Failed to start upload session");
         }
 
@@ -80,13 +92,10 @@ function ProductSlot({
         });
 
         if (!uploadRes.ok) {
-          const errorData = await uploadRes.json().catch(() => ({ error: "Upload failed" }));
-          const statusText = uploadRes.status === 403 
-            ? "Access denied. Please ensure you're logged in and have permission to upload photos."
-            : uploadRes.status === 401
-            ? "Authentication failed. Please refresh the page and try again."
-            : "Upload failed";
-          throw new Error(errorData.err || errorData.error || `${statusText} (${uploadRes.status})`);
+          const errorData = await uploadRes.json().catch(() => ({}));
+          const userMessage = getErrorMessage(uploadRes.status, "Failed to upload photo");
+          const detailMessage = errorData.err || errorData.error || userMessage;
+          throw new Error(detailMessage);
         }
 
         const uploadData = await uploadRes.json();
@@ -131,8 +140,8 @@ function ProductSlot({
         onUploadComplete?.([photoMetadata]);
         // No need to reload - React Query will automatically refetch and update UI
       } catch (error) {
-        const errorMsg = error.message || "Failed to upload photo";
-        // Error feedback is handled by the mutation's onError handler
+        // Provide user-friendly error message
+        const errorMsg = error.message || getErrorMessage('upload_failed');
         onError?.(errorMsg);
       } finally {
         setUploading(false);
@@ -446,7 +455,7 @@ export function ProductPhotoUpload({
       }
       
       // If we get here, we couldn't trigger the input
-      console.warn(`Could not trigger ${initialAction} for ${initialItemName}`);
+      // Could not trigger file input - component may not be mounted yet
       onInitialActionHandled?.();
     }, 300); // Increased timeout to ensure refs are registered
 

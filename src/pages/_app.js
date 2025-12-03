@@ -7,6 +7,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/react-query/query-client";
 import { Spinner } from "@/components/ui/spinner";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function RouteProgressOverlay() {
   const router = useRouter();
@@ -59,15 +60,17 @@ function RouteProgressOverlay() {
 
 export default function App({ Component, pageProps }) {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ToastProvider>
-          <RouteProgressOverlay />
-          <Component {...pageProps} />
-          <Toaster />
-        </ToastProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <ToastProvider>
+            <RouteProgressOverlay />
+            <Component {...pageProps} />
+            <Toaster />
+          </ToastProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

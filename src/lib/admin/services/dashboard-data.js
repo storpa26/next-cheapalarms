@@ -49,7 +49,7 @@ async function fetchProductCounts(req) {
 
     return { base: baseCount, addons: addonsCount, packages: packagesCount };
   } catch (error) {
-    console.error("Failed to fetch products:", error);
+    // Error fetching products - return empty array
     return { base: 0, addons: 0, packages: 0 };
   }
 }

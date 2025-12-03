@@ -31,7 +31,7 @@ export function SignOutButton({ className = "" }) {
       // Always redirect to login after logout
       router.push("/login");
     } catch (error) {
-      console.error(error);
+      // Sign out error - silently fail and redirect anyway
       // Even if logout fails, redirect to login
       router.push("/login");
     } finally {
