@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
@@ -13,7 +13,6 @@ import { PhotoGallery } from "./PhotoGallery";
 import { AddCustomItemModal } from "./AddCustomItemModal";
 import { DiscountModal } from "./DiscountModal";
 import { ChangeSummary } from "./ChangeSummary";
-import { SaveEstimateModal } from "./SaveEstimateModal";
 import { toast } from "sonner";
 
 export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated }) {
@@ -36,10 +35,8 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedItems, setEditedItems] = useState([]);
   const [editedDiscount, setEditedDiscount] = useState(null);
-  const [removedItems, setRemovedItems] = useState([]);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
-  const [showSaveModal, setShowSaveModal] = useState(false);
   
   // Fetch photos to determine which items have photos
   const { data: photosData } = useEstimatePhotos({
@@ -62,26 +59,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     return counts;
   }, [photosData]);
 
-  // Warn before leaving page with unsaved changes
-  useEffect(() => {
-    if (!isEditMode) return;
-    
-    const handleBeforeUnload = (e) => {
-      e.preventDefault();
-      e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
-      return e.returnValue;
-    };
-    
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [isEditMode]);
-
   // Initialize edited items when entering edit mode
   const handleEnterEditMode = () => {
     const items = estimate?.items || [];
     setEditedItems(items.map(item => ({ ...item, originalQty: item.qty || item.quantity || 1 })));
     setEditedDiscount(estimate?.discount || null);
-    setRemovedItems([]);
     setIsEditMode(true);
   };
 
@@ -89,58 +71,10 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     setIsEditMode(false);
     setEditedItems([]);
     setEditedDiscount(null);
-    setRemovedItems([]);
   };
 
-  const handleSaveClick = () => {
-    // Validation
-    if (editedItems.length === 0) {
-      toast.error("Cannot save estimate with no items");
-      return;
-    }
-    
-    const invalidItems = editedItems.filter(item => {
-      const qty = item.qty || item.quantity || 0;
-      const amount = item.amount || 0;
-      return amount <= 0 || qty <= 0;
-    });
-    
-    if (invalidItems.length > 0) {
-      toast.error("All items must have positive price and quantity");
-      return;
-    }
-    
-    // Show save confirmation modal
-    setShowSaveModal(true);
-  };
-
-  const handleConfirmSave = async ({ adminNote, sendNotification }) => {
+  const handleSaveChanges = async () => {
     try {
-      // Calculate revision data
-      const revisionData = {
-        revisedAt: new Date().toISOString(),
-        adminNote,
-        oldTotal: originalTotal,
-        newTotal,
-        netChange: newTotal - originalTotal,
-        changedItems: changedItems.map(item => ({
-          name: item.name,
-          oldQty: item.originalQty,
-          newQty: item.newQty
-        })),
-        addedItems: addedItems.map(item => ({
-          name: item.name,
-          qty: item.qty || 1,
-          amount: item.amount
-        })),
-        removedItems: removedItems.map(item => ({
-          name: item.name,
-          qty: item.qty || item.quantity || 1,
-          amount: item.amount
-        })),
-        discount: editedDiscount
-      };
-
       await updateEstimateMutation.mutateAsync({
         estimateId,
         locationId,
@@ -152,38 +86,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
           qty: item.qty || item.quantity || 1
         })),
         discount: editedDiscount,
-        revisionData, // Send revision data to backend
       });
       
-      setShowSaveModal(false);
       toast.success("Estimate updated successfully");
       setIsEditMode(false);
       refetch();
-      
-      // If admin chose to send notification
-      if (sendNotification) {
-        // Send the estimate notification
-        try {
-          await sendEstimateMutation.mutateAsync({ 
-            estimateId, 
-            locationId,
-            revisionNote: adminNote,
-            revisionData 
-          });
-          toast.success("Customer notified of estimate update");
-        } catch (err) {
-          toast.error("Estimate saved but failed to notify customer");
-        }
-      } else if (estimate.portalStatus === 'sent') {
-        // Remind admin to send estimate if customer hasn't accepted yet
-        toast.info("Don't forget to send the updated estimate to the customer!", {
-          duration: 5000,
-          action: {
-            label: 'Send Now',
-            onClick: () => handleSendEstimate()
-          }
-        });
-      }
     } catch (err) {
       toast.error(err.message || "Failed to update estimate");
     }
@@ -193,15 +100,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     setEditedItems(prev => {
       const newItems = [...prev];
       const currentQty = newItems[index].qty || newItems[index].quantity || 1;
-      const originalQty = newItems[index].originalQty || currentQty;
-      
-      // Calculate min/max based on original quantity
-      const minQty = Math.max(1, originalQty - 10);
-      const maxQty = originalQty + 10;
-      
-      // Apply delta and constrain to limits
-      const newQty = Math.max(minQty, Math.min(currentQty + delta, maxQty));
-      
+      const newQty = Math.max(1, Math.min(currentQty + delta, currentQty + 10)); // Limit to +10
       newItems[index] = { ...newItems[index], qty: newQty, quantity: newQty };
       return newItems;
     });
@@ -209,11 +108,6 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
 
   const handleRemoveItem = (index) => {
     if (confirm('Are you sure you want to remove this item?')) {
-      const item = editedItems[index];
-      // Track removed items if they were original (not custom added)
-      if (!item.isCustom) {
-        setRemovedItems(prev => [...prev, item]);
-      }
       setEditedItems(prev => prev.filter((_, i) => i !== index));
     }
   };
@@ -233,12 +127,10 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       return sum + (item.amount * (item.qty || item.quantity || 1));
     }, 0);
     
-    if (editedDiscount && editedDiscount.value !== 0) {
+    if (editedDiscount && editedDiscount.value > 0) {
       if (editedDiscount.type === 'percentage') {
-        // For percentage: positive = discount, negative = surcharge
         return itemsTotal * (1 - editedDiscount.value / 100);
       } else {
-        // For fixed: positive = discount, negative = surcharge
         return itemsTotal - editedDiscount.value;
       }
     }
@@ -362,7 +254,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         {/* Line Items (Left 70%) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Edit Mode Controls */}
-          {!isEditMode && !hasInvoice && portalMeta.photos?.submission_status === 'submitted' && (
+          {!isEditMode && estimate.portalStatus === 'accepted' && portalMeta.photos?.submission_status === 'submitted' && (
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -371,12 +263,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   </svg>
                   <div>
                     <p className="font-semibold text-blue-900">Ready for Photo Review</p>
-                    <p className="text-sm text-blue-700">
-                      {estimate.portalStatus === 'accepted' 
-                        ? 'Customer accepted and submitted photos. You can still adjust based on photos. Re-send estimate if you make changes.'
-                        : 'Customer submitted photos. Review and adjust pricing, then send updated estimate to customer for acceptance.'
-                      }
-                    </p>
+                    <p className="text-sm text-blue-700">Customer submitted photos. Review and adjust estimate if needed.</p>
                   </div>
                 </div>
                 <button
@@ -388,23 +275,6 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               </div>
             </div>
           )}
-          
-          {/* Info banner when invoice already created */}
-          {hasInvoice && portalMeta.photos?.submission_status === 'submitted' && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-              <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                <div>
-                  <p className="font-semibold text-amber-900">Invoice Created</p>
-                  <p className="text-sm text-amber-700">
-                    An invoice has already been created for this estimate. To make changes, edit the estimate in GHL and create a new invoice.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Change Summary (only in edit mode) */}
           {isEditMode && (
@@ -413,7 +283,6 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               newTotal={newTotal}
               changedItems={changedItems}
               addedItems={addedItems}
-              removedItems={removedItems}
               discount={editedDiscount}
               currency={currency}
             />
@@ -474,17 +343,20 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                         <tr
                           key={item.id || idx}
                           onClick={() => {
-                            // Allow photo viewing even in edit mode
-                            if (selectedItem?.name === itemName) {
-                              setSelectedItem(null);
-                            } else {
-                              setSelectedItem({ ...item, name: itemName });
+                            if (!isEditMode) {
+                              if (selectedItem?.name === itemName) {
+                                setSelectedItem(null);
+                              } else {
+                                setSelectedItem({ ...item, name: itemName });
+                              }
                             }
                           }}
-                          className={`cursor-pointer transition-all duration-200 ${
+                          className={`transition-all duration-200 ${
                             isSelected
                               ? "bg-gradient-to-r from-[#1EA6DF]/10 via-[#c95375]/5 to-[#1EA6DF]/10 ring-2 ring-[#1EA6DF]/40 shadow-sm"
-                              : "hover:bg-muted/30 hover:shadow-sm"
+                              : isEditMode
+                              ? ""
+                              : "cursor-pointer hover:bg-muted/30 hover:shadow-sm"
                           }`}
                         >
                           <td className="px-4 py-3">
@@ -584,11 +456,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveClick}
+                  onClick={handleSaveChanges}
                   disabled={updateEstimateMutation.isPending}
                   className="flex-1 px-4 py-2 bg-gradient-to-r from-[#1EA6DF] to-[#c95375] text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
                 >
-                  Save Changes
+                  {updateEstimateMutation.isPending ? 'Saving...' : 'Save Changes'}
                 </button>
               </div>
             )}
@@ -723,20 +595,6 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         currentDiscount={editedDiscount}
         estimateTotal={editedItems.reduce((sum, item) => sum + (item.amount * (item.qty || item.quantity || 1)), 0)}
         currency={currency}
-      />
-
-      <SaveEstimateModal
-        isOpen={showSaveModal}
-        onClose={() => setShowSaveModal(false)}
-        onConfirm={handleConfirmSave}
-        changedItems={changedItems}
-        addedItems={addedItems}
-        removedItems={removedItems}
-        discount={editedDiscount}
-        originalTotal={originalTotal}
-        newTotal={newTotal}
-        currency={currency}
-        isSaving={updateEstimateMutation.isPending}
       />
     </div>
   );

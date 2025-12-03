@@ -2,6 +2,7 @@ import { ArrowRight, Camera, AlertCircle, ChevronLeft, ChevronRight } from "luci
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { RevisionBanner } from "../sections/RevisionBanner";
 
 export function OverviewView({ 
   estimate, 
@@ -55,6 +56,15 @@ export function OverviewView({
 
   return (
     <div className="space-y-6">
+      {/* Revision Banner (if estimate was revised) */}
+      {estimate.revision && (
+        <RevisionBanner 
+          revision={estimate.revision}
+          currency={estimate.currency || 'AUD'}
+          portalStatus={statusValue}
+        />
+      )}
+
       {/* Hero Section */}
       <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
         <div className="flex flex-wrap items-start justify-between gap-6">

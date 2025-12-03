@@ -403,6 +403,8 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
           taxTotal: current.taxTotal || 0,
           total: current.total || current.quote?.total || 0,
           label: `Estimate #${current.quote?.number || current.number || current.estimateId}`,
+          revision: current.revision || null, // Include revision data
+          currency: current.currency || 'AUD',
         };
       }
       
