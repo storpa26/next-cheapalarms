@@ -40,6 +40,7 @@ export function EstimateDetailView({
           photoItems={photoItems}
           estimateId={estimateId}
           locationId={view?.locationId}
+          view={view}
           onLaunchCamera={() => {}}
         />
         <ApprovalCard

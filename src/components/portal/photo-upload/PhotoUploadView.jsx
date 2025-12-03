@@ -13,11 +13,16 @@ import { toast } from "sonner";
  * Main photo upload view component
  * Displays list of products, manages upload state, handles submission
  */
-export function PhotoUploadView({ estimateId, locationId }) {
+export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [showValidation, setShowValidation] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [savingStatus, setSavingStatus] = useState('Saved just now');
+  
+  // Check if photos already submitted
+  const submissionStatus = view?.photos?.submission_status;
+  const isAlreadySubmitted = submissionStatus === 'submitted';
+  const submittedAt = view?.photos?.submitted_at;
   
   const queryClient = useQueryClient();
   const storePhotosMutation = useStoreEstimatePhotos();
@@ -145,7 +150,7 @@ export function PhotoUploadView({ estimateId, locationId }) {
     if (!validation.isComplete) {
       setShowValidation(true);
       toast.error('Incomplete', {
-        description: `${validation.incompleteCount} required item${validation.incompleteCount !== 1 ? 's' : ''} need photos or skip reason.`,
+        description: `${validation.incompleteCount} required item${validation.incompleteCount !== 1 ? 's' : ''} need photos or to be skipped.`,
       });
       
       // Scroll to first error
@@ -159,18 +164,42 @@ export function PhotoUploadView({ estimateId, locationId }) {
     setIsSubmitting(true);
     
     try {
-      // Submit photos (this could trigger backend processing)
-      // For now, just show success
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Submit photos to backend
+      const response = await fetch('/api/portal/submit-photos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ estimateId, locationId }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.err || errorData.error || 'Submission failed');
+      }
+
+      const result = await response.json();
+      
+      if (!result.ok) {
+        throw new Error(result.err || result.error || 'Submission failed');
+      }
+
+      // Invalidate portal status to refresh submission status
+      await queryClient.invalidateQueries(['portal-status', estimateId]);
       
       toast.success('Photos submitted successfully', {
         description: 'Your photos have been sent to the installation team.',
         duration: 4000,
       });
       
+      // Close the photo manager
+      if (onComplete) {
+        onComplete();
+      }
+      
     } catch (error) {
       toast.error('Submission failed', {
         description: error.message,
+        duration: 5000,
       });
     } finally {
       setIsSubmitting(false);
@@ -224,6 +253,18 @@ export function PhotoUploadView({ estimateId, locationId }) {
             Add photos for each product so installers can see where devices will go.
           </p>
           
+          {/* Submission Status Warning */}
+          {isAlreadySubmitted && (
+            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
+              <p className="text-sm text-blue-800 font-medium">
+                ✓ Photos already submitted {submittedAt && `on ${new Date(submittedAt).toLocaleDateString()}`}
+              </p>
+              <p className="text-xs text-blue-600 mt-1">
+                You can still add or edit photos. Click "Submit photos" again when done.
+              </p>
+            </div>
+          )}
+          
           {/* Progress Bar */}
           <ProgressBar 
             completed={progress.completed}
@@ -255,6 +296,7 @@ export function PhotoUploadView({ estimateId, locationId }) {
         incompleteCount={validation.incompleteCount}
         onSubmit={handleSubmitAll}
         isSubmitting={isSubmitting}
+        isResubmit={isAlreadySubmitted}
       />
 
       {/* Upload Modal */}

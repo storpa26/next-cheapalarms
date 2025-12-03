@@ -5,7 +5,9 @@ import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
  * PhotoGallery component for displaying customer photos in admin sidebar
  * Supports both selected item view and grouped accordion view
  */
-export function PhotoGallery({ estimateId, items = [], selectedItem = null }) {
+export function PhotoGallery({ estimateId, items = [], selectedItem = null, portalMeta = {} }) {
+  const submissionStatus = portalMeta?.photos?.submission_status;
+  const submittedAt = portalMeta?.photos?.submitted_at;
   const { data: photosData, isLoading } = useEstimatePhotos({
     estimateId: estimateId || undefined,
     enabled: !!estimateId,
@@ -283,11 +285,22 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null }) {
   return (
     <>
       <div className="rounded-xl border border-border/60 bg-card p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-foreground">All Photos</h3>
-          <span className="text-xs text-muted-foreground">
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-semibold text-foreground">Customer Photos</h3>
+            {submissionStatus === 'submitted' && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 text-xs font-semibold rounded-full">
+                <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                Submitted
+              </span>
+            )}
+          </div>
+          <div className="text-xs text-muted-foreground">
             {totalPhotos} {totalPhotos === 1 ? "photo" : "photos"}
-          </span>
+            {submittedAt && ` • Submitted ${new Date(submittedAt).toLocaleString()}`}
+          </div>
         </div>
 
         <div className="space-y-2">

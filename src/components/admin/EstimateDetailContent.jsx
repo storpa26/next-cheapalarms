@@ -154,27 +154,25 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                     {items.map((item, idx) => {
                       const itemName = item.name || "Item";
                       const photoCount = itemPhotoCounts[itemName] || 0;
-                      // Improved selection matching - check both id and name
-                      const isSelected = selectedItem && (
-                        (selectedItem.id && item.id && selectedItem.id === item.id) ||
-                        (selectedItem.name === itemName && (!selectedItem.id || !item.id || selectedItem.id === item.id))
-                      );
+                      
+                      // Simpler selection check - just compare by name (more reliable)
+                      const isSelected = selectedItem?.name === itemName;
                       
                       return (
                         <tr
                           key={item.id || idx}
                           onClick={() => {
-                            // Toggle selection - if same item clicked, deselect
-                            if (isSelected) {
+                            // Toggle: if clicking the same row, clear selection to show all photos
+                            if (selectedItem?.name === itemName) {
                               setSelectedItem(null);
                             } else {
-                              setSelectedItem(item);
+                              setSelectedItem({ ...item, name: itemName });
                             }
                           }}
-                          className={`cursor-pointer transition ${
+                          className={`cursor-pointer transition-all duration-200 ${
                             isSelected
-                              ? "bg-blue-50/50 dark:bg-blue-950/20 ring-2 ring-blue-200 dark:ring-blue-800"
-                              : "hover:bg-muted/30"
+                              ? "bg-gradient-to-r from-[#1EA6DF]/10 via-[#c95375]/5 to-[#1EA6DF]/10 ring-2 ring-[#1EA6DF]/40 shadow-sm"
+                              : "hover:bg-muted/30 hover:shadow-sm"
                           }`}
                         >
                           <td className="px-4 py-3">
@@ -186,8 +184,8 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                                 )}
                               </div>
                               {photoCount > 0 && (
-                                <div className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-                                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#1EA6DF]/20 to-[#c95375]/20 px-2.5 py-1 text-xs font-semibold text-[#1EA6DF] shadow-sm border border-[#1EA6DF]/30">
+                                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                                   </svg>
@@ -242,8 +240,25 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               {portalMeta.photos && (
                 <div>
                   <span className="text-muted-foreground">Photos:</span>{" "}
-                  <span className="font-medium text-foreground">
-                    {portalMeta.photos.total || 0} of {portalMeta.photos.required || 0}
+                  {portalMeta.photos.submission_status === 'submitted' ? (
+                    <span className="font-medium text-green-600 flex items-center gap-1 inline-flex">
+                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      Submitted ({portalMeta.photos.total || 0} photos)
+                    </span>
+                  ) : (
+                    <span className="font-medium text-orange-600">
+                      Pending ({portalMeta.photos.total || 0} photos)
+                    </span>
+                  )}
+                </div>
+              )}
+              {portalMeta.photos?.submitted_at && (
+                <div>
+                  <span className="text-muted-foreground">Submitted:</span>{" "}
+                  <span className="text-xs text-foreground">
+                    {new Date(portalMeta.photos.submitted_at).toLocaleString()}
                   </span>
                 </div>
               )}
@@ -312,6 +327,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
             estimateId={estimateId}
             items={items}
             selectedItem={selectedItem}
+            portalMeta={portalMeta}
           />
         </div>
       </div>

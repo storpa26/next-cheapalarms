@@ -8,7 +8,8 @@ export function StickySubmitBar({
   isComplete, 
   incompleteCount, 
   onSubmit, 
-  isSubmitting = false 
+  isSubmitting = false,
+  isResubmit = false 
 }) {
   return (
     <div className="absolute bottom-0 left-0 right-0 w-full bg-white border-t border-slate-100 p-5 pb-8 z-20 shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
@@ -39,8 +40,10 @@ export function StickySubmitBar({
         >
           {isSubmitting ? (
             <>
-              <Loader2 className="animate-spin" size={18} /> Submitting photos...
+              <Loader2 className="animate-spin" size={18} /> Submitting...
             </>
+          ) : isResubmit ? (
+            "Resubmit photos"
           ) : (
             "Submit all photos"
           )}
