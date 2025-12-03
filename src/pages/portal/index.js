@@ -35,6 +35,9 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
     handleUploadImages,
     handleViewDetails,
     handleNavigateToPhotos,
+    handleNextEstimate,
+    handlePrevEstimate,
+    currentEstimateIndex,
     resumeEstimate,
     missionSteps,
     photoItems,
@@ -99,6 +102,10 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                 ) : (
                   <OverviewView
                     estimate={overviewEstimate}
+                    estimates={estimates}
+                    currentEstimateIndex={currentEstimateIndex}
+                    onNextEstimate={handleNextEstimate}
+                    onPrevEstimate={handlePrevEstimate}
                     onUploadImages={handleUploadImages}
                     onViewDetails={handleViewDetails}
                     onViewAll={!estimateId && estimates.length > 1 ? () => handleNavigateToSection("estimates") : undefined}

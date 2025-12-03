@@ -1,8 +1,10 @@
 import { useRouter } from "next/router";
-import { useEffect, useMemo, useCallback } from "react";
+import { useEffect, useMemo, useCallback, useState } from "react";
+import { useQueries } from "@tanstack/react-query";
 import { usePortalStatus, usePortalDashboard, useEstimate } from "@/lib/react-query/hooks";
 import { normaliseStatus } from "@/components/portal/utils/status-normalizer";
 import { formatAddress } from "@/components/portal/utils/portal-utils";
+import { getEstimateDetails } from "@/lib/wp";
 
 /**
  * Custom hook to manage all portal state and data fetching
@@ -95,7 +97,68 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     return [];
   }, [estimateId, dashboardData, initialEstimates]);
 
-  const loading = estimateId ? statusLoading : dashboardLoading;
+  // Local state for overview estimate index (client-side switching, no URL changes)
+  const [overviewIndex, setOverviewIndex] = useState(0);
+
+  // Reset overview index when estimates change
+  useEffect(() => {
+    if (estimates.length > 0 && overviewIndex >= estimates.length) {
+      setOverviewIndex(0);
+    }
+  }, [estimates.length, overviewIndex]);
+
+  // Fetch full details for ALL estimates when on overview page (no estimateId in URL)
+  const shouldFetchAllEstimates = activeNav === 'overview' && !estimateId && estimates.length > 0;
+  
+  const estimateDetailsQueries = useQueries({
+    queries: shouldFetchAllEstimates
+      ? estimates.map((est) => ({
+          queryKey: ['estimate-details', est.estimateId],
+          queryFn: () => getEstimateDetails({
+            estimateId: est.estimateId,
+            locationId: est.locationId,
+            inviteToken: inviteToken || undefined,
+          }),
+          staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+          gcTime: 10 * 60 * 1000,
+          refetchOnMount: false,
+          refetchOnWindowFocus: false,
+        }))
+      : [],
+  });
+
+  // Combine basic estimate info from dashboard with full details from queries
+  const enrichedEstimates = useMemo(() => {
+    if (!shouldFetchAllEstimates) return estimates;
+    
+    return estimates.map((est, idx) => {
+      const query = estimateDetailsQueries[idx];
+      const details = query?.data;
+      
+      if (!details) {
+        // Return basic info while loading
+        return est;
+      }
+
+      // Merge dashboard data with full details
+      return {
+        ...est,
+        ...details,
+        // Keep basic fields from dashboard
+        estimateId: est.estimateId,
+        locationId: est.locationId,
+        portalUrl: est.portalUrl,
+        resetUrl: est.resetUrl,
+        lastInviteAt: est.lastInviteAt,
+      };
+    });
+  }, [estimates, estimateDetailsQueries, shouldFetchAllEstimates]);
+
+  // Check if we're still loading any estimate details
+  const isLoadingEstimateDetails = shouldFetchAllEstimates && 
+    estimateDetailsQueries.some(q => q.isLoading);
+
+  const loading = estimateId ? statusLoading : (dashboardLoading || isLoadingEstimateDetails);
   const error = estimateId ? statusError?.message : dashboardError?.message || initialError;
 
   // Get last viewed estimate from localStorage
@@ -184,6 +247,63 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     handleNavigateToSection("estimates");
   }, [estimateId, handleNavigateToSection]);
 
+  // Navigate to next/previous estimate (client-side only, no URL changes on overview)
+  const handleNextEstimate = useCallback(() => {
+    if (enrichedEstimates.length === 0) return;
+    
+    // On overview page (no estimateId in URL), use local state
+    if (!estimateId && activeNav === 'overview') {
+      setOverviewIndex((prev) => 
+        prev < enrichedEstimates.length - 1 ? prev + 1 : prev
+      );
+      return;
+    }
+    
+    // On estimates detail view (estimateId in URL), navigate via URL
+    const currentIdx = enrichedEstimates.findIndex(
+      (e) => (e.estimateId || e.id) === estimateId
+    );
+    if (currentIdx < enrichedEstimates.length - 1) {
+      const nextEstimate = enrichedEstimates[currentIdx + 1];
+      handleSelectEstimate(nextEstimate.estimateId || nextEstimate.id);
+    }
+  }, [enrichedEstimates, estimateId, activeNav, handleSelectEstimate]);
+
+  const handlePrevEstimate = useCallback(() => {
+    if (enrichedEstimates.length === 0) return;
+    
+    // On overview page (no estimateId in URL), use local state
+    if (!estimateId && activeNav === 'overview') {
+      setOverviewIndex((prev) => prev > 0 ? prev - 1 : prev);
+      return;
+    }
+    
+    // On estimates detail view (estimateId in URL), navigate via URL
+    const currentIdx = enrichedEstimates.findIndex(
+      (e) => (e.estimateId || e.id) === estimateId
+    );
+    if (currentIdx > 0) {
+      const prevEstimate = enrichedEstimates[currentIdx - 1];
+      handleSelectEstimate(prevEstimate.estimateId || prevEstimate.id);
+    }
+  }, [enrichedEstimates, estimateId, activeNav, handleSelectEstimate]);
+
+  // Get current estimate index for display
+  const currentEstimateIndex = useMemo(() => {
+    if (enrichedEstimates.length === 0) return 0;
+    
+    // On overview page (no estimateId), use local index
+    if (!estimateId && activeNav === 'overview') {
+      return overviewIndex;
+    }
+    
+    // On estimates detail view, find index by estimateId
+    const idx = enrichedEstimates.findIndex(
+      (e) => (e.estimateId || e.id) === estimateId
+    );
+    return idx === -1 ? 0 : idx;
+  }, [enrichedEstimates, estimateId, activeNav, overviewIndex]);
+
   // Computed values
   const missionSteps = useMemo(() => {
     if (!view) return [];
@@ -260,46 +380,61 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   }, [estimateId, view, estimateData]);
 
   const overviewEstimate = useMemo(() => {
-    // During SSR, if estimateData isn't available, return null consistently
-    // Use initialEstimates if available (from SSR) to ensure server/client consistency
+    // When no estimateId in URL (overview page), use enrichedEstimates with local index
     if (!estimateId) {
-      // No estimateId - check if we have estimates for fallback
-      // Use initialEstimates first (from SSR), then fall back to client-side estimates
-      const estimatesToUse = Array.isArray(initialEstimates) && initialEstimates.length > 0 
-        ? initialEstimates 
-        : estimates;
+      if (enrichedEstimates.length === 0) return null;
       
-      if (estimatesToUse.length > 0) {
-        const first = estimatesToUse[0];
+      // Get current estimate from enriched array
+      const current = enrichedEstimates[overviewIndex];
+      if (!current) return null;
+      
+      // If full details are loaded, use them
+      if (current.quote) {
         return {
-          estimateId: first.estimateId || first.id,
-          number: first.number || first.estimateNumber,
-          statusLabel: first.statusLabel || first.status || "Sent",
-          status: first.status || "sent",
-          address: first.address || first.meta?.address,
-          photosCount: first.photosCount || 0,
-          items: [],
-          subtotal: 0,
-          taxTotal: 0,
-          total: 0,
+          estimateId: current.estimateId,
+          number: current.quote?.number || current.number,
+          statusLabel: current.quote?.statusLabel || current.statusLabel || "Sent",
+          status: current.quote?.status || current.status || "sent",
+          statusValue: current.quote?.status || current.status || "sent",
+          address: formatAddress(current.installation?.address) || "Site address pending",
+          photosCount: current.photos?.items?.length || 0,
+          items: current.items || [],
+          subtotal: current.subtotal || 0,
+          taxTotal: current.taxTotal || 0,
+          total: current.total || current.quote?.total || 0,
+          label: `Estimate #${current.quote?.number || current.number || current.estimateId}`,
         };
       }
-      return null;
+      
+      // Fallback to basic info while loading
+      return {
+        estimateId: current.estimateId,
+        number: current.number,
+        statusLabel: current.statusLabel || "Sent",
+        status: current.status || "sent",
+        statusValue: current.status || "sent",
+        address: "Loading...",
+        photosCount: 0,
+        items: [],
+        subtotal: 0,
+        taxTotal: 0,
+        total: 0,
+        label: `Estimate #${current.number || current.estimateId}`,
+      };
     }
     
-    // If estimateId exists, we can build from view (status) even if estimateData isn't loaded
-    // This ensures consistent rendering - use view as primary source
+    // If estimateId exists in URL, build from view (status) + estimateData
     if (!view) {
       return null;
     }
     
     // Build from view (portal status) - this is always available if estimateId exists
-    // estimateData is optional and can be loaded later
     const baseEstimate = {
       estimateId: estimateId,
       number: view?.quote?.number || estimateId,
       statusLabel: view?.quote?.statusLabel || view?.quote?.status || "Sent",
       status: view?.quote?.status || "sent", // Use portal status (sent/accepted/rejected), not GHL status
+      statusValue: view?.quote?.status || "sent",
       address: formatAddress(view?.installation?.address) || "Site address pending",
       photosCount: view?.photos?.items?.length || 0,
       items: estimateData?.ok ? (estimateData.items || []) : [],
@@ -312,7 +447,7 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     };
     
     return baseEstimate;
-  }, [estimateId, estimateData, estimates, initialEstimates, view]);
+  }, [estimateId, estimateData, enrichedEstimates, overviewIndex, view]);
 
   const progress = useMemo(() => {
     if (!view) return 0;
@@ -347,8 +482,11 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     handleUploadImages,
     handleViewDetails,
     handleNavigateToPhotos,
+    handleNextEstimate,
+    handlePrevEstimate,
     
     // Computed values
+    currentEstimateIndex,
     resumeEstimate,
     missionSteps,
     photoItems,

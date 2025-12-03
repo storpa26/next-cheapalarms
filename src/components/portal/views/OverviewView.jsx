@@ -1,9 +1,18 @@
-import { ArrowRight, Camera, AlertCircle } from "lucide-react";
+import { ArrowRight, Camera, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 
-export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAll }) {
+export function OverviewView({ 
+  estimate, 
+  estimates = [], 
+  currentEstimateIndex = 0,
+  onNextEstimate,
+  onPrevEstimate,
+  onUploadImages, 
+  onViewDetails, 
+  onViewAll 
+}) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -61,13 +70,43 @@ export function OverviewView({ estimate, onUploadImages, onViewDetails, onViewAl
               <span className="text-sm font-semibold text-primary">{estimate.statusLabel || estimate.status}</span>
             </div>
           </div>
-          {onViewAll && (
-            <Link href="/portal?section=estimates">
-              <Button variant="outline" size="sm">
-                View All Estimates <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          )}
+          
+          {/* Estimate Switcher - Show when multiple estimates available */}
+          <div className="flex flex-col items-end gap-3">
+            {estimates.length > 1 && onNextEstimate && onPrevEstimate && (
+              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+                <button
+                  type="button"
+                  onClick={onPrevEstimate}
+                  disabled={currentEstimateIndex === 0}
+                  className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Previous estimate"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <span className="text-sm font-medium text-slate-700 min-w-[60px] text-center">
+                  {currentEstimateIndex + 1} of {estimates.length}
+                </span>
+                <button
+                  type="button"
+                  onClick={onNextEstimate}
+                  disabled={currentEstimateIndex >= estimates.length - 1}
+                  className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                  aria-label="Next estimate"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            )}
+            
+            {onViewAll && (
+              <Link href="/portal?section=estimates">
+                <Button variant="outline" size="sm">
+                  View All Estimates <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Photo Upload Callout */}

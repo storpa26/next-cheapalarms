@@ -94,6 +94,33 @@ export async function getPortalDashboard(fetchOptions = {}) {
   return wpFetch('/ca/v1/portal/dashboard', fetchOptions);
 }
 
+/**
+ * Fetch complete estimate details (status + items + pricing)
+ * Used for overview page to get full data for all estimates
+ */
+export async function getEstimateDetails({ estimateId, locationId, inviteToken }, fetchOptions = {}) {
+  const params = new URLSearchParams();
+  params.set('estimateId', estimateId);
+  if (locationId) params.set('locationId', locationId);
+  if (inviteToken) params.set('inviteToken', inviteToken);
+
+  // Fetch both status and estimate data in parallel
+  const [status, estimate] = await Promise.all([
+    wpFetch(`/ca/v1/portal/status?${params.toString()}`, fetchOptions),
+    wpFetch(`/ca/v1/estimate?${params.toString()}`, fetchOptions).catch(() => null),
+  ]);
+
+  // Merge the data
+  return {
+    ...status,
+    // Add estimate line items and pricing if available
+    items: estimate?.items || [],
+    subtotal: estimate?.subtotal || 0,
+    taxTotal: estimate?.taxTotal || 0,
+    total: estimate?.total || status?.quote?.total || 0,
+  };
+}
+
 export async function authenticate({ username, password }) {
   return wpFetch("/ca/v1/auth/token", {
     method: "POST",
