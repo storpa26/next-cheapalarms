@@ -4,6 +4,9 @@ import { createPortal } from "react-dom";
 
 export function Modal({ isOpen, onClose, title, children, showBackButton = true }) {
   useEffect(() => {
+    // Only run on client-side
+    if (typeof window === 'undefined') return;
+    
     if (isOpen) {
       document.body.style.overflow = "hidden";
       // Handle ESC key
@@ -22,7 +25,9 @@ export function Modal({ isOpen, onClose, title, children, showBackButton = true 
     }
   }, [isOpen, onClose]);
 
+  // Don't render anything on server-side
   if (!isOpen) return null;
+  if (typeof window === 'undefined') return null;
 
   const content = (
     <div

@@ -159,10 +159,11 @@ export function uploadFile(file, metadata, onProgress) {
 
 /**
  * Compress image before upload
+ * Optimized: Skip compression for files < 2MB for faster uploads
  */
 export async function compressImage(file) {
-  // Skip if already small
-  if (file.size < 1024 * 1024) { // Less than 1MB
+  // Skip if already small - increased threshold to 2MB for speed
+  if (file.size < 2 * 1024 * 1024) { // Less than 2MB
     return file;
   }
 

@@ -20,7 +20,6 @@ export function EstimateDetailView({
   onNavigateToPhotos,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showPhotoUploader, setShowPhotoUploader] = useState(false);
 
   return (
     <>
@@ -41,20 +40,13 @@ export function EstimateDetailView({
           photoItems={photoItems}
           estimateId={estimateId}
           locationId={view?.locationId}
-          showUploader={showPhotoUploader}
-          onLaunchCamera={() => {
-            setShowPhotoUploader(true);
-            if (onNavigateToPhotos) onNavigateToPhotos();
-          }}
+          onLaunchCamera={() => {}}
         />
         <ApprovalCard
           view={view}
           estimateId={estimateId}
           locationId={view?.locationId}
-          onUploadPhotos={() => {
-            setShowPhotoUploader(true);
-            if (onNavigateToPhotos) onNavigateToPhotos();
-          }}
+          onUploadPhotos={() => {}}
         />
       </div>
 

@@ -133,6 +133,34 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null }) {
     });
   };
 
+  // IMPORTANT: Calculate itemsWithPhotos BEFORE any returns to avoid hooks count mismatch
+  const itemsWithPhotos = useMemo(() => {
+    return items.filter((item) => {
+      const itemName = item.name || "Unknown";
+      
+      // Check exact match
+      if (photosByItem[itemName]?.length > 0) {
+        return true;
+      }
+      
+      // Check fuzzy match
+      const normalizedItemName = itemName.toLowerCase().trim();
+      for (const [photoItemName, photos] of Object.entries(photosByItem)) {
+        const normalizedPhotoItemName = photoItemName.toLowerCase().trim();
+        if (
+          (normalizedPhotoItemName === normalizedItemName ||
+            normalizedPhotoItemName.includes(normalizedItemName) ||
+            normalizedItemName.includes(normalizedPhotoItemName)) &&
+          photos.length > 0
+        ) {
+          return true;
+        }
+      }
+      
+      return false;
+    });
+  }, [items, photosByItem]);
+
   // Handle case when estimateId is not available
   if (!estimateId) {
     return (
@@ -242,34 +270,7 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null }) {
     );
   }
 
-  // Show all photos grouped by item in accordion (with fuzzy matching)
-  const itemsWithPhotos = useMemo(() => {
-    return items.filter((item) => {
-      const itemName = item.name || "Unknown";
-      
-      // Check exact match
-      if (photosByItem[itemName]?.length > 0) {
-        return true;
-      }
-      
-      // Check fuzzy match
-      const normalizedItemName = itemName.toLowerCase().trim();
-      for (const [photoItemName, photos] of Object.entries(photosByItem)) {
-        const normalizedPhotoItemName = photoItemName.toLowerCase().trim();
-        if (
-          (normalizedPhotoItemName === normalizedItemName ||
-            normalizedPhotoItemName.includes(normalizedItemName) ||
-            normalizedItemName.includes(normalizedPhotoItemName)) &&
-          photos.length > 0
-        ) {
-          return true;
-        }
-      }
-      
-      return false;
-    });
-  }, [items, photosByItem]);
-
+  // Show all photos grouped by item in accordion
   if (itemsWithPhotos.length === 0) {
     return (
       <div className="rounded-xl border border-border/60 bg-card p-4">
