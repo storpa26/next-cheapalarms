@@ -237,11 +237,6 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     handleNavigateToSection("estimates");
   }, [estimateId, resumeEstimate, handleSelectEstimate, handleNavigateToSection]);
 
-  const handleViewDetails = useCallback(() => {
-    if (!estimateId) return;
-    handleNavigateToSection("estimates");
-  }, [estimateId, handleNavigateToSection]);
-
   const handleNavigateToPhotos = useCallback(() => {
     if (!estimateId) return;
     handleNavigateToSection("estimates");
@@ -450,6 +445,19 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     
     return baseEstimate;
   }, [estimateId, estimateData, enrichedEstimates, overviewIndex, view]);
+
+  // Handler to view full estimate details (must be after overviewEstimate is defined)
+  const handleViewDetails = useCallback(() => {
+    if (!estimateId) {
+      // On overview page without estimateId in URL, select the current estimate first
+      const currentEstimate = overviewEstimate || resumeEstimate;
+      if (currentEstimate) {
+        handleSelectEstimate(currentEstimate.estimateId || currentEstimate.id);
+      }
+      return;
+    }
+    handleNavigateToSection("estimates");
+  }, [estimateId, overviewEstimate, resumeEstimate, handleSelectEstimate, handleNavigateToSection]);
 
   const progress = useMemo(() => {
     if (!view) return 0;
