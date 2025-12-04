@@ -411,17 +411,17 @@ export default function SampleProductPage() {
       {showEmailSentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">Email Sent</h2>
+            <h2 className="text-xl font-semibold mb-4 text-foreground">Quote Submitted Successfully! 📧</h2>
             <p className="text-muted-foreground mb-4">
-              We've sent a password setup email to <strong className="text-foreground">{email}</strong>. 
-              Please check your inbox and follow the instructions to set your password.
+              We've sent your quote details to <strong className="text-foreground">{email}</strong>. 
+              Please check your inbox for a link to access your portal.
             </p>
             <p className="text-sm text-muted-foreground mb-6">
-              Once you've set your password, you'll be able to access your quote and upload photos.
+              Use the portal link in the email to view your quote and upload installation photos.
             </p>
             <button
               onClick={() => setShowEmailSentModal(false)}
-              className="w-full bg-emerald-600 text-white rounded-md px-4 py-2 hover:bg-emerald-700 transition-colors"
+              className="w-full bg-rose-600 text-white rounded-md px-4 py-2 hover:bg-rose-700 transition-colors font-medium"
             >
               Got it
             </button>
