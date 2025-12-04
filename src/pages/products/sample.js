@@ -410,13 +410,13 @@ export default function SampleProductPage() {
       {/* Email Sent Modal - shown when account doesn't exist */}
       {showEmailSentModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
-            <h2 className="text-xl font-semibold mb-4 text-foreground">Quote Submitted Successfully! 📧</h2>
-            <p className="text-muted-foreground mb-4">
-              We've sent your quote details to <strong className="text-foreground">{email}</strong>. 
+          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-gray-200">
+            <h2 className="text-xl font-semibold mb-4 text-gray-900">Quote Submitted Successfully! 📧</h2>
+            <p className="text-gray-600 mb-4">
+              We've sent your quote details to <strong className="text-gray-900">{email}</strong>. 
               Please check your inbox for a link to access your portal.
             </p>
-            <p className="text-sm text-muted-foreground mb-6">
+            <p className="text-sm text-gray-500 mb-6">
               Use the portal link in the email to view your quote and upload installation photos.
             </p>
             <button
