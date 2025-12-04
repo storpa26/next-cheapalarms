@@ -95,42 +95,7 @@ export default function SampleProductPage() {
     setIsSubmitting(true);
 
     try {
-      // Step 1: Create GHL contact
-      let contactRes;
-      try {
-        contactRes = await fetch("/api/ghl/contacts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ firstName, lastName, email, phone }),
-        });
-      } catch (fetchError) {
-        throw new Error(`Network error: ${fetchError.message}. Please check if the server is running.`);
-      }
-
-      let contactJson;
-      try {
-        contactJson = await contactRes.json();
-      } catch (parseError) {
-        const text = await contactRes.text().catch(() => "Unable to read response");
-        throw new Error(`Invalid response from server: ${text.substring(0, 200)}`);
-      }
-
-      if (!contactRes.ok || !contactJson.ok) {
-        const raw = contactJson && contactJson.error;
-        const msg =
-          typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-        throw new Error(msg || "Failed to create contact");
-      }
-
-      const contactId = extractContactId(contactJson.contact);
-      if (!contactId) {
-        throw new Error("Contact created but ID missing in response");
-      }
-
-      // Step 2: Get locationId from env or use default
-      const effectiveLocationId = process.env.NEXT_PUBLIC_GHL_LOCATION_ID || null;
-
-      // Step 3: Build line items from calculator data
+      // Build line items from calculator data
       const items = [];
 
       // Add base kit
@@ -168,141 +133,91 @@ export default function SampleProductPage() {
             description: `Monthly monitoring service (${services.monitoringTier} tier)`,
             amount: monitoringPrice,
             qty: 1,
+            currency: "AUD",
+            type: "recurring",
+            taxInclusive: true,
           });
         }
       }
-      
+
       if (services.cellularBackup) {
         items.push({
           name: "Cellular Backup",
           description: "Cellular backup service",
           amount: 18,
           qty: 1,
+          currency: "AUD",
+          type: "recurring",
+          taxInclusive: true,
         });
       }
-      
+
       if (services.extendedWarrantyYears > 0) {
         items.push({
           name: `Extended Warranty - ${services.extendedWarrantyYears} ${services.extendedWarrantyYears === 1 ? "Year" : "Years"}`,
           description: `Extended warranty coverage`,
           amount: 89 * services.extendedWarrantyYears,
           qty: 1,
+          currency: "AUD",
+          type: "one_time",
+          taxInclusive: true,
         });
       }
+      
+      // Ensure all items have required GHL fields
+      items.forEach(item => {
+        if (!item.currency) item.currency = "AUD";
+        if (!item.type) item.type = "one_time";
+        if (item.taxInclusive === undefined) item.taxInclusive = true;
+      });
 
-      // Step 4: Build estimate payload
-      // Format phone to E.164 format (required by GHL)
-      const formattedPhone = phone 
-        ? (phone.startsWith("+") ? phone : `+61${phone.replace(/^0/, "").replace(/\s+/g, "")}`)
-        : "";
-
-      const estimatePayload = {
-        ...(effectiveLocationId && { altId: effectiveLocationId }),
-        altType: "location",
-        name: `Ajax Hub 2 Configuration - ${activeProfile?.title || "Custom"}`,
-        title: "ESTIMATE",
-        businessDetails: {
-          name: "Cheap Alarms",
-          address: {
-            addressLine1: "Cheap Alarms Pty Ltd",
-            city: "Brisbane",
-            state: "QLD",
-            postalCode: "4000",
-            countryCode: "AU"
-          }
-        },
-        currency: "AUD",
-        items: items.map(item => ({
-          ...item,
-          currency: "AUD", // Each item needs currency field
-          type: "one_time", // Required by GHL - must be "one_time" or "recurring"
-          taxInclusive: true, // Required by GHL
-        })),
-        discount: { type: "percentage", value: 0 },
-        termsNotes: "<p>Quote generated from website configurator.</p>",
-        contactDetails: {
-          id: contactId, // Include the contactId to link the estimate to the contact
-          email: email,
-          name: firstName && lastName ? `${firstName} ${lastName}` : firstName || lastName || email,
-          phoneNo: formattedPhone,
-          address: {
-            addressLine1: "Address not provided",
-            city: "TBD",
-            state: "TBD",
-            postalCode: "TBD",
-            countryCode: "AU"
-          }
-        },
-        issueDate: new Date().toISOString().split("T")[0],
-        expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
-        frequencySettings: { enabled: false },
-        liveMode: true
+      // Submit quote request (creates contact, estimate, and portal invitation)
+      const quotePayload = {
+        firstName,
+        lastName,
+        email,
+        phone,
+        items,
+        propertyProfile: activeProfile?.title || "Custom",
+        locationId: process.env.NEXT_PUBLIC_GHL_LOCATION_ID || null,
       };
 
-      // Step 5: Create estimate
-      let estimateRes;
+      let quoteRes;
       try {
-        estimateRes = await fetch("/api/estimate/create", {
+        quoteRes = await fetch("/api/quote-request", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(estimatePayload),
+          body: JSON.stringify(quotePayload),
         });
       } catch (fetchError) {
         throw new Error(`Network error: ${fetchError.message}. Please check if the server is running.`);
       }
 
-      let estimateJson;
+      let quoteJson;
       try {
-        estimateJson = await estimateRes.json();
+        quoteJson = await quoteRes.json();
       } catch (parseError) {
-        const text = await estimateRes.text().catch(() => "Unable to read response");
+        const text = await quoteRes.text().catch(() => "Unable to read response");
         throw new Error(`Invalid response from server: ${text.substring(0, 200)}`);
       }
 
-      if (!estimateRes.ok || !estimateJson.ok) {
-        const raw = estimateJson && (estimateJson.err || estimateJson.error);
+      if (!quoteRes.ok || !quoteJson.ok) {
+        const raw = quoteJson && (quoteJson.err || quoteJson.error);
         const msg =
           typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
-        throw new Error(msg || "Failed to create estimate");
+        throw new Error(msg || "Failed to submit quote request");
       }
 
-      const createdEstimateId = estimateJson.estimateId || estimateJson.result?.estimate?.id || estimateJson.result?.id || estimateJson.result?._id;
-      const createdLocationId = effectiveLocationId || estimateJson.locationId;
+      const createdEstimateId = quoteJson.estimateId;
+      const createdLocationId = quoteJson.locationId || process.env.NEXT_PUBLIC_GHL_LOCATION_ID;
 
       // Store estimate and location IDs
       setEstimateId(createdEstimateId);
       setLocationId(createdLocationId);
 
-      // Step 6: Handle account flow
-      if (estimateJson.accountExists) {
-        // Account exists - show login modal
-        setShowLoginModal(true);
-        setSubmitSuccess(false);
-      } else {
-        // New account - send password reset email via GHL
-        try {
-          const resetRes = await fetch("/api/auth/send-password-reset", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ 
-              email: email,
-              estimateId: createdEstimateId,
-              locationId: createdLocationId 
-            }),
-          });
-          
-          const resetJson = await resetRes.json();
-          if (resetRes.ok && resetJson.ok) {
-            // Show modal saying email was sent
-            setShowEmailSentModal(true);
-            setSubmitSuccess(true);
-          } else {
-            throw new Error(resetJson.error || resetJson.err || "Failed to send password reset email");
-          }
-        } catch (err) {
-          setSubmitError(err.message || "Failed to send password reset email");
-        }
-      }
+      // Success! Portal invitation was already sent
+      setShowEmailSentModal(true);
+      setSubmitSuccess(true);
     } catch (err) {
       setSubmitError(err.message || "Failed to submit quote request");
     } finally {
