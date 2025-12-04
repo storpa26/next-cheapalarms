@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-
-const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || 'http://localhost:8882/wp-json';
+import { wpFetch } from '@/lib/wp';
 
 /**
  * React Query hook for updating estimate items/prices
@@ -12,17 +11,11 @@ export function useUpdateEstimate() {
   return useMutation({
     mutationFn: async ({ estimateId, locationId, items, discount, termsNotes }) => {
       // First, fetch current estimate to get all required fields for GHL
-      const getRes = await fetch(
-        `${WP_API_BASE}/ca/v1/admin/estimates/${estimateId}${locationId ? `?locationId=${locationId}` : ''}`,
-        { credentials: 'include' }
-      );
-
-      if (!getRes.ok) {
-        const error = await getRes.json().catch(() => ({}));
-        throw new Error(error.err || error.error || 'Failed to fetch current estimate');
-      }
-
-      const currentData = await getRes.json();
+      const params = new URLSearchParams();
+      if (locationId) params.set('locationId', locationId);
+      const search = params.toString();
+      
+      const currentData = await wpFetch(`/ca/v1/admin/estimates/${estimateId}${search ? `?${search}` : ''}`);
       
       if (!currentData.ok) {
         throw new Error('Invalid estimate data');
@@ -85,19 +78,11 @@ export function useUpdateEstimate() {
       };
 
       // PUT to WordPress bridge (which updates GHL)
-      const updateRes = await fetch(`${WP_API_BASE}/ca/v1/estimate/update`, {
+      return wpFetch('/ca/v1/estimate/update', {
         method: 'PUT',
-        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-
-      if (!updateRes.ok) {
-        const error = await updateRes.json().catch(() => ({}));
-        throw new Error(error.err || error.error || 'Failed to update estimate');
-      }
-
-      return updateRes.json();
     },
     onSuccess: (data, variables) => {
       // Invalidate and refetch estimate data

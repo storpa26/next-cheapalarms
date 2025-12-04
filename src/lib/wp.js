@@ -150,7 +150,7 @@ export async function resendPortalInvite({ estimateId, locationId }) {
   });
 }
 
-export { WP_API_BASE, TOKEN_COOKIE };
+export { WP_API_BASE, TOKEN_COOKIE, wpFetch };
 
 function normaliseHeaders(customHeaders = {}) {
   const headers = {

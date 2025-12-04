@@ -1,4 +1,5 @@
 import "@/styles/globals.css";
+import "@/styles/testing-guide.css";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { ThemeProvider } from "@/components/ui/theme-provider";
