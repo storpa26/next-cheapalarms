@@ -17,6 +17,12 @@ export function SignOutButton({ className = "" }) {
   const handleLogout = async () => {
     try {
       setLoading(true);
+      
+      // Clear localStorage token
+      if (typeof window !== "undefined") {
+        localStorage.removeItem('auth_token');
+      }
+      
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {

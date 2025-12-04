@@ -35,6 +35,11 @@ export default function LoginPage() {
         throw new Error(result.err ?? "Login failed");
       }
 
+      // Store token in localStorage for cross-origin API requests
+      if (result.token) {
+        localStorage.setItem('auth_token', result.token);
+      }
+
       // Redirect to return URL or default to admin
       const returnUrl = router.query.from || "/admin";
       router.push(returnUrl);

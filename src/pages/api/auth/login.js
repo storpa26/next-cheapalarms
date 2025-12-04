@@ -30,6 +30,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
+      token: result.token, // Include token for localStorage storage
       user: result.user,
       expiresAt: result.expires_at,
     });
