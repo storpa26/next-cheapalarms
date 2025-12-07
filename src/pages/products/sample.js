@@ -366,11 +366,22 @@ export default function SampleProductPage() {
                 <button
                   type="submit"
                   disabled={!inCart || !email || isSubmitting}
-                  className={`w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium ${
+                  className={`w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all ${
                     !inCart || !email || isSubmitting
                       ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                      : "bg-emerald-600 text-white hover:bg-emerald-700"
+                      : "text-white"
                   }`}
+                  style={!inCart || !email || isSubmitting ? {} : { backgroundColor: '#c95375' }}
+                  onMouseEnter={(e) => {
+                    if (!(!inCart || !email || isSubmitting)) {
+                      e.target.style.backgroundColor = '#b34563';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!(!inCart || !email || isSubmitting)) {
+                      e.target.style.backgroundColor = '#c95375';
+                    }
+                  }}
                 >
                   {isSubmitting
                     ? "Creating Contact & Estimate…"
@@ -421,7 +432,10 @@ export default function SampleProductPage() {
             </p>
             <button
               onClick={() => setShowEmailSentModal(false)}
-              className="w-full bg-rose-600 text-white rounded-md px-4 py-2 hover:bg-rose-700 transition-colors font-medium"
+              className="w-full text-white rounded-md px-4 py-2 transition-colors font-medium"
+              style={{ backgroundColor: '#c95375' }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#b34563'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#c95375'}
             >
               Got it
             </button>
