@@ -9,7 +9,7 @@ import { EstimateDetailView } from "@/components/portal/views/EstimateDetailView
 import { PaymentsView } from "@/components/portal/views/PaymentsView";
 import { SupportView } from "@/components/portal/views/SupportView";
 import { PreferencesView } from "@/components/portal/views/PreferencesView";
-import { InviteTokenBanner } from "@/components/portal/InviteTokenBanner";
+import { GuestAccessBanner } from "@/components/portal/GuestAccessBanner";
 import { Spinner } from "@/components/ui/spinner";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import { usePortalState } from "@/hooks/usePortalState";
@@ -66,9 +66,19 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
           />
 
           <section className="flex-1 space-y-6">
-            {/* Invite Token Banner */}
-            {inviteToken && (
-              <InviteTokenBanner />
+            {/* Guest Access Banner */}
+            {view?.isGuestMode && (
+              <GuestAccessBanner 
+                daysRemaining={view?.daysRemaining ?? null}
+                estimateId={estimateId}
+                onCreateAccount={() => {
+                  // Will be implemented with CreateAccountModal
+                  router.push(`/set-password?estimateId=${estimateId}`);
+                }}
+                onSignIn={() => {
+                  router.push(`/login?redirect=/portal?estimateId=${estimateId}`);
+                }}
+              />
             )}
 
             {/* Overview View */}
@@ -285,8 +295,42 @@ export async function getServerSideProps({ query, req }) {
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : "Unknown error";
     
-    // Check if it's an authentication error
-    if (errorMsg.includes("401") || errorMsg.includes("Authentication")) {
+    // Extract error details from wpFetch error format: "WP error 403 Forbidden: {...}"
+    let errorData = null;
+    let statusCode = null;
+    try {
+      // wpFetch throws: "WP error ${status} ${statusText}: ${errorText}"
+      const statusMatch = errorMsg.match(/WP error (\d+)/);
+      if (statusMatch) {
+        statusCode = parseInt(statusMatch[1], 10);
+      }
+      
+      // Try to parse JSON from error message (wpFetch includes response body)
+      const jsonMatch = errorMsg.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        errorData = JSON.parse(jsonMatch[0]);
+      }
+    } catch (e) {
+      // Parsing failed, use defaults
+    }
+    
+    // Check for invalid/expired invite token (403) - show error, don't redirect
+    if (statusCode === 403 && inviteToken) {
+      const displayError = errorData?.err || errorData?.error || 
+        "This invite link is invalid or has expired. Please use the link from your email.";
+      
+      return {
+        props: {
+          initialStatus: null,
+          initialError: displayError,
+          initialEstimateId: estimateId,
+          initialEstimates: null,
+        },
+      };
+    }
+    
+    // Only redirect for actual authentication errors (401 without inviteToken)
+    if (statusCode === 401 && !inviteToken) {
       return {
         redirect: {
           destination: getLoginRedirect(`/portal?estimateId=${estimateId}`),
@@ -295,10 +339,12 @@ export async function getServerSideProps({ query, req }) {
       };
     }
     
+    // Other errors - show error message
+    const displayError = errorData?.err || errorData?.error || errorMsg;
     return {
       props: {
         initialStatus: null,
-        initialError: errorMsg,
+        initialError: displayError,
         initialEstimateId: estimateId,
         initialEstimates: null,
       },

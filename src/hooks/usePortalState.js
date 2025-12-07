@@ -159,7 +159,9 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     estimateDetailsQueries.some(q => q.isLoading);
 
   const loading = estimateId ? statusLoading : (dashboardLoading || isLoadingEstimateDetails);
-  const error = estimateId ? statusError?.message : dashboardError?.message || initialError;
+  // Check initialError first (from getServerSideProps) - it takes priority over React Query errors
+  // This ensures server-side errors (like invalid invite tokens) are displayed
+  const error = initialError || (estimateId ? statusError?.message : dashboardError?.message);
 
   // Get last viewed estimate from localStorage
   const lastViewedEstimateId = useMemo(() => {

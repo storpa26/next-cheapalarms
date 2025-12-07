@@ -53,6 +53,10 @@ export function normaliseStatus(status) {
     support: status.support ?? null,
     activity: status.activity ?? null,
     timeline: installation.timeline ?? null,
+    // Guest mode info
+    isGuestMode: status.isGuestMode ?? false,
+    daysRemaining: status.daysRemaining ?? null,
+    canCreateAccount: status.canCreateAccount ?? false,
   };
 }
 

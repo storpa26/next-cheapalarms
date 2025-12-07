@@ -35,7 +35,7 @@ function EmptyPhotoState({ onSelectFiles, onSkip }) {
   );
 }
 
-export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locationId }) {
+export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPhotoTab, estimateId, locationId, isGuestMode = false }) {
   // Use React Query hook for photos (with caching and automatic refetching)
   const { data: photosData, isLoading: loadingPhotos } = useEstimatePhotos({
     estimateId: estimateId || undefined,

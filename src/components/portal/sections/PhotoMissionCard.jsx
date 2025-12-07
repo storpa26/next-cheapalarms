@@ -17,6 +17,7 @@ export function PhotoMissionCard({
   view,
   onLaunchCamera,
 }) {
+  const isGuestMode = view?.isGuestMode ?? false;
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showValidation, setShowValidation] = useState(false);
@@ -204,8 +205,9 @@ export function PhotoMissionCard({
                 <ProductListCard
                   key={product.name}
                   product={product}
-                  onClick={() => setSelectedProduct(product)}
+                  onClick={() => !isGuestMode && setSelectedProduct(product)}
                   hasError={hasError}
+                  disabled={isGuestMode}
                 />
               );
             })
@@ -231,28 +233,34 @@ export function PhotoMissionCard({
               )}
             </div>
             
-            <button
-              type="button"
-              onClick={handleSubmitPhotos}
-              disabled={!validation.isComplete || isSubmitting}
-              className={`
-                w-full py-4 rounded-full font-bold text-sm transition-all flex justify-center items-center gap-2
-                ${validation.isComplete 
-                  ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl active:scale-[0.98]' 
-                  : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                }
-              `}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="animate-spin" size={18} /> Submitting...
-                </>
-              ) : isSubmitted ? (
-                "Resubmit photos"
-              ) : (
-                "Submit all photos"
-              )}
-            </button>
+            {isGuestMode ? (
+              <div className="w-full py-4 rounded-full bg-slate-100 text-slate-500 text-center text-sm font-medium">
+                Please create an account to submit photos
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmitPhotos}
+                disabled={!validation.isComplete || isSubmitting}
+                className={`
+                  w-full py-4 rounded-full font-bold text-sm transition-all flex justify-center items-center gap-2
+                  ${validation.isComplete 
+                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl active:scale-[0.98]' 
+                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                  }
+                `}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="animate-spin" size={18} /> Submitting...
+                  </>
+                ) : isSubmitted ? (
+                  "Resubmit photos"
+                ) : (
+                  "Submit all photos"
+                )}
+              </button>
+            )}
           </div>
         )}
       </div>

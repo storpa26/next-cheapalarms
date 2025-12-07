@@ -14,6 +14,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const isAccepted = quoteStatus === "accepted";
   const isRejected = quoteStatus === "rejected";
   const acceptedAt = view?.quote?.acceptedAt;
+  const isGuestMode = view?.isGuestMode ?? false;
 
   const [showPhotoWarning, setShowPhotoWarning] = useState(false);
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
@@ -215,40 +216,50 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
         {/* Action Buttons - Only show when pending and not rejected */}
         {isPending && !isRejected && (
           <div className="mt-5 grid gap-3 md:grid-cols-2">
-            <button
-              type="button"
-              onClick={handleAccept}
-              disabled={isProcessing}
-              className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? (
-                <>
-                  <Spinner size="sm" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Accept Estimate <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={handleReject}
-              disabled={isProcessing}
-              className="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-red-700 shadow-lg transition hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isProcessing ? (
-                <>
-                  <Spinner size="sm" />
-                  Processing...
-                </>
-              ) : (
-                <>
-                  Reject Estimate <XCircle className="h-4 w-4" />
-                </>
-              )}
-            </button>
+            {isGuestMode ? (
+              <div className="col-span-2 rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-4 text-center">
+                <p className="text-sm font-medium text-slate-600">
+                  Please create an account to accept or reject this estimate
+                </p>
+              </div>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleAccept}
+                  disabled={isProcessing}
+                  className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Spinner size="sm" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Accept Estimate <ArrowRight className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleReject}
+                  disabled={isProcessing}
+                  className="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-red-700 shadow-lg transition hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isProcessing ? (
+                    <>
+                      <Spinner size="sm" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      Reject Estimate <XCircle className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              </>
+            )}
           </div>
         )}
 
