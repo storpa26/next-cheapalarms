@@ -40,8 +40,12 @@ export default function LoginPage() {
         localStorage.setItem('auth_token', result.token);
       }
 
-      // Redirect to return URL or default to admin
-      const returnUrl = router.query.from || "/admin";
+      // Check user role and redirect accordingly
+      const userRoles = result.user?.roles || [];
+      const isCustomer = userRoles.includes('ca_customer');
+      
+      // Redirect customers to portal, others to admin (or return URL)
+      const returnUrl = router.query.from || (isCustomer ? "/portal" : "/admin");
       router.push(returnUrl);
     } catch (err) {
       setError(err.message);
