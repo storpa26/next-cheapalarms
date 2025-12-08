@@ -1,11 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { X, ArrowLeft } from "lucide-react";
 import { createPortal } from "react-dom";
 
 export function Modal({ isOpen, onClose, title, children, showBackButton = true }) {
+  const [mounted, setMounted] = useState(false);
+
+  // Track client-side mount to prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   useEffect(() => {
     // Only run on client-side
-    if (typeof window === 'undefined') return;
+    if (!mounted) return;
     
     if (isOpen) {
       document.body.style.overflow = "hidden";
@@ -23,11 +30,10 @@ export function Modal({ isOpen, onClose, title, children, showBackButton = true 
     } else {
       document.body.style.overflow = "";
     }
-  }, [isOpen, onClose]);
+  }, [isOpen, onClose, mounted]);
 
-  // Don't render anything on server-side
-  if (!isOpen) return null;
-  if (typeof window === 'undefined') return null;
+  // Don't render anything on server-side or if not mounted
+  if (!isOpen || !mounted) return null;
 
   const content = (
     <div
