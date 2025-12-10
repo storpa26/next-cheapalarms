@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { RevisionBanner } from "../sections/RevisionBanner";
+import { ReviewRequestCard } from "../sections/ReviewRequestCard";
 
 export function OverviewView({ 
   estimate, 
@@ -26,7 +27,7 @@ export function OverviewView({
   if (!estimate) {
     return (
       <div 
-        className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)] text-center"
+        className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg text-center"
         suppressHydrationWarning
       >
         <h1 className="text-3xl font-semibold text-slate-900">Welcome to Your Portal</h1>
@@ -65,8 +66,11 @@ export function OverviewView({
         />
       )}
 
-      {/* Hero Section */}
-      <div className="rounded-[32px] border border-slate-100 bg-white p-8 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+      {/* Review Request Card - New Feature */}
+      <div className="grid md:grid-cols-3 gap-6">
+        <div className="md:col-span-2">
+          {/* Hero Section */}
+          <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex-1">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Your Estimate</p>
@@ -139,7 +143,7 @@ export function OverviewView({
 
         {/* Pricing Section */}
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
               {needsPhotos ? "Estimated Total" : "Estimate Total"}
             </p>
@@ -153,7 +157,7 @@ export function OverviewView({
               <p className="mt-1 text-xs text-emerald-600">✓ Photos uploaded • Final pricing</p>
             )}
           </div>
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-6">
+          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Breakdown</p>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between">
@@ -230,6 +234,14 @@ export function OverviewView({
             View Full Details <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
+          </div>
+        </div>
+
+        {/* Review Request Card */}
+        <ReviewRequestCard 
+          estimateId={estimate.estimateId || estimate.id}
+          estimate={estimate}
+        />
       </div>
     </div>
   );

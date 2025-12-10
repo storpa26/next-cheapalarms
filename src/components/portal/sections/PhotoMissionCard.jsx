@@ -1,4 +1,7 @@
 import { Camera, Check, AlertCircle, Loader2 } from "lucide-react";
+
+const BRAND_ROSE = "#c95375";
+const BRAND_TEAL = "#2fb6c9";
 import { useState, useMemo } from "react";
 import { useEstimate, useEstimatePhotos } from "@/lib/react-query/hooks";
 import { ProductListCard, UploadModal, ProgressBar, calculateProgress, groupPhotosByProduct, validateAllProducts } from "../photo-upload";
@@ -153,22 +156,45 @@ export function PhotoMissionCard({
     );
   }
 
+  // Mock admin photo requests - will be replaced with real data later
+  const adminPhotoRequests = [
+    "Please upload photo of existing alarm system",
+    "Front door frame for sensor placement",
+  ];
+
   return (
     <>
-      <div className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
         {/* Header */}
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Photo updates</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-900">Installation photos</h3>
-            <p className="text-sm text-slate-500">
-              Add photos for each product so installers can see where devices will go.
-            </p>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-rose-100 to-teal-100">
+            <Camera className="h-5 w-5 text-[#c95375]" />
           </div>
-          <div className="rounded-full bg-primary/10 p-4">
-            <Camera className="h-6 w-6 text-primary" />
+          <div>
+            <h3 className="text-xl font-bold text-slate-900">Photo Upload System</h3>
+            <p className="text-xs text-slate-500">With limits & admin photo requests</p>
           </div>
         </div>
+
+        {/* Admin Photo Requests Banner - Compact */}
+        {adminPhotoRequests.length > 0 && (
+          <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs font-semibold text-amber-900 mb-1">Admin Photo Requests</p>
+                <div className="space-y-1">
+                  {adminPhotoRequests.map((request, idx) => (
+                    <div key={idx} className="flex items-center gap-1.5 text-xs text-amber-800">
+                      <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                      <span>{request}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Submission Status */}
         {isSubmitted && (
@@ -196,7 +222,7 @@ export function PhotoMissionCard({
           </div>
         )}
 
-        {/* Product List - Beautiful cards */}
+        {/* Product List - Compact */}
         <div className="max-h-80 space-y-3 overflow-y-auto pr-1">
           {products.length > 0 ? (
             products.map((product) => {
@@ -242,13 +268,16 @@ export function PhotoMissionCard({
                 type="button"
                 onClick={handleSubmitPhotos}
                 disabled={!validation.isComplete || isSubmitting}
-                className={`
-                  w-full py-4 rounded-full font-bold text-sm transition-all flex justify-center items-center gap-2
+                  className={`
+                  w-full py-3 rounded-xl font-semibold text-sm transition-all flex justify-center items-center gap-2
                   ${validation.isComplete 
-                    ? 'bg-gradient-to-r from-primary to-secondary text-white shadow-lg hover:shadow-xl active:scale-[0.98]' 
+                    ? 'text-white hover:opacity-90' 
                     : 'bg-slate-100 text-slate-400 cursor-not-allowed'
                   }
                 `}
+                  style={validation.isComplete ? {
+                    background: `linear-gradient(135deg, ${BRAND_ROSE}, ${BRAND_TEAL})`,
+                  } : {}}
               >
                 {isSubmitting ? (
                   <>

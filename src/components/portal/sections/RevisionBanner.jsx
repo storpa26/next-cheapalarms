@@ -21,10 +21,10 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
   return (
     <>
       {/* Hero Banner */}
-      <div className={`rounded-[32px] p-8 shadow-xl ${
+      <div className={`rounded-xl p-6 shadow-lg border-2 ${
         isSavings 
-          ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 border-2 border-green-300'
-          : 'bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 border-2 border-blue-300'
+          ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 border-green-300'
+          : 'bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 border-blue-300'
       }`}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
@@ -50,7 +50,7 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
         {/* Pricing Impact */}
         <div className="grid md:grid-cols-2 gap-6 my-6">
           {/* Original Price */}
-          <div className="bg-white/70 rounded-2xl p-6 border border-slate-200">
+          <div className="bg-white/70 rounded-xl p-4 border border-slate-200">
             <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">Original Estimate</p>
             <p className="text-2xl font-semibold text-slate-400 line-through">
               {currency} {(revision.oldTotal || 0).toFixed(2)}
@@ -58,7 +58,7 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
           </div>
 
           {/* New Price */}
-          <div className={`rounded-2xl p-6 border-2 ${
+          <div className={`rounded-xl p-4 border-2 ${
             isSavings 
               ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400' 
               : 'bg-gradient-to-br from-blue-500 to-sky-600 border-blue-400'
@@ -72,7 +72,7 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
 
         {/* Savings/Change Highlight */}
         {netChange !== 0 && (
-          <div className={`rounded-2xl p-6 text-center ${
+          <div className={`rounded-xl p-4 text-center ${
             isSavings 
               ? 'bg-gradient-to-r from-green-600 to-emerald-700'
               : 'bg-gradient-to-r from-blue-600 to-sky-700'
@@ -103,7 +103,7 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
 
         {/* Admin Note */}
         {revision.adminNote && (
-          <div className="mt-6 bg-white/80 rounded-2xl p-5 border border-slate-200">
+          <div className="mt-4 bg-white/80 rounded-xl p-4 border border-slate-200">
             <div className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                 isSavings ? 'bg-green-100' : 'bg-blue-100'
@@ -139,10 +139,10 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
                 approvalCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
             }}
-            className={`flex-1 px-6 py-3 rounded-full font-bold text-white shadow-lg hover:shadow-xl transition transform hover:scale-105 flex items-center justify-center gap-2 ${
+            className={`flex-1 px-6 py-3 rounded-xl font-bold text-white shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2 ${
               isSavings
                 ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                : 'bg-gradient-to-r from-[#1EA6DF] to-[#c95375]'
+                : 'bg-gradient-to-r from-[#2fb6c9] to-[#c95375]'
             }`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -155,7 +155,7 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
 
       {/* Detailed Changes (Expandable) */}
       {showDetails && (
-        <div className="rounded-[32px] border-2 border-slate-200 bg-white p-8 shadow-xl mt-4 animate-slideDown">
+        <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg mt-4 animate-slideDown">
           <h3 className="text-xl font-bold text-slate-900 mb-6">What Changed & Why</h3>
 
           {/* Quantity Changes */}
