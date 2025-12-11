@@ -11,6 +11,7 @@ import { SupportView } from "@/components/portal/views/SupportView";
 import { PreferencesView } from "@/components/portal/views/PreferencesView";
 import { GuestAccessBanner } from "@/components/portal/GuestAccessBanner";
 import { Spinner } from "@/components/ui/spinner";
+import { WorkflowProgressSkeleton, CardSkeleton } from "@/components/ui/skeleton";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import { usePortalState } from "@/hooks/usePortalState";
 import { ExpiredInviteMessage } from "@/components/portal/ExpiredInviteMessage";
@@ -85,8 +86,9 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
             {activeNav === "overview" && (
               <>
                 {loading || estimateLoading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Spinner size="lg" />
+                  <div className="space-y-6 animate-in fade-in duration-300">
+                    <WorkflowProgressSkeleton />
+                    <CardSkeleton />
                   </div>
                 ) : error || estimateError?.message ? (
                   // Check if error is about expired invite token
@@ -104,9 +106,22 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                       }}
                     />
                   ) : (
-                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-                      <p className="text-lg font-semibold">Error loading estimate</p>
-                      <p className="text-sm text-red-600">{error || estimateError?.message}</p>
+                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-full bg-red-100 p-2">
+                          <span className="text-red-600 text-xl">⚠</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-lg font-semibold mb-1">Error loading estimate</p>
+                          <p className="text-sm text-red-600 mb-4">{error || estimateError?.message}</p>
+                          <button
+                            onClick={() => router.reload()}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )
                 ) : (
@@ -119,6 +134,8 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                     onUploadImages={handleUploadImages}
                     onViewDetails={handleViewDetails}
                     onViewAll={!estimateId && estimates.length > 1 ? () => handleNavigateToSection("estimates") : undefined}
+                    view={view}
+                    estimateId={estimateId}
                   />
                 )}
               </>
@@ -151,9 +168,22 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                       }}
                     />
                   ) : (
-                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-                      <p className="text-lg font-semibold">Error loading estimate</p>
-                      <p className="text-sm text-red-600">{error}</p>
+                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-top-2 duration-300">
+                      <div className="flex items-start gap-4">
+                        <div className="rounded-full bg-red-100 p-2">
+                          <span className="text-red-600 text-xl">⚠</span>
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-lg font-semibold mb-1">Error loading estimate</p>
+                          <p className="text-sm text-red-600 mb-4">{error}</p>
+                          <button
+                            onClick={() => router.reload()}
+                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                          >
+                            Retry
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   )
                 ) : activeEstimate ? (

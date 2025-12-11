@@ -46,6 +46,12 @@ export function normaliseStatus(status) {
         ),
       required: photos.required ?? 6,
       samples: photos.samples ?? [],
+      // Preserve backend submission status fields (critical for "Resubmit" button persistence)
+      submission_status: photos.submission_status ?? null,
+      submitted_at: photos.submitted_at ?? null,
+      total: photos.total ?? 0,
+      uploaded: photos.uploaded ?? 0,
+      last_edited_at: photos.last_edited_at ?? null,
     },
     payments: status.payments ?? null,
     documents: status.documents ?? null,
@@ -53,6 +59,10 @@ export function normaliseStatus(status) {
     support: status.support ?? null,
     activity: status.activity ?? null,
     timeline: installation.timeline ?? null,
+    // Workflow data (for customer journey tracking)
+    workflow: status.workflow ?? null,
+    booking: status.booking ?? null,
+    payment: status.payment ?? null,
     // Guest mode info
     isGuestMode: status.isGuestMode ?? false,
     daysRemaining: status.daysRemaining ?? null,

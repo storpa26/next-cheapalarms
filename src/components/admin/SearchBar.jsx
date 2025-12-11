@@ -7,6 +7,8 @@ export function SearchBar({
   onStartDateChange,
   endDate,
   onEndDateChange,
+  workflowStatus,
+  onWorkflowStatusChange,
   placeholder = "Search..." 
 }) {
   return (
@@ -31,6 +33,27 @@ export function SearchBar({
             placeholder="End Date"
           />
         </div>
+
+        {/* Workflow Status Filter */}
+        {onWorkflowStatusChange && (
+          <div className="flex items-center gap-2">
+            <label className="text-sm text-gray-600 whitespace-nowrap">Workflow:</label>
+            <select
+              value={workflowStatus || ""}
+              onChange={(e) => onWorkflowStatusChange(e.target.value)}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">All</option>
+              <option value="requested">Requested</option>
+              <option value="reviewing">Reviewing</option>
+              <option value="reviewed">Reviewed</option>
+              <option value="accepted">Accepted</option>
+              <option value="booked">Booked</option>
+              <option value="paid">Paid</option>
+              <option value="completed">Completed</option>
+            </select>
+          </div>
+        )}
 
         {/* Search */}
         <div className="flex-1 min-w-[200px] relative">

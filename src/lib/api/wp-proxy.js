@@ -95,7 +95,20 @@ export async function proxyToWordPress(req, res, wpPath, options = {}) {
 
     const wpUrl = `${wpBase}${finalPath}`;
     const wpResp = await fetch(wpUrl, fetchOptions);
-    const body = await wpResp.json();
+    
+    // Parse JSON response with error handling
+    let body;
+    try {
+      body = await wpResp.json();
+    } catch (parseError) {
+      // If response is not JSON, return error response
+      const text = await wpResp.text().catch(() => 'Failed to read response');
+      return res.status(wpResp.status).json({
+        ok: false,
+        err: `Invalid JSON response from WordPress API: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
+        details: text.substring(0, 200), // Limit details length
+      });
+    }
 
     const transformedBody = transformResponse(body);
     return res.status(wpResp.status).json(transformedBody);

@@ -3,7 +3,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { RevisionBanner } from "../sections/RevisionBanner";
-import { ReviewRequestCard } from "../sections/ReviewRequestCard";
+import { WorkflowProgress } from "../sections/WorkflowProgress";
+import { BookingCard } from "../sections/BookingCard";
+import { PaymentCard } from "../sections/PaymentCard";
 
 export function OverviewView({ 
   estimate, 
@@ -13,7 +15,9 @@ export function OverviewView({
   onPrevEstimate,
   onUploadImages, 
   onViewDetails, 
-  onViewAll 
+  onViewAll,
+  view,
+  estimateId
 }) {
   const [mounted, setMounted] = useState(false);
 
@@ -66,11 +70,38 @@ export function OverviewView({
         />
       )}
 
-      {/* Review Request Card - New Feature */}
-      <div className="grid md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
-          {/* Hero Section */}
-          <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
+      {/* Workflow Progress */}
+      {view?.workflow && (
+        <WorkflowProgress workflow={view.workflow} />
+      )}
+
+      {/* Booking/Payment Cards - Compact versions for overview */}
+      {view?.workflow?.status === 'accepted' && !view?.booking && estimateId && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <BookingCard
+            estimateId={estimateId}
+            locationId={view?.locationId}
+            inviteToken={view?.account?.inviteToken}
+            booking={view?.booking}
+            workflow={view?.workflow}
+          />
+        </div>
+      )}
+      {view?.workflow?.status === 'booked' && view?.payment?.status !== 'paid' && estimateId && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <PaymentCard
+            estimateId={estimateId}
+            locationId={view?.locationId}
+            inviteToken={view?.account?.inviteToken}
+            payment={view?.payment}
+            workflow={view?.workflow}
+            invoice={view?.invoice}
+          />
+        </div>
+      )}
+
+      {/* Hero Section */}
+      <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex-1">
             <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Your Estimate</p>
@@ -234,14 +265,6 @@ export function OverviewView({
             View Full Details <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
         </div>
-          </div>
-        </div>
-
-        {/* Review Request Card */}
-        <ReviewRequestCard 
-          estimateId={estimate.estimateId || estimate.id}
-          estimate={estimate}
-        />
       </div>
     </div>
   );

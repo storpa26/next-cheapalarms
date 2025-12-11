@@ -17,15 +17,16 @@ export class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    // Log error details for debugging
-    console.error('Error caught by boundary:', error, errorInfo);
+    // Log error details for debugging (development only)
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error caught by boundary:', error, errorInfo);
+    }
     
-    // Store error info in state
-    this.state = {
-      ...this.state,
+    // Store error info in state using setState() (React will detect this change)
+    this.setState({
       error,
       errorInfo,
-    };
+    });
 
     // In production, you could send errors to an error reporting service here
     // Example: Sentry.captureException(error);

@@ -20,6 +20,7 @@ export default function EstimatesListPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [workflowStatusFilter, setWorkflowStatusFilter] = useState(""); // NEW: Workflow status filter
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
   const pageSize = 20;
@@ -45,6 +46,7 @@ export default function EstimatesListPage() {
   const { data, isLoading, error, refetch } = useAdminEstimates({
     search: search || undefined,
     portalStatus: portalStatusFilter || undefined,
+    workflowStatus: workflowStatusFilter || undefined, // NEW: Add workflow status filter
     page,
     pageSize,
   });
@@ -56,7 +58,7 @@ export default function EstimatesListPage() {
 
   const estimates = data?.items ?? [];
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
 
   // Use backend summary totals (calculated across ALL estimates, not just current page)
   const summaryMetrics = useMemo(() => {
@@ -153,6 +155,30 @@ export default function EstimatesListPage() {
     return classes[status] || "bg-gray-100 text-gray-700 border-gray-200";
   };
 
+  const getWorkflowStatusBadgeClass = (status) => {
+    const classes = {
+      requested: "bg-gray-100 text-gray-800 border-gray-300",
+      reviewing: "bg-blue-100 text-blue-800 border-blue-300",
+      accepted: "bg-green-100 text-green-800 border-green-300",
+      booked: "bg-purple-100 text-purple-800 border-purple-300",
+      paid: "bg-yellow-100 text-yellow-800 border-yellow-300",
+      completed: "bg-emerald-100 text-emerald-800 border-emerald-300",
+    };
+    return classes[status] || "bg-gray-100 text-gray-800 border-gray-300";
+  };
+
+  const getWorkflowStatusLabel = (status) => {
+    const labels = {
+      requested: "Requested",
+      reviewing: "Reviewing",
+      accepted: "Accepted",
+      booked: "Booked",
+      paid: "Paid",
+      completed: "Completed",
+    };
+    return labels[status] || status;
+  };
+
   return (
     <>
       <Head>
@@ -227,6 +253,11 @@ export default function EstimatesListPage() {
               setEndDate(value);
               setPage(1);
             }}
+            workflowStatus={workflowStatusFilter}
+            onWorkflowStatusChange={(value) => {
+              setWorkflowStatusFilter(value);
+              setPage(1);
+            }}
             placeholder="Search by number, email..."
           />
 
@@ -275,14 +306,26 @@ export default function EstimatesListPage() {
                           #{estimate.estimateNumber || estimate.id}
                         </p>
                       </div>
-                      <span
-                        className={`
-                          inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                          ${getStatusBadgeClass(estimate.portalStatus || "sent")}
-                        `}
-                      >
-                        {estimate.portalStatus || "sent"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={`
+                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                            ${getStatusBadgeClass(estimate.portalStatus || "sent")}
+                          `}
+                        >
+                          {estimate.portalStatus || "sent"}
+                        </span>
+                        {estimate.workflowStatus && (
+                          <span
+                            className={`
+                              inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                              ${getWorkflowStatusBadgeClass(estimate.workflowStatus)}
+                            `}
+                          >
+                            {getWorkflowStatusLabel(estimate.workflowStatus)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="flex items-center gap-2 mb-3">
@@ -348,7 +391,10 @@ export default function EstimatesListPage() {
                           Value
                         </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
-                          Status
+                          Portal Status
+                        </th>
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                          Workflow
                         </th>
                         <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
                           Actions
@@ -416,6 +462,16 @@ export default function EstimatesListPage() {
                               `}
                             >
                               {estimate.portalStatus || "sent"}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span
+                              className={`
+                                inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                                ${getWorkflowStatusBadgeClass(estimate.workflowStatus || "requested")}
+                              `}
+                            >
+                              {getWorkflowStatusLabel(estimate.workflowStatus || "requested")}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">

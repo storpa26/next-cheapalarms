@@ -6,7 +6,9 @@ import {
   useAdminEstimate, 
   useCreateInvoiceFromEstimate, 
   useSendEstimate,
-  useUpdateEstimate 
+  useUpdateEstimate,
+  useCompleteReview,
+  useSendRevisionNotification
 } from "@/lib/react-query/hooks/admin";
 import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
@@ -14,6 +16,7 @@ import { AddCustomItemModal } from "./AddCustomItemModal";
 import { DiscountModal } from "./DiscountModal";
 import { ChangeSummary } from "./ChangeSummary";
 import { SaveEstimateModal } from "./SaveEstimateModal";
+import { WorkflowStatusCard } from "./WorkflowStatusCard";
 import { toast } from "sonner";
 
 export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated }) {
@@ -25,6 +28,8 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const createInvoiceMutation = useCreateInvoiceFromEstimate();
   const sendEstimateMutation = useSendEstimate();
   const updateEstimateMutation = useUpdateEstimate();
+  const completeReviewMutation = useCompleteReview();
+  const sendRevisionMutation = useSendRevisionNotification(); // Separate hook for revision notifications
 
   const estimate = data?.ok ? data : null;
   const hasInvoice = !!(estimate?.linkedInvoice || estimate?.portalMeta?.invoice?.id);
@@ -116,13 +121,19 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
 
   const handleConfirmSave = async ({ adminNote, sendNotification }) => {
     try {
-      // Calculate revision data
+      // Calculate revision data with validation for NaN/Infinity
+      const safeOldTotal = isFinite(originalTotal) ? originalTotal : 0;
+      const safeNewTotal = isFinite(newTotal) ? newTotal : 0;
+      const safeNetChange = isFinite(safeNewTotal) && isFinite(safeOldTotal) 
+        ? safeNewTotal - safeOldTotal 
+        : 0;
+      
       const revisionData = {
         revisedAt: new Date().toISOString(),
         adminNote,
-        oldTotal: originalTotal,
-        newTotal,
-        netChange: newTotal - originalTotal,
+        oldTotal: safeOldTotal,
+        newTotal: safeNewTotal,
+        netChange: safeNetChange,
         changedItems: changedItems.map(item => ({
           name: item.name,
           oldQty: item.originalQty,
@@ -141,6 +152,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         discount: editedDiscount
       };
 
+      // 1. Update estimate (one API call)
       await updateEstimateMutation.mutateAsync({
         estimateId,
         locationId,
@@ -158,13 +170,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       setShowSaveModal(false);
       toast.success("Estimate updated successfully");
       setIsEditMode(false);
-      refetch();
       
-      // If admin chose to send notification
+      // 2. Send notification (if requested) - using separate hook to avoid button confusion
       if (sendNotification) {
-        // Send the estimate notification
         try {
-          await sendEstimateMutation.mutateAsync({ 
+          await sendRevisionMutation.mutateAsync({ 
             estimateId, 
             locationId,
             revisionNote: adminNote,
@@ -184,13 +194,23 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
           }
         });
       }
+      
+      // 3. Refetch ONCE at the end (after everything is done) - optimized
+      refetch();
     } catch (err) {
       toast.error(err.message || "Failed to update estimate");
+      // Refetch on error to ensure UI shows current state
+      refetch();
     }
   };
 
   const handleQuantityChange = (index, delta) => {
     setEditedItems(prev => {
+      // Bounds check: ensure index is valid
+      if (index < 0 || index >= prev.length) {
+        return prev;
+      }
+      
       const newItems = [...prev];
       const currentQty = newItems[index].qty || newItems[index].quantity || 1;
       const originalQty = newItems[index].originalQty || currentQty;
@@ -208,10 +228,15 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   };
 
   const handleRemoveItem = (index) => {
+    // Bounds check: ensure index is valid
+    if (index < 0 || index >= editedItems.length) {
+      return;
+    }
+    
     if (confirm('Are you sure you want to remove this item?')) {
       const item = editedItems[index];
       // Track removed items if they were original (not custom added)
-      if (!item.isCustom) {
+      if (item && !item.isCustom) {
         setRemovedItems(prev => [...prev, item]);
       }
       setEditedItems(prev => prev.filter((_, i) => i !== index));
@@ -288,6 +313,16 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       refetch();
     } catch (err) {
       toast.error(err.message || "Failed to send estimate");
+    }
+  };
+
+  const handleCompleteReview = async () => {
+    try {
+      await completeReviewMutation.mutateAsync({ estimateId, locationId });
+      toast.success("Review completed! Customer has been notified.");
+      refetch();
+    } catch (err) {
+      toast.error(err.message || "Failed to complete review");
     }
   };
 
@@ -597,6 +632,15 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
 
         {/* Sidebar (Right 30%) - Keep existing sidebar code */}
         <div className="space-y-4">
+          {/* Workflow Status Card - NEW */}
+          {portalMeta.workflow?.status && (
+            <WorkflowStatusCard
+              workflow={portalMeta.workflow}
+              booking={portalMeta.booking}
+              payment={portalMeta.payment}
+            />
+          )}
+
           {/* Portal Meta */}
           <div className="rounded-xl border border-border/60 bg-card p-4">
             <h3 className="mb-3 text-sm font-semibold text-foreground">Portal Status</h3>
@@ -678,6 +722,28 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   </svg>
                   View in GHL
                 </a>
+              )}
+              {/* Complete Review button - show when workflow is "reviewing" and photos are submitted */}
+              {portalMeta.workflow?.status === 'reviewing' && portalMeta.photos?.submission_status === 'submitted' && (
+                <button
+                  onClick={handleCompleteReview}
+                  disabled={completeReviewMutation.isPending}
+                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {completeReviewMutation.isPending ? (
+                    <>
+                      <Spinner size="sm" />
+                      Completing...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Complete Review
+                    </>
+                  )}
+                </button>
               )}
               <button
                 onClick={handleSendEstimate}

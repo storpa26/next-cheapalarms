@@ -257,7 +257,15 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
           {isAlreadySubmitted && (
             <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
               <p className="text-sm text-blue-800 font-medium">
-                ✓ Photos already submitted {submittedAt && `on ${new Date(submittedAt).toLocaleDateString()}`}
+                ✓ Photos already submitted {submittedAt && (() => {
+                  try {
+                    const date = new Date(submittedAt);
+                    if (!isNaN(date.getTime())) {
+                      return `on ${date.toLocaleDateString()}`;
+                    }
+                  } catch {}
+                  return null;
+                })()}
               </p>
               <p className="text-xs text-blue-600 mt-1">
                 You can still add or edit photos. Click "Submit photos" again when done.

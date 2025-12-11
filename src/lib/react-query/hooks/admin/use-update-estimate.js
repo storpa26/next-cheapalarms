@@ -9,7 +9,7 @@ export function useUpdateEstimate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ estimateId, locationId, items, discount, termsNotes }) => {
+    mutationFn: async ({ estimateId, locationId, items, discount, termsNotes, revisionData }) => {
       // First, fetch current estimate to get all required fields for GHL
       const params = new URLSearchParams();
       if (locationId) params.set('locationId', locationId);
@@ -29,11 +29,19 @@ export function useUpdateEstimate() {
       const title = current.title || 'ESTIMATE';
       
       const businessDetails = current.businessDetails || [{ name: 'Cheap Alarms' }];
+      
+      // Build contactDetails with required ID field (GHL requirement)
       const contactDetails = {
+        id: current.contact?.id || '', // Required by GHL - must be a non-empty string
         name: current.contact?.name || '',
         email: current.contact?.email || '',
         phoneNo: current.contact?.phone || ''
       };
+      
+      // Validate contact ID is present
+      if (!contactDetails.id) {
+        throw new Error('Contact ID is required to update estimate. Estimate must have a linked contact.');
+      }
 
       // Format dates
       const formatDate = (dateValue) => {
@@ -58,16 +66,23 @@ export function useUpdateEstimate() {
       const discountData = discount !== undefined 
         ? discount 
         : (current.discount || { type: 'percentage', value: 0 });
+      
+      // Clean discount object - GHL only accepts 'type' and 'value' properties
+      // Remove any extra properties like 'name' or 'isDiscount' that come from DiscountModal
+      const cleanDiscount = {
+        type: discountData.type || 'percentage',
+        value: parseFloat(discountData.value) || 0
+      };
 
       const payload = {
         estimateId,
-        altId: locationId || current.locationId,
+        altId: locationId || current.locationId, // Backend extracts this and passes as query param, then removes from body
         altType: 'location',
         name: name40,
         title,
         businessDetails,
         currency,
-        discount: discountData,
+        discount: cleanDiscount, // Use cleaned discount (only type and value)
         contactDetails,
         issueDate,
         expiryDate,
@@ -76,6 +91,11 @@ export function useUpdateEstimate() {
         items: formattedItems,
         termsNotes: termsNotes !== undefined ? termsNotes : (current.termsNotes || '')
       };
+
+      // Include revision data if provided (for tracking estimate changes)
+      if (revisionData) {
+        payload.revisionData = revisionData;
+      }
 
       // PUT to WordPress bridge (which updates GHL)
       return wpFetch('/ca/v1/estimate/update', {

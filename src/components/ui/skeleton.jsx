@@ -3,58 +3,58 @@ import { cn } from "@/lib/utils";
 export function Skeleton({ className, ...props }) {
   return (
     <div
-      className={cn("animate-pulse rounded-md bg-muted", className)}
+      className={cn("animate-pulse rounded-md bg-slate-200", className)}
       {...props}
     />
   );
 }
 
-export function SkeletonCard() {
+export function CardSkeleton({ className, ...props }) {
   return (
-    <div className="rounded-lg border border-border bg-card p-6">
-      <Skeleton className="h-4 w-3/4 mb-4" />
-      <Skeleton className="h-8 w-1/2 mb-2" />
-      <Skeleton className="h-3 w-full" />
+    <div
+      className={cn(
+        "rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]",
+        className
+      )}
+      {...props}
+    >
+      <div className="flex items-center justify-between mb-5">
+        <div className="space-y-2 flex-1">
+          <Skeleton className="h-3 w-24" />
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+        <Skeleton className="h-14 w-14 rounded-full" />
+      </div>
+      <div className="space-y-3">
+        <Skeleton className="h-10 w-full rounded-xl" />
+        <Skeleton className="h-10 w-full rounded-xl" />
+        <Skeleton className="h-24 w-full rounded-xl" />
+      </div>
+      <Skeleton className="h-12 w-full rounded-xl mt-4" />
     </div>
   );
 }
 
-export function SkeletonTable({ rows = 5, columns = 4 }) {
+export function WorkflowProgressSkeleton() {
   return (
-    <div className="rounded-md border border-border/60 overflow-hidden">
-      <div className="bg-muted/40 p-3 border-b border-border/60">
-        <div className="flex gap-4">
-          {Array.from({ length: columns }).map((_, i) => (
-            <Skeleton key={i} className="h-4 flex-1" />
-          ))}
-        </div>
+    <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mb-4">
+        <Skeleton className="h-3 w-24 mb-1" />
+        <Skeleton className="h-4 w-32" />
       </div>
-      <div className="divide-y divide-border/60">
-        {Array.from({ length: rows }).map((_, rowIdx) => (
-          <div key={rowIdx} className="p-3 flex gap-4">
-            {Array.from({ length: columns }).map((_, colIdx) => (
-              <Skeleton key={colIdx} className="h-4 flex-1" />
-            ))}
+      <div className="flex items-center gap-2 mb-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} className="flex-1 flex items-center">
+            <div className="flex flex-col items-center flex-1">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <Skeleton className="h-3 w-12 mt-2" />
+            </div>
+            {i < 4 && <Skeleton className="flex-1 h-1 mx-2 rounded-full" />}
           </div>
         ))}
       </div>
+      <Skeleton className="w-full h-2 rounded-full" />
     </div>
   );
 }
-
-export function SkeletonList({ items = 3 }) {
-  return (
-    <div className="space-y-3">
-      {Array.from({ length: items }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3">
-          <Skeleton className="h-12 w-12 rounded-full shrink-0" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-3 w-1/2" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
