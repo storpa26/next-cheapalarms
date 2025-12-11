@@ -346,8 +346,8 @@ export default function SampleProductPage() {
                 <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
                   <p className="font-medium mb-1">Quote Summary</p>
                   <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li>Total: ${totals.totalIncGst.toFixed(0)} inc GST</li>
                     <li>Property profile: {activeProfile?.title ?? "Custom"}</li>
+                    <li>Configuration ready for personalized quote</li>
                   </ul>
                 </div>
 
@@ -456,13 +456,12 @@ function buildHtmlEmail({ firstName, totals, activeProfile, selectedAddons, cove
   const coverageLine = `Doors ${coverage.doors}, windows ${coverage.windows}, glass walls ${coverage.glassWalls}, outdoor zones ${coverage.outdoorZones}, panic buttons ${coverage.panicButtons}`;
   return `
     <p>Hi ${firstName || "there"},</p>
-    <p>Thanks for building an Ajax Hub 2 package. Here’s the snapshot we received:</p>
-    <p><strong>Total:</strong> $${totals.totalIncGst.toFixed(0)} inc GST<br/>
-    <strong>Profile:</strong> ${activeProfile?.title ?? "Custom"} — ${activeProfile?.scopeGuide ?? ""}<br/>
+    <p>Thanks for building an Ajax Hub 2 package. Here's the snapshot we received:</p>
+    <p><strong>Profile:</strong> ${activeProfile?.title ?? "Custom"} — ${activeProfile?.scopeGuide ?? ""}<br/>
     <strong>Coverage inputs:</strong> ${coverageLine}</p>
     <p><strong>Add-ons selected:</strong></p>
     ${addonList}
-    <p>We’ll review the coverage, request photos if needed, and send the refined estimate in your portal.</p>
+    <p>We'll review the coverage, request photos if needed, and send the refined estimate with pricing in your portal.</p>
     <p>— CheapAlarms</p>
   `;
 }
@@ -474,11 +473,10 @@ function buildTextEmail({ firstName, totals, activeProfile, selectedAddons, cove
       : "- No optional add-ons selected";
   const coverageLine = `Doors ${coverage.doors}, windows ${coverage.windows}, glass walls ${coverage.glassWalls}, outdoor zones ${coverage.outdoorZones}, panic buttons ${coverage.panicButtons}`;
   return `Hi ${firstName || "there"},\n\n` +
-    `Thanks for building an Ajax Hub 2 package. Here’s what we received:\n` +
-    `Total: $${totals.totalIncGst.toFixed(0)} inc GST\n` +
+    `Thanks for building an Ajax Hub 2 package. Here's what we received:\n` +
     `Profile: ${activeProfile?.title ?? "Custom"} — ${activeProfile?.scopeGuide ?? ""}\n` +
     `Coverage inputs: ${coverageLine}\n` +
     `Add-ons:\n${addons}\n\n` +
-    `We’ll review everything, update the estimate, and share it in your portal.\n\n— CheapAlarms`;
+    `We'll review everything, update the estimate with pricing, and share it in your portal.\n\n— CheapAlarms`;
 }
 

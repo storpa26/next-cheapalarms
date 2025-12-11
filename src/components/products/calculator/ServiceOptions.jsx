@@ -32,7 +32,7 @@ export default function ServiceOptions({ services, onChange }) {
               <div className="text-base font-semibold">{option.label}</div>
               <p className="text-sm">{option.description}</p>
               <div className="mt-2 text-sm font-semibold text-foreground">
-                {option.price === 0 ? "Included" : `$${option.price}/mo`}
+                {option.price === 0 ? "Included" : "Available"}
               </div>
             </button>
           ))}
@@ -50,7 +50,7 @@ export default function ServiceOptions({ services, onChange }) {
           <div>
             <div className="text-base font-semibold text-foreground">Cellular failover</div>
             <p className="text-sm text-muted-foreground">
-              Adds SIM monitoring for power or internet outages ($18/mo).
+              Adds SIM monitoring for power or internet outages.
             </p>
           </div>
         </label>
@@ -58,7 +58,7 @@ export default function ServiceOptions({ services, onChange }) {
         <label className="flex flex-col rounded-2xl border p-4">
           <span className="text-base font-semibold text-foreground">Extended warranty</span>
           <span className="text-sm text-muted-foreground">
-            Add annual blocks beyond the standard 2-year Ajax warranty ($89/yr).
+            Add annual blocks beyond the standard 2-year Ajax warranty.
           </span>
           <div className="mt-3 flex items-center gap-3">
             <button

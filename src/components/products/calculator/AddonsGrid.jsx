@@ -29,8 +29,7 @@ export default function AddonsGrid({ catalog, quantities, onQuantityChange, onSh
         <p className="text-sm uppercase tracking-wide text-muted-foreground">Sensors & devices</p>
         <h2 className="text-xl font-semibold text-foreground">Add hardware to the kit</h2>
         <p className="text-sm text-muted-foreground">
-          Each card shows price (ex GST), install minutes, and system limits so you can stay within Hub
-          2 capacity.
+          Each card shows install minutes and system limits so you can stay within Hub 2 capacity.
         </p>
       </div>
 
@@ -59,7 +58,7 @@ export default function AddonsGrid({ catalog, quantities, onQuantityChange, onSh
                     </div>
                     <div className="mt-3 flex flex-wrap gap-3 text-xs text-muted-foreground">
                       <span>
-                        ${item.priceExGst.toFixed(0)} ex GST · {item.installMinutes} min install
+                        {item.installMinutes} min install
                       </span>
                       {max ? <span>Max {max} per system</span> : null}
                       {item.powerDrawMa ? <span>{item.powerDrawMa} mA draw</span> : null}

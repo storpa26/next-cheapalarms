@@ -46,11 +46,10 @@ export default function SummaryPanel({
             ) : (
               <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
                 {selectedAddons.map((item) => (
-                  <li key={item.id} className="flex justify-between">
+                  <li key={item.id}>
                     <span>
                       {item.quantity} × {item.name}
                     </span>
-                    <span>${(item.priceExGst * item.quantity).toFixed(0)}</span>
                   </li>
                 ))}
               </ul>
@@ -59,32 +58,11 @@ export default function SummaryPanel({
         </div>
 
         <div className="mt-6 space-y-2 text-sm">
-          <div className="flex justify-between text-muted-foreground">
-            <span>Base kit</span>
-            <span>${baseKit.priceExGst.toFixed(0)}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Add-ons</span>
-            <span>${totals.addonSubtotal.toFixed(0)}</span>
-          </div>
-          <div className="flex justify-between text-muted-foreground">
-            <span>Services</span>
-            <span>${totals.serviceSubtotal.toFixed(0)}</span>
-          </div>
-          <div className="flex justify-between text-sm font-semibold text-foreground">
-            <span>Subtotal (ex GST)</span>
-            <span>${totals.subtotalExGst.toFixed(0)}</span>
-          </div>
-          <div className="flex justify-between text-sm text-muted-foreground">
-            <span>GST (15%)</span>
-            <span>${totals.gstAmount.toFixed(0)}</span>
-          </div>
-          <div className="flex justify-between text-lg font-semibold text-foreground">
-            <span>Total inc GST</span>
-            <span>${totals.totalIncGst.toFixed(0)}</span>
-          </div>
           <div className="text-xs text-muted-foreground">
             Install time estimate: {(totals.installMinutes / 60).toFixed(1)} hrs
+          </div>
+          <div className="text-xs text-muted-foreground pt-2 border-t">
+            Pricing will be provided in your personalized quote after we review your configuration.
           </div>
         </div>
 
