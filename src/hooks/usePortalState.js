@@ -443,6 +443,8 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
       label: estimateData?.ok 
         ? (estimateData.title || `Estimate #${estimateData.estimateNumber || estimateId}`)
         : `Estimate #${view?.quote?.number || estimateId}`,
+      revision: view?.revision || null, // Include revision data for RevisionBanner
+      currency: estimateData?.ok ? (estimateData.currency || 'AUD') : 'AUD',
     };
     
     return baseEstimate;

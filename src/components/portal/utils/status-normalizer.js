@@ -63,6 +63,7 @@ export function normaliseStatus(status) {
     workflow: status.workflow ?? null,
     booking: status.booking ?? null,
     payment: status.payment ?? null,
+    revision: status.revision ?? null, // Include revision data for RevisionBanner
     // Guest mode info
     isGuestMode: status.isGuestMode ?? false,
     daysRemaining: status.daysRemaining ?? null,

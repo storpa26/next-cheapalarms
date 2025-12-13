@@ -397,7 +397,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         {/* Line Items (Left 70%) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Edit Mode Controls */}
-          {!isEditMode && !hasInvoice && portalMeta.photos?.submission_status === 'submitted' && (
+          {!isEditMode && !hasInvoice && (estimate.portalStatus === 'sent' || portalMeta.photos?.submission_status === 'submitted') && (
             <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -405,11 +405,13 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                   <div>
-                    <p className="font-semibold text-blue-900">Ready for Photo Review</p>
+                    <p className="font-semibold text-blue-900">Ready for Review</p>
                     <p className="text-sm text-blue-700">
                       {estimate.portalStatus === 'accepted' 
                         ? 'Customer accepted and submitted photos. You can still adjust based on photos. Re-send estimate if you make changes.'
-                        : 'Customer submitted photos. Review and adjust pricing, then send updated estimate to customer for acceptance.'
+                        : portalMeta.photos?.submission_status === 'submitted'
+                        ? 'Customer submitted photos. Review and adjust pricing, then send updated estimate to customer for acceptance.'
+                        : 'Estimate is ready. You can edit and adjust pricing before sending to customer.'
                       }
                     </p>
                   </div>
