@@ -1,0 +1,85 @@
+/**
+ * Light Theme CSS Variables
+ * Raw HSL parts only (no hsl() wrapper)
+ * Used with hsl(var(--token)) in Tailwind
+ * 
+ * THIS IS THE SOURCE OF TRUTH for semantic token values
+ */
+
+:root {
+    /* Backgrounds */
+    --color-bg: 0 0% 100%;
+    --color-surface: 0 0% 100%;
+    --color-surface-2: 0 0% 98%;
+    --color-muted: 0 0% 96.1%;
+    --color-elevated: 0 0% 100%;
+    
+    /* Text */
+    --color-text: 0 0% 3.9%;
+    --color-text-muted: 0 0% 50%;
+    --color-text-disabled: 0 0% 60%;
+    --color-text-inverse: 0 0% 98%;
+    
+    /* Borders */
+    --color-border: 0 0% 89.8%;
+    --color-border-strong: 0 0% 70%;
+    --color-border-subtle: 0 0% 96%;
+    
+    /* Inputs */
+    --color-input: 0 0% 89.8%;
+    --color-input-focus: 188 52% 37%;
+    
+    /* Brand */
+    --color-primary: 343 49% 58%;
+    --color-primary-foreground: 0 0% 98%;
+    --color-primary-hover: 343 49% 52%;
+    --color-primary-active: 343 49% 45%;
+    
+    --color-secondary: 188 52% 37%;
+    --color-secondary-foreground: 0 0% 98%;
+    --color-secondary-hover: 188 52% 30%;
+    
+    /* Semantic */
+    --color-success: 142 76% 36%;
+    --color-success-foreground: 0 0% 98%;
+    --color-success-bg: 142 76% 95%;
+    
+    --color-error: 0 84% 60%;
+    --color-error-foreground: 0 0% 98%;
+    --color-error-bg: 0 84% 95%;
+    
+    --color-warning: 45 100% 45%;
+    --color-warning-foreground: 0 0% 3.9%;
+    --color-warning-bg: 45 100% 95%;
+    
+    --color-info: 188 52% 37%;
+    --color-info-foreground: 0 0% 98%;
+    --color-info-bg: 188 52% 95%;
+    
+    /* State tokens */
+    --state-hover-bg: 0 0% 96.1%;
+    --state-active-bg: 0 0% 94%;
+    --opacity-disabled: 0.5;
+    --opacity-muted: 0.6;
+    
+    /* Focus/Ring */
+    --color-ring: 188 52% 37%;
+    --color-ring-offset: 0 0% 100%;
+    --color-focus: 188 52% 37%;
+    
+    /* Overlay */
+    --color-overlay: 0 0% 0% / 0.5;
+    
+    /* Motion */
+    --motion-fast: 150ms;
+    --motion-normal: 250ms;
+    --motion-slow: 350ms;
+    --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+    --ease-emphasized: cubic-bezier(0.2, 0, 0, 1);
+}
+
+.dark {
+  /* Future dark theme - same structure, different values */
+  /* Can be added later without breaking anything */
+}
+

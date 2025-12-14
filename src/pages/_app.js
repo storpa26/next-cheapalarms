@@ -2,6 +2,7 @@ import "@/styles/globals.css";
 import "@/styles/testing-guide.css";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
+import { Poppins } from "next/font/google";
 import { ThemeProvider } from "@/components/ui/theme-provider";
 import { ToastProvider } from "@/components/ui/use-toast";
 import { Toaster } from "@/components/ui/sonner";
@@ -9,6 +10,14 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "@/lib/react-query/query-client";
 import { Spinner } from "@/components/ui/spinner";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
+
+// Configure Poppins font
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-poppins",
+  display: "swap",
+});
 
 function RouteProgressOverlay() {
   const router = useRouter();
@@ -65,9 +74,11 @@ export default function App({ Component, pageProps }) {
       <QueryClientProvider client={queryClient}>
         <ThemeProvider>
           <ToastProvider>
-            <RouteProgressOverlay />
-            <Component {...pageProps} />
-            <Toaster />
+            <div className={poppins.variable}>
+              <RouteProgressOverlay />
+              <Component {...pageProps} />
+              <Toaster />
+            </div>
           </ToastProvider>
         </ThemeProvider>
       </QueryClientProvider>

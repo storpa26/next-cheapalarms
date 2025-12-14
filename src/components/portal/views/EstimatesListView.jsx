@@ -5,9 +5,6 @@ import { formatAddress } from "@/components/portal/utils/portal-utils";
 import { useState } from "react";
 import { ChevronDown, CheckCircle, Clock, AlertCircle, FileText, X } from "lucide-react";
 
-const BRAND_ROSE = "#c95375";
-const BRAND_TEAL = "#2fb6c9";
-
 const statusIcons = {
   sent: Clock,
   under_review: AlertCircle,
@@ -112,7 +109,7 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
                         isSelected ? "bg-rose-50 border-l-4" : ""
                       }`}
                       style={{
-                        borderLeftColor: isSelected ? BRAND_ROSE : "transparent",
+                        borderLeftColor: isSelected ? "hsl(var(--color-primary))" : "transparent",
                       }}
                     >
                       <div className={`p-2 rounded-lg ${estStatusColor.split(" ")[1]} ${estStatusColor.split(" ")[2]}`}>

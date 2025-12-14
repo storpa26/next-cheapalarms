@@ -1,8 +1,6 @@
 import { Camera, Check, AlertCircle, Loader2 } from "lucide-react";
-
-const BRAND_ROSE = "#c95375";
-const BRAND_TEAL = "#2fb6c9";
 import { useState, useMemo } from "react";
+import { Button } from "@/components/ui/button";
 import { useEstimate, useEstimatePhotos } from "@/lib/react-query/hooks";
 import { ProductListCard, UploadModal, ProgressBar, calculateProgress, groupPhotosByProduct, validateAllProducts } from "../photo-upload";
 import { Spinner } from "@/components/ui/spinner";
@@ -272,20 +270,12 @@ export function PhotoMissionCard({
                 Please create an account to submit photos
               </div>
             ) : (
-              <button
-                type="button"
+              <Button
                 onClick={handleSubmitPhotos}
                 disabled={!validation.isComplete || isSubmitting}
-                  className={`
-                  w-full py-3 rounded-xl font-semibold text-sm transition-all flex justify-center items-center gap-2
-                  ${validation.isComplete 
-                    ? 'text-white hover:opacity-90' 
-                    : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                  }
-                `}
-                  style={validation.isComplete ? {
-                    background: `linear-gradient(135deg, ${BRAND_ROSE}, ${BRAND_TEAL})`,
-                  } : {}}
+                variant={validation.isComplete ? "gradient" : "outline"}
+                className="w-full py-3 rounded-xl font-semibold"
+                size="lg"
               >
                 {isSubmitting ? (
                   <>
@@ -296,7 +286,7 @@ export function PhotoMissionCard({
                 ) : (
                   "Submit all photos"
                 )}
-              </button>
+              </Button>
             )}
           </div>
         )}

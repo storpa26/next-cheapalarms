@@ -25,7 +25,7 @@ export function Spinner({ className, size = "md", ...props }) {
       {...props}
     >
       <span className="absolute inset-0 rounded-full bg-primary/25 blur-2xl opacity-70 animate-pulse" />
-      <span className="absolute inset-[3px] rounded-full border border-white/40 dark:border-white/10" />
+      <span className="absolute inset-[3px] rounded-full border border-border-subtle" />
       <span
         className={cn(
           "absolute inset-0 rounded-full border-transparent border-t-primary border-r-secondary animate-[spin_1.1s_linear_infinite]",
@@ -51,13 +51,13 @@ export function SpinnerOverlay({
   return (
     <div
       className={cn(
-        "relative flex flex-col items-center gap-3 rounded-2xl border border-primary/30 bg-linear-to-br from-card via-background to-card px-6 py-5 text-center shadow-[0_25px_65px_-30px_rgba(201,83,117,0.8)]",
+        "relative flex flex-col items-center gap-3 rounded-xl border border-border bg-elevated px-6 py-5 text-center shadow-elevated",
         className
       )}
     >
       <Spinner size="lg" className="text-primary" />
       <div>
-        <p className="text-sm font-semibold text-primary">{message}</p>
+        <p className="text-sm font-semibold text-foreground">{message}</p>
         {subtext ? <p className="text-xs text-muted-foreground">{subtext}</p> : null}
       </div>
       {children}

@@ -1,4 +1,5 @@
 import { Check, AlertCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 /**
  * Sticky submit bar component
@@ -26,17 +27,12 @@ export function StickySubmitBar({
           )}
         </div>
         
-        <button
-          type="button"
+        <Button
           onClick={onSubmit}
           disabled={!isComplete || isSubmitting}
-          className={`
-            w-full py-4 rounded-full font-bold text-sm transition-all flex justify-center items-center gap-2
-            ${isComplete 
-              ? 'bg-primary text-white shadow-lg hover:shadow-xl active:scale-[0.98]' 
-              : 'bg-slate-100 text-slate-400 cursor-not-allowed'
-            }
-          `}
+          variant={isComplete ? "gradient" : "outline"}
+          className="w-full py-4 rounded-full font-bold shadow-lg hover:shadow-xl active:scale-[0.98]"
+          size="lg"
         >
           {isSubmitting ? (
             <>
@@ -47,7 +43,7 @@ export function StickySubmitBar({
           ) : (
             "Submit all photos"
           )}
-        </button>
+        </Button>
       </div>
     </div>
   );

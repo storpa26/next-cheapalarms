@@ -85,10 +85,10 @@ export const DialogContent = React.forwardRef(({
     >
       <div
         ref={ref}
-        className={cn(
-          "bg-card text-foreground relative rounded-2xl border border-border/50 shadow-2xl max-w-4xl w-full",
-          className
-        )}
+      className={cn(
+        "bg-elevated text-foreground relative rounded-xl border border-border shadow-elevated max-w-4xl w-full",
+        className
+      )}
         style={{ 
           maxHeight: '90vh', 
           display: 'flex', 
@@ -100,7 +100,7 @@ export const DialogContent = React.forwardRef(({
       >
         <button
           onClick={() => setIsOpen(false)}
-          className="absolute right-4 top-4 z-20 rounded-lg p-2 opacity-70 hover:opacity-100 transition-opacity bg-background/80 backdrop-blur-sm border border-border/50"
+          className="absolute right-4 top-4 z-20 rounded-md p-2 opacity-70 hover:opacity-100 transition-opacity duration-normal ease-standard bg-surface border border-border"
         >
           <X className="h-4 w-4" />
           <span className="sr-only">Close</span>
