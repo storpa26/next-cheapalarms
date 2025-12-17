@@ -1,7 +1,18 @@
 /* eslint-disable @next/next/no-img-element */
 import { memo, useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { ProductPhotoUpload } from "./ProductPhotoUpload";
 import { useEstimatePhotos } from "@/lib/react-query/hooks";
 import { Spinner } from "@/components/ui/spinner";
@@ -64,6 +75,7 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
   const [sendingEmail, setSendingEmail] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const [photosSkipped, setPhotosSkipped] = useState(false);
+  const [skipDialogOpen, setSkipDialogOpen] = useState(false);
 
   // Update tabs when uploaded count changes
   const tabs = [
@@ -73,12 +85,15 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
   ];
 
   // Handle skip photos
-  const handleSkipPhotos = useCallback(() => {
-    if (window.confirm("Are you sure you want to skip uploading photos? We'll call you to confirm details instead.")) {
-      setPhotosSkipped(true);
-      // Optionally, you could store this in the backend
-      // For now, just show a confirmation message
-    }
+  const handleSkipPhotosClick = useCallback(() => {
+    setSkipDialogOpen(true);
+  }, []);
+
+  const handleSkipPhotosConfirm = useCallback(() => {
+    setPhotosSkipped(true);
+    setSkipDialogOpen(false);
+    // Optionally, you could store this in the backend
+    // For now, just show a confirmation message
   }, []);
 
   const handleSendPasswordReset = async (e) => {
@@ -133,16 +148,16 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
         </div>
         <div className="flex gap-2 rounded-md border border-border bg-muted/40 p-1 text-xs">
           {tabs.map((tab) => (
-            <button
+            <Button
               key={tab.id}
               type="button"
               onClick={() => setPhotoTab(tab.id)}
-              className={`rounded px-3 py-1 transition ${
-                photoTab === tab.id ? "bg-background text-foreground shadow" : "text-muted-foreground"
-              }`}
+              variant={photoTab === tab.id ? "default" : "ghost"}
+              size="sm"
+              className="rounded"
             >
               {tab.label}
-            </button>
+            </Button>
           ))}
         </div>
       </CardHeader>
@@ -154,17 +169,17 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
             Enter your email address and we'll send you a link to set your password.
           </p>
           {emailSent ? (
-            <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
-              Password reset email sent! Check your inbox.
-            </div>
+            <div className="rounded-md bg-success-bg p-3 text-sm text-success">
+                Password reset email sent! Check your inbox.
+              </div>
           ) : (
             <form onSubmit={handleSendPasswordReset} className="flex flex-col gap-2 sm:flex-row">
-              <input
+              <Input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
-                className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                className="flex-1"
                 disabled={sendingEmail}
               />
               <Button type="submit" disabled={sendingEmail || !email} variant="secondary" className="sm:w-auto">
@@ -215,7 +230,7 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
                   }
                 }, 100);
               }}
-              onSkip={handleSkipPhotos}
+              onSkip={handleSkipPhotosClick}
             />
           )
         ) : null}
@@ -250,12 +265,12 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
               <p className="text-sm text-muted-foreground mt-2">
                 That's okay—you can skip this step and we'll call to confirm details.
               </p>
-              <Button variant="outline" className="mt-4" onClick={handleSkipPhotos}>
+              <Button variant="outline" className="mt-4" onClick={handleSkipPhotosClick}>
                 Skip photos for now
               </Button>
             </div>
             {photosSkipped && (
-              <div className="rounded-md bg-blue-50 p-3 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200">
+              <div className="rounded-md bg-info-bg p-3 text-sm text-info">
                 Photos skipped. We'll call you to confirm details before installation.
               </div>
             )}
@@ -281,6 +296,24 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
           </div>
         ) : null}
       </CardContent>
+
+      {/* Skip Photos Confirmation Dialog */}
+      <AlertDialog open={skipDialogOpen} onOpenChange={setSkipDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Skip Photo Upload?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to skip uploading photos? We'll call you to confirm details instead.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleSkipPhotosConfirm}>
+              Skip Photos
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 });

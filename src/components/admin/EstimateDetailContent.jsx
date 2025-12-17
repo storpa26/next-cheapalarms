@@ -1,7 +1,19 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
 import { 
   useAdminEstimate, 
   useCreateInvoiceFromEstimate, 
@@ -159,7 +171,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         items: editedItems.map(item => ({
           name: item.name,
           description: item.description,
-          currency: item.currency || estimate.currency || 'AUD',
+          currency: item.currency || estimate.currency || DEFAULT_CURRENCY,
           amount: item.amount,
           qty: item.qty || item.quantity || 1
         })),
@@ -227,20 +239,24 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     });
   };
 
-  const handleRemoveItem = (index) => {
+  const handleRemoveItemClick = (index) => {
     // Bounds check: ensure index is valid
     if (index < 0 || index >= editedItems.length) {
       return;
     }
-    
-    if (confirm('Are you sure you want to remove this item?')) {
-      const item = editedItems[index];
-      // Track removed items if they were original (not custom added)
-      if (item && !item.isCustom) {
-        setRemovedItems(prev => [...prev, item]);
-      }
-      setEditedItems(prev => prev.filter((_, i) => i !== index));
+    setItemToDeleteIndex(index);
+    setDeleteItemDialogOpen(true);
+  };
+
+  const handleRemoveItem = (index) => {
+    const item = editedItems[index];
+    // Track removed items if they were original (not custom added)
+    if (item && !item.isCustom) {
+      setRemovedItems(prev => [...prev, item]);
     }
+    setEditedItems(prev => prev.filter((_, i) => i !== index));
+    setDeleteItemDialogOpen(false);
+    setItemToDeleteIndex(null);
   };
 
   const handleAddCustomItem = (newItem) => {
@@ -336,7 +352,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
 
   if (error || !estimate) {
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+      <div className="rounded-md border border-error/30 bg-error-bg p-4 text-sm text-error">
         <p className="font-semibold">Error loading estimate</p>
         <p className="mt-1">{error?.message || "Estimate not found"}</p>
       </div>
@@ -347,7 +363,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const items = isEditMode ? editedItems : (estimate.items || []);
   const portalMeta = estimate.portalMeta || {};
   const linkedInvoice = estimate.linkedInvoice;
-  const currency = estimate.currency || "AUD";
+  const currency = estimate.currency || DEFAULT_CURRENCY;
 
   return (
     <div className="space-y-6">
@@ -398,15 +414,15 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         <div className="lg:col-span-2 space-y-4">
           {/* Edit Mode Controls */}
           {!isEditMode && !hasInvoice && (estimate.portalStatus === 'sent' || portalMeta.photos?.submission_status === 'submitted') && (
-            <div className="rounded-xl border border-blue-200 bg-blue-50 p-4">
+            <div className="rounded-xl border border-info/30 bg-info-bg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <svg className="h-5 w-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 text-info" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                   </svg>
                   <div>
-                    <p className="font-semibold text-blue-900">Ready for Review</p>
-                    <p className="text-sm text-blue-700">
+                    <p className="font-semibold text-info">Ready for Review</p>
+                    <p className="text-sm text-info">
                       {estimate.portalStatus === 'accepted' 
                         ? 'Customer accepted and submitted photos. You can still adjust based on photos. Re-send estimate if you make changes.'
                         : portalMeta.photos?.submission_status === 'submitted'
@@ -416,26 +432,27 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                     </p>
                   </div>
                 </div>
-                <button
+                <Button
                   onClick={handleEnterEditMode}
-                  className="px-4 py-2 bg-gradient-to-r from-[#1EA6DF] to-[#c95375] text-white rounded-lg font-semibold hover:shadow-lg transition whitespace-nowrap"
+                  variant="gradient"
+                  className="whitespace-nowrap"
                 >
                   Edit Estimate
-                </button>
+                </Button>
               </div>
             </div>
           )}
           
           {/* Info banner when invoice already created */}
           {hasInvoice && portalMeta.photos?.submission_status === 'submitted' && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
+            <div className="rounded-xl border border-warning/30 bg-warning-bg p-4">
               <div className="flex items-center gap-2">
-                <svg className="h-5 w-5 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="h-5 w-5 text-warning" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
                 <div>
-                  <p className="font-semibold text-amber-900">Invoice Created</p>
-                  <p className="text-sm text-amber-700">
+                  <p className="font-semibold text-warning">Invoice Created</p>
+                  <p className="text-sm text-warning">
                     An invoice has already been created for this estimate. To make changes, edit the estimate in GHL and create a new invoice.
                   </p>
                 </div>
@@ -462,24 +479,27 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               <h2 className="text-lg font-semibold text-foreground">Line Items</h2>
               {isEditMode && (
                 <div className="flex gap-2">
-                  <button
+                  <Button
                     onClick={() => setShowAddItemModal(true)}
-                    className="px-3 py-1.5 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition flex items-center gap-1"
+                    variant="default"
+                    size="sm"
+                    className="bg-success text-success-foreground hover:bg-success/90"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                     </svg>
                     Add Item
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     onClick={() => setShowDiscountModal(true)}
-                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition flex items-center gap-1"
+                    variant="default"
+                    size="sm"
                   >
                     <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     Discount/Fee
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -520,7 +540,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                           }}
                           className={`cursor-pointer transition-all duration-200 ${
                             isSelected
-                              ? "bg-gradient-to-r from-[#1EA6DF]/10 via-[#c95375]/5 to-[#1EA6DF]/10 ring-2 ring-[#1EA6DF]/40 shadow-sm"
+                              ? "bg-primary/10 ring-2 ring-primary/40 shadow-sm"
                               : "hover:bg-muted/30 hover:shadow-sm"
                           }`}
                         >
@@ -530,7 +550,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                                 <div className="font-medium text-foreground flex items-center gap-2">
                                   {itemName}
                                   {item.isCustom && (
-                                    <span className="text-xs px-1.5 py-0.5 bg-green-100 text-green-700 rounded font-semibold">NEW</span>
+                                    <span className="text-xs px-1.5 py-0.5 bg-success-bg text-success rounded font-semibold">NEW</span>
                                   )}
                                 </div>
                                 {item.description && (
@@ -538,7 +558,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                                 )}
                               </div>
                               {!isEditMode && photoCount > 0 && (
-                                <div className="flex items-center gap-1 rounded-full bg-gradient-to-r from-[#1EA6DF]/20 to-[#c95375]/20 px-2.5 py-1 text-xs font-semibold text-[#1EA6DF] shadow-sm border border-[#1EA6DF]/30">
+                                <div className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm border border-primary/30">
                                   <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -551,25 +571,29 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                           <td className="px-4 py-3">
                             {isEditMode ? (
                               <div className="flex items-center justify-center gap-1">
-                                <button
+                                <Button
                                   onClick={() => handleQuantityChange(idx, -1)}
                                   disabled={itemQty <= 1}
-                                  className="w-7 h-7 flex items-center justify-center rounded-md border border-border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition"
+                                  variant="outline"
+                                  size="icon-sm"
+                                  className="w-7 h-7"
                                 >
                                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
                                   </svg>
-                                </button>
+                                </Button>
                                 <span className="w-10 text-center font-medium text-foreground">{itemQty}</span>
-                                <button
+                                <Button
                                   onClick={() => handleQuantityChange(idx, 1)}
                                   disabled={itemQty >= (item.originalQty || 1) + 10}
-                                  className="w-7 h-7 flex items-center justify-center rounded-md border border-border hover:bg-muted disabled:opacity-30 disabled:cursor-not-allowed transition"
+                                  variant="outline"
+                                  size="icon-sm"
+                                  className="w-7 h-7"
                                 >
                                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                                   </svg>
-                                </button>
+                                </Button>
                               </div>
                             ) : (
                               <div className="text-center text-sm text-foreground">{itemQty}</div>
@@ -583,15 +607,17 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                           </td>
                           {isEditMode && (
                             <td className="px-4 py-3 text-center">
-                              <button
-                                onClick={() => handleRemoveItem(idx)}
-                                className="text-red-600 hover:text-red-700 transition"
+                              <Button
+                                onClick={() => handleRemoveItemClick(idx)}
+                                variant="ghost"
+                                size="icon-sm"
+                                className="text-error hover:text-error/80"
                                 title="Remove item"
                               >
                                 <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
-                              </button>
+                              </Button>
                             </td>
                           )}
                         </tr>
@@ -614,19 +640,21 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
             {/* Save/Cancel Buttons */}
             {isEditMode && (
               <div className="flex gap-3 mt-6 pt-4 border-t border-border/60">
-                <button
+                <Button
                   onClick={handleCancelEdit}
-                  className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition"
+                  variant="outline"
+                  className="flex-1"
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   onClick={handleSaveClick}
                   disabled={updateEstimateMutation.isPending}
-                  className="flex-1 px-4 py-2 bg-gradient-to-r from-[#1EA6DF] to-[#c95375] text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50"
+                  variant="gradient"
+                  className="flex-1"
                 >
                   Save Changes
-                </button>
+                </Button>
               </div>
             )}
           </div>
@@ -663,7 +691,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                 <div>
                   <span className="text-muted-foreground">Photos:</span>{" "}
                   {portalMeta.photos.submission_status === 'submitted' ? (
-                    <span className="font-medium text-green-600 flex items-center gap-1 inline-flex">
+                    <span className="font-medium text-success inline-flex items-center gap-1">
                       <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                       </svg>
@@ -727,10 +755,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               )}
               {/* Complete Review button - show when workflow is "reviewing" and photos are submitted */}
               {portalMeta.workflow?.status === 'reviewing' && portalMeta.photos?.submission_status === 'submitted' && (
-                <button
+                <Button
                   onClick={handleCompleteReview}
                   disabled={completeReviewMutation.isPending}
-                  className="w-full px-4 py-2 bg-purple-600 text-white rounded-lg font-medium hover:bg-purple-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                  variant="default"
+                  className="w-full"
                 >
                   {completeReviewMutation.isPending ? (
                     <>
@@ -745,23 +774,25 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                       Complete Review
                     </>
                   )}
-                </button>
+                </Button>
               )}
-              <button
+              <Button
                 onClick={handleSendEstimate}
                 disabled={sendEstimateMutation.isPending}
-                className="w-full px-4 py-2 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition disabled:opacity-50"
+                variant="default"
+                className="w-full bg-success text-success-foreground hover:bg-success/90"
               >
                 {sendEstimateMutation.isPending ? "Sending..." : "Send Estimate"}
-              </button>
+              </Button>
               {!hasInvoice && estimate.portalStatus === "accepted" && (
-                <button
+                <Button
                   onClick={handleCreateInvoice}
                   disabled={createInvoiceMutation.isPending}
-                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50"
+                  variant="default"
+                  className="w-full"
                 >
                   {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
-                </button>
+                </Button>
               )}
             </div>
           </div>
@@ -806,6 +837,24 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         currency={currency}
         isSaving={updateEstimateMutation.isPending}
       />
+
+      {/* Delete Item Confirmation Dialog */}
+      <AlertDialog open={deleteItemDialogOpen} onOpenChange={setDeleteItemDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Item</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove this item? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => itemToDeleteIndex !== null && handleRemoveItem(itemToDeleteIndex)}>
+              Remove
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -1,11 +1,15 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
 import { Modal } from './Modal';
 
 /**
  * Modal for adding custom line items to estimate
  * Used for photo-based additions (cables, labor, hardware, etc.)
  */
-export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = 'AUD' }) {
+export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = DEFAULT_CURRENCY }) {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [qty, setQty] = useState(1);
@@ -60,14 +64,13 @@ export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = 'AUD' })
         {/* Item Name */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Item Name <span className="text-red-500">*</span>
+            Item Name <span className="text-error">*</span>
           </label>
-          <input
+          <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Additional cabling"
-            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1EA6DF] bg-background text-foreground"
             required
           />
         </div>
@@ -77,12 +80,11 @@ export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = 'AUD' })
           <label className="block text-sm font-medium text-foreground mb-1">
             Description
           </label>
-          <textarea
+          <Textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g., 50 feet CAT6 cable"
             rows={2}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1EA6DF] bg-background text-foreground resize-none"
           />
         </div>
 
@@ -91,29 +93,27 @@ export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = 'AUD' })
           <label className="block text-sm font-medium text-foreground mb-1">
             Quantity
           </label>
-          <input
+          <Input
             type="number"
             value={qty}
             onChange={(e) => setQty(e.target.value)}
             min="1"
             step="1"
-            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1EA6DF] bg-background text-foreground"
           />
         </div>
 
         {/* Unit Price */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            Unit Price ({currency}) <span className="text-red-500">*</span>
+            Unit Price ({currency}) <span className="text-error">*</span>
           </label>
-          <input
+          <Input
             type="number"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
             min="0"
             step="0.01"
-            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1EA6DF] bg-background text-foreground"
             required
           />
         </div>
@@ -130,19 +130,21 @@ export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = 'AUD' })
 
         {/* Buttons */}
         <div className="flex gap-3 pt-2">
-          <button
+          <Button
             type="button"
             onClick={handleCancel}
-            className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition"
+            variant="outline"
+            className="flex-1"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="flex-1 px-4 py-2 bg-gradient-to-r from-[#1EA6DF] to-[#c95375] text-white rounded-lg font-semibold hover:shadow-lg transition"
+            variant="gradient"
+            className="flex-1"
           >
             Add Item
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

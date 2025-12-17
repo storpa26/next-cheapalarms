@@ -1,33 +1,61 @@
-import Link from "next/link";
 import { useRouter } from "next/router";
+import {
+  LayoutDashboard,
+  Package,
+  FileText,
+  Receipt,
+  Mail,
+  Users,
+  Settings,
+  Plug,
+  ScrollText,
+} from "lucide-react";
+import { Sidebar as UISidebar } from "@/components/ui/sidebar";
 import { navItems } from "../nav";
+
+// Map icons to navigation items
+const iconMap = {
+  "/admin": LayoutDashboard,
+  "/admin/products": Package,
+  "/admin/estimates": FileText,
+  "/admin/invoices": Receipt,
+  "/admin/invites": Mail,
+  "/admin/customers": Users,
+  "/admin/settings": Settings,
+  "/admin/integrations": Plug,
+  "/admin/logs": ScrollText,
+};
 
 export function Sidebar() {
   const router = useRouter();
+  const activeItem = router.pathname;
+
+  // Map nav items with icons
+  const adminNavItems = navItems.map((item) => ({
+    ...item,
+    icon: iconMap[item.href] || LayoutDashboard,
+  }));
+
+  const handleNavChange = (href) => {
+    router.push(href);
+  };
+
   return (
-    <aside className="hidden w-64 flex-col border-r border-border/60 bg-card/40 backdrop-blur md:flex">
-      <div className="border-b border-border/60 px-6 py-6">
-        <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">CheapAlarms</p>
-        <p className="mt-3 text-lg font-semibold text-foreground">Superadmin</p>
-      </div>
-      <nav className="flex-1 space-y-1 overflow-y-auto px-3 py-4">
-        {navItems.map((item) => {
-          const active = router.pathname === item.href;
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              prefetch={false}
-              className={`block rounded-md px-3 py-2 text-sm font-medium transition ${
-                active ? "bg-background text-foreground shadow" : "text-muted-foreground hover:bg-muted/60 hover:text-foreground"
-              }`}
-            >
-              {item.label}
-            </Link>
-          );
-        })}
-      </nav>
-    </aside>
+    <UISidebar
+      variant="split"
+      navItems={adminNavItems}
+      activeItem={activeItem}
+      title="Admin Portal"
+      subtitle="Superadmin"
+      showFooter={true}
+      showHeader={true}
+      enableSearch={false}
+      enableRecentItems={false}
+      enablePinnedItems={false}
+      enableNestedNav={false}
+      onNavChange={handleNavChange}
+      inContainer={false}
+    />
   );
 }
 

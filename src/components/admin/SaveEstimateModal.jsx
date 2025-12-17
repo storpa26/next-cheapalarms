@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
 import { Modal } from './Modal';
 
 /**
@@ -15,7 +19,7 @@ export function SaveEstimateModal({
   discount,
   originalTotal,
   newTotal,
-  currency = 'AUD',
+  currency = DEFAULT_CURRENCY,
   isSaving = false
 }) {
   const [adminNote, setAdminNote] = useState('');
@@ -51,7 +55,7 @@ export function SaveEstimateModal({
               <p className="text-xs font-medium text-muted-foreground uppercase">Quantities Adjusted:</p>
               {changedItems.map((item, idx) => (
                 <div key={idx} className="text-sm text-foreground flex items-center gap-2">
-                  <svg className="h-3 w-3 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                  <svg className="h-3 w-3 text-primary" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" />
                   </svg>
                   <span>{item.name}: {item.originalQty} → {item.newQty}</span>
@@ -65,7 +69,7 @@ export function SaveEstimateModal({
             <div className="space-y-1 mt-2">
               <p className="text-xs font-medium text-muted-foreground uppercase">Items Added:</p>
               {addedItems.map((item, idx) => (
-                <div key={idx} className="text-sm text-green-700 flex items-center gap-2">
+                <div key={idx} className="text-sm text-success flex items-center gap-2">
                   <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
                   </svg>
@@ -80,7 +84,7 @@ export function SaveEstimateModal({
             <div className="space-y-1 mt-2">
               <p className="text-xs font-medium text-muted-foreground uppercase">Items Removed:</p>
               {removedItems.map((item, idx) => (
-                <div key={idx} className="text-sm text-red-700 flex items-center gap-2">
+                <div key={idx} className="text-sm text-error flex items-center gap-2">
                   <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
                   </svg>
@@ -94,7 +98,7 @@ export function SaveEstimateModal({
           {discount && discount.value !== 0 && (
             <div className="space-y-1 mt-2">
               <p className="text-xs font-medium text-muted-foreground uppercase">Price Adjustment:</p>
-              <div className="text-sm text-blue-700 flex items-center gap-2">
+              <div className="text-sm text-info flex items-center gap-2">
                 <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v3.586L7.707 9.293a1 1 0 00-1.414 1.414l3 3a1 1 0 001.414 0l3-3a1 1 0 00-1.414-1.414L11 10.586V7z" clipRule="evenodd" />
                 </svg>
@@ -105,7 +109,7 @@ export function SaveEstimateModal({
         </div>
 
         {/* Price Impact */}
-        <div className={`rounded-lg p-4 ${isDecrease ? 'bg-green-50 border border-green-200' : 'bg-blue-50 border border-blue-200'}`}>
+        <div className={`rounded-lg p-4 ${isDecrease ? 'bg-success-bg border border-success/30' : 'bg-info-bg border border-info/30'}`}>
           <div className="space-y-2">
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Original Total:</span>
@@ -118,11 +122,11 @@ export function SaveEstimateModal({
               </span>
             </div>
             {difference !== 0 && (
-              <div className={`flex justify-between items-center pt-2 border-t ${isDecrease ? 'border-green-200' : 'border-blue-200'}`}>
-                <span className={`font-semibold ${isDecrease ? 'text-green-700' : 'text-blue-700'}`}>
+              <div className={`flex justify-between items-center pt-2 border-t ${isDecrease ? 'border-success/30' : 'border-info/30'}`}>
+                <span className={`font-semibold ${isDecrease ? 'text-success' : 'text-info'}`}>
                   {isDecrease ? '💚 Customer Saves:' : 'Additional Cost:'}
                 </span>
-                <span className={`text-lg font-bold ${isDecrease ? 'text-green-700' : 'text-blue-700'}`}>
+                <span className={`text-lg font-bold ${isDecrease ? 'text-success' : 'text-info'}`}>
                   {isDecrease ? '-' : '+'}{currency} {Math.abs(difference).toFixed(2)}
                 </span>
               </div>
@@ -135,7 +139,7 @@ export function SaveEstimateModal({
           <label className="block text-sm font-medium text-foreground mb-2">
             Note for Customer <span className="text-muted-foreground font-normal">(optional)</span>
           </label>
-          <textarea
+          <Textarea
             value={adminNote}
             onChange={(e) => setAdminNote(e.target.value)}
             placeholder={isDecrease 
@@ -143,7 +147,6 @@ export function SaveEstimateModal({
               : "e.g., Based on your photos, we noticed a few extra items needed for proper coverage."
             }
             rows={4}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1EA6DF] bg-background text-foreground resize-none"
           />
           <p className="text-xs text-muted-foreground mt-1">
             This will be included in the email and shown in the customer's portal
@@ -152,12 +155,11 @@ export function SaveEstimateModal({
 
         {/* Send Notification Checkbox */}
         <div className="flex items-start gap-3">
-          <input
-            type="checkbox"
+          <Checkbox
             id="sendNotification"
             checked={sendNotification}
-            onChange={(e) => setSendNotification(e.target.checked)}
-            className="mt-1 h-4 w-4 text-[#1EA6DF] focus:ring-[#1EA6DF] border-border rounded"
+            onCheckedChange={(checked) => setSendNotification(checked)}
+            className="mt-1"
           />
           <label htmlFor="sendNotification" className="text-sm">
             <span className="font-medium text-foreground">Send email notification to customer</span>
@@ -169,18 +171,20 @@ export function SaveEstimateModal({
 
         {/* Buttons */}
         <div className="flex gap-3 pt-2">
-          <button
+          <Button
             type="button"
             onClick={handleCancel}
             disabled={isSaving}
-            className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition disabled:opacity-50"
+            variant="outline"
+            className="flex-1"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
             disabled={isSaving}
-            className="flex-1 px-4 py-2 bg-gradient-to-r from-[#1EA6DF] to-[#c95375] text-white rounded-lg font-semibold hover:shadow-lg transition disabled:opacity-50 flex items-center justify-center gap-2"
+            variant="gradient"
+            className="flex-1"
           >
             {isSaving ? (
               <>
@@ -195,7 +199,7 @@ export function SaveEstimateModal({
                 {sendNotification ? 'Save & Notify Customer' : 'Save Changes'}
               </>
             )}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

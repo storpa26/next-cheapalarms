@@ -2,7 +2,8 @@ import Head from "next/head";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { useState, useCallback } from "react";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
 export default function AdminIntegrations() {
@@ -11,7 +12,7 @@ export default function AdminIntegrations() {
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState(null);
 
-  async function testConnection() {
+  const testConnection = useCallback(async () => {
     try {
       setTesting(true);
       setResult(null);
@@ -21,7 +22,7 @@ export default function AdminIntegrations() {
     } finally {
       setTesting(false);
     }
-  }
+  }, []);
 
   return (
     <>
@@ -38,8 +39,8 @@ export default function AdminIntegrations() {
             <CardContent className="space-y-3 text-sm">
               <div>
                 <label className="block text-xs text-muted-foreground">API key</label>
-                <input
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                <Input
+                  className="mt-1 w-full"
                   value={apiKey}
                   onChange={(e) => setApiKey(e.target.value)}
                   placeholder="sk_live_xxx"
@@ -47,8 +48,8 @@ export default function AdminIntegrations() {
               </div>
               <div>
                 <label className="block text-xs text-muted-foreground">Location ID</label>
-                <input
-                  className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                <Input
+                  className="mt-1 w-full"
                   value={locationId}
                   onChange={(e) => setLocationId(e.target.value)}
                   placeholder="LOC_XXXX"
@@ -61,7 +62,7 @@ export default function AdminIntegrations() {
                 </Button>
               </div>
               {result ? (
-                <p className={`text-xs ${result.ok ? "text-green-700" : "text-red-700"}`}>{result.message}</p>
+                <p className={`text-xs ${result.ok ? "text-success" : "text-error"}`}>{result.message}</p>
               ) : null}
             </CardContent>
           </Card>

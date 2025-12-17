@@ -1,4 +1,5 @@
 import { ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { formatAddress } from "@/components/portal/utils/portal-utils";
 
@@ -13,10 +14,10 @@ const statusIcons = {
 };
 
 const statusColors = {
-  sent: "text-amber-600 bg-amber-50 border-amber-200",
-  under_review: "text-blue-600 bg-blue-50 border-blue-200",
-  accepted: "text-emerald-600 bg-emerald-50 border-emerald-200",
-  rejected: "text-red-600 bg-red-50 border-red-200",
+  sent: "text-warning bg-warning-bg border-warning/30",
+  under_review: "text-info bg-info-bg border-info/30",
+  accepted: "text-success bg-success-bg border-success/30",
+  rejected: "text-error bg-error-bg border-error/30",
 };
 
 export function EstimatesListView({ estimates, loading, error, onSelectEstimate, resumeEstimate }) {
@@ -29,28 +30,30 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
   const statusColor = statusColors[selectedStatus] || statusColors.sent;
 
   return (
-    <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
+    <div className="rounded-xl border-2 border-border bg-surface p-6 shadow-lg">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">My estimates</p>
-          <h1 className="mt-2 text-3xl font-semibold text-slate-900">Select a project</h1>
-          <p className="text-sm text-slate-500">
+          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">My estimates</p>
+          <h1 className="mt-2 text-3xl font-semibold text-foreground">Select a project</h1>
+          <p className="text-sm text-muted-foreground">
             Pick an estimate to continue. We&apos;ll remember your last viewed site for next time.
           </p>
         </div>
         {resumeEstimate && (
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-right shadow-inner">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Resume last viewed</p>
-            <p className="text-sm font-semibold text-slate-900">
+          <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-right shadow-inner">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Resume last viewed</p>
+            <p className="text-sm font-semibold text-foreground">
               {resumeEstimate.label || `Estimate #${resumeEstimate.number || resumeEstimate.estimateId}`}
             </p>
-            <button
+            <Button
               type="button"
               onClick={() => onSelectEstimate(resumeEstimate.estimateId || resumeEstimate.id)}
-              className="mt-2 inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-slate-600 transition hover:bg-slate-100"
+              variant="outline"
+              size="sm"
+              className="mt-2 rounded-full uppercase tracking-[0.3em]"
             >
               Resume <ArrowRight className="h-3.5 w-3.5" />
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -59,37 +62,38 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
           <Spinner size="lg" />
         </div>
       ) : error ? (
-        <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-red-800">
+        <div className="mt-6 rounded-2xl border border-error/30 bg-error-bg p-4 text-error">
           <p className="text-sm font-semibold">Error loading estimates</p>
-          <p className="text-xs text-red-600">{error}</p>
+          <p className="text-xs text-error">{error}</p>
         </div>
       ) : estimates.length > 0 ? (
         <>
           {/* Estimate Switcher Dropdown */}
           <div className="mt-6 relative">
-            <button
+            <Button
               onClick={() => setIsOpen(!isOpen)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 bg-slate-50 hover:border-[#c95375] transition-all duration-300 flex items-center justify-between"
+              variant="outline"
+              className="w-full px-4 py-3 rounded-xl border-2 hover:border-primary transition-all duration-300 flex items-center justify-between h-auto"
             >
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-lg ${statusColor.split(" ")[1]} ${statusColor.split(" ")[2]}`}>
                   <StatusIcon className={`h-4 w-4 ${statusColor.split(" ")[0]}`} />
                 </div>
                 <div className="text-left">
-                  <p className="font-semibold text-slate-900">
+                  <p className="font-semibold text-foreground">
                     {selectedEstimate?.label || `Estimate #${selectedEstimate?.number || selectedEstimate?.estimateId || selectedIndex + 1}`}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {formatAddress(selectedEstimate?.address || selectedEstimate?.meta?.address) || "Site address pending"}
                   </p>
                 </div>
               </div>
-              <ChevronDown className={`h-5 w-5 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
-            </button>
+              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+            </Button>
 
             {/* Dropdown Menu */}
             {isOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border-2 border-slate-200 bg-white shadow-2xl z-20 overflow-hidden">
+              <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border-2 border-border bg-surface shadow-2xl z-20 overflow-hidden">
                 {estimates.map((estimate, idx) => {
                   const estId = estimate.estimateId || estimate.id;
                   const estStatus = estimate.status || "sent";
@@ -98,15 +102,16 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
                   const isSelected = idx === selectedIndex;
 
                   return (
-                    <button
+                    <Button
                       key={estId}
                       onClick={() => {
                         setSelectedIndex(idx);
                         setIsOpen(false);
                         onSelectEstimate(estId);
                       }}
-                      className={`w-full px-4 py-3 flex items-center gap-3 hover:bg-slate-50 transition ${
-                        isSelected ? "bg-rose-50 border-l-4" : ""
+                      variant={isSelected ? "default" : "ghost"}
+                      className={`w-full px-4 py-3 flex items-center gap-3 h-auto ${
+                        isSelected ? "border-l-4 border-primary" : ""
                       }`}
                       style={{
                         borderLeftColor: isSelected ? "hsl(var(--color-primary))" : "transparent",
@@ -124,9 +129,9 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
                         </p>
                       </div>
                       {isSelected && (
-                        <CheckCircle className="h-5 w-5 text-[#c95375]" />
+                        <CheckCircle className="h-5 w-5 text-primary" />
                       )}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>

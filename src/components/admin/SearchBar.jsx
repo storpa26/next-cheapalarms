@@ -1,4 +1,6 @@
 import { Search, Calendar } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 
 export function SearchBar({ 
   search, 
@@ -12,24 +14,24 @@ export function SearchBar({
   placeholder = "Search..." 
 }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm">
+    <div className="bg-surface rounded-lg border border-border p-4 shadow-sm">
       <div className="flex flex-wrap items-center gap-4">
         {/* Date Range */}
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-gray-400" />
-          <input
+          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Input
             type="date"
             value={startDate || ""}
             onChange={(e) => onStartDateChange?.(e.target.value)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-auto"
             placeholder="Start Date"
           />
-          <span className="text-gray-400">to</span>
-          <input
+          <span className="text-muted-foreground">to</span>
+          <Input
             type="date"
             value={endDate || ""}
             onChange={(e) => onEndDateChange?.(e.target.value)}
-            className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-auto"
             placeholder="End Date"
           />
         </div>
@@ -37,33 +39,34 @@ export function SearchBar({
         {/* Workflow Status Filter */}
         {onWorkflowStatusChange && (
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-600 whitespace-nowrap">Workflow:</label>
-            <select
-              value={workflowStatus || ""}
-              onChange={(e) => onWorkflowStatusChange(e.target.value)}
-              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="">All</option>
-              <option value="requested">Requested</option>
-              <option value="reviewing">Reviewing</option>
-              <option value="reviewed">Reviewed</option>
-              <option value="accepted">Accepted</option>
-              <option value="booked">Booked</option>
-              <option value="paid">Paid</option>
-              <option value="completed">Completed</option>
-            </select>
+            <label className="text-sm text-muted-foreground whitespace-nowrap">Workflow:</label>
+            <Select value={workflowStatus || ""} onValueChange={onWorkflowStatusChange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="All" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All</SelectItem>
+                <SelectItem value="requested">Requested</SelectItem>
+                <SelectItem value="reviewing">Reviewing</SelectItem>
+                <SelectItem value="reviewed">Reviewed</SelectItem>
+                <SelectItem value="accepted">Accepted</SelectItem>
+                <SelectItem value="booked">Booked</SelectItem>
+                <SelectItem value="paid">Paid</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
         {/* Search */}
         <div className="flex-1 min-w-[200px] relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-          <input
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
             type="text"
             placeholder={placeholder}
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 rounded-md border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="w-full pl-10 pr-4"
           />
         </div>
       </div>

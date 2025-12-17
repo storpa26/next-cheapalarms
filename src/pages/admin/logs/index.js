@@ -2,14 +2,14 @@ import Head from "next/head";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
 export default function AdminLogs() {
   const [tail, setTail] = useState(mockLogs());
-  function refresh() {
+  const refresh = useCallback(() => {
     setTail(mockLogs());
-  }
+  }, []);
   return (
     <>
       <Head>
@@ -40,13 +40,13 @@ export default function AdminLogs() {
             </CardHeader>
             <CardContent className="space-y-2 text-sm">
               <p>
-                WordPress API: <span className="font-medium text-green-700">OK</span>
+                WordPress API: <span className="font-medium text-success">OK</span>
               </p>
               <p>
-                GHL: <span className="font-medium text-green-700">OK</span>
+                GHL: <span className="font-medium text-success">OK</span>
               </p>
               <p>
-                Rate limit: <span className="font-medium text-yellow-700">Moderate</span>
+                Rate limit: <span className="font-medium text-warning">Moderate</span>
               </p>
             </CardContent>
           </Card>

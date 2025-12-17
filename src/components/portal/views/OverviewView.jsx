@@ -119,28 +119,30 @@ export function OverviewView({
           {/* Estimate Switcher - Show when multiple estimates available */}
           <div className="flex flex-col items-end gap-3">
             {estimates.length > 1 && onNextEstimate && onPrevEstimate && (
-              <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
-                <button
+              <div className="flex items-center gap-2 rounded-2xl border border-border bg-surface px-3 py-2 shadow-sm">
+                <Button
                   type="button"
                   onClick={onPrevEstimate}
                   disabled={currentEstimateIndex === 0}
-                  className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label="Previous estimate"
                 >
                   <ChevronLeft className="h-5 w-5" />
-                </button>
-                <span className="text-sm font-medium text-slate-700 min-w-[60px] text-center">
+                </Button>
+                <span className="text-sm font-medium text-foreground min-w-[60px] text-center">
                   {currentEstimateIndex + 1} of {estimates.length}
                 </span>
-                <button
+                <Button
                   type="button"
                   onClick={onNextEstimate}
                   disabled={currentEstimateIndex >= estimates.length - 1}
-                  className="rounded-lg p-1.5 text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 disabled:opacity-40 disabled:cursor-not-allowed"
+                  variant="ghost"
+                  size="icon-sm"
                   aria-label="Next estimate"
                 >
                   <ChevronRight className="h-5 w-5" />
-                </button>
+                </Button>
               </div>
             )}
             

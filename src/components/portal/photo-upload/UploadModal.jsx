@@ -1,5 +1,17 @@
 import { useState } from "react";
 import { X } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { UploadButtons } from "./UploadButtons";
 import { PhotoGrid } from "./PhotoGrid";
 import { SkipSection } from "./SkipSection";
@@ -26,6 +38,8 @@ export function UploadModal({
   const [isSkipping, setIsSkipping] = useState(!!product.skipReason);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState(null);
   
   const queryClient = useQueryClient();
   const storePhotosMutation = useStoreEstimatePhotos();
@@ -145,11 +159,16 @@ export function UploadModal({
     }
   };
 
-  const handleDeletePhoto = async (photo) => {
-    if (!confirm('Delete this photo?')) return;
+  const handleDeletePhotoClick = (photo) => {
+    setPhotoToDelete(photo);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeletePhoto = async () => {
+    if (!photoToDelete) return;
     
     // Remove from local state
-    const updatedPhotos = photos.filter(p => p.id !== photo.id && p.attachmentId !== photo.attachmentId);
+    const updatedPhotos = photos.filter(p => p.id !== photoToDelete.id && p.attachmentId !== photoToDelete.attachmentId);
     setPhotos(updatedPhotos);
     
     // AUTO-SAVE: Update backend immediately
@@ -180,6 +199,9 @@ export function UploadModal({
     toast.success('Photo removed', {
       duration: 2000,
     });
+    
+    setDeleteDialogOpen(false);
+    setPhotoToDelete(null);
   };
 
   const handleDone = async () => {
@@ -247,31 +269,33 @@ export function UploadModal({
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-900/40 backdrop-blur-[2px] transition-opacity"
+        className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
         onClick={onClose}
       />
 
       {/* Bottom Sheet - Centered, relative to drawer */}
-      <div className="relative bg-white w-full max-w-full md:max-w-md rounded-t-3xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+      <div className="relative bg-surface w-full max-w-full md:max-w-md rounded-t-3xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300">
         
         {/* Modal Header */}
-        <div className="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-white sticky top-0 z-10">
+        <div className="px-6 py-5 border-b border-border flex justify-between items-center bg-surface sticky top-0 z-10">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 line-clamp-1">
+            <h2 className="text-lg font-bold text-foreground line-clamp-1">
               {product.name}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5">
               {product.quantity > 1 ? `${product.quantity} units` : '1 unit'}
               {product.required && ' • Required'}
             </p>
           </div>
-          <button 
+          <Button 
             type="button"
             onClick={onClose} 
-            className="p-2 bg-slate-50 rounded-full hover:bg-slate-100 transition-colors"
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
           >
-            <X size={20} className="text-slate-500" />
-          </button>
+            <X size={20} />
+          </Button>
         </div>
 
         {/* Scrollable Content */}
@@ -292,7 +316,7 @@ export function UploadModal({
                 <div className="mb-6">
                   <PhotoGrid 
                     photos={photos}
-                    onDelete={handleDeletePhoto}
+                    onDelete={handleDeletePhotoClick}
                     uploading={uploading}
                   />
                 </div>
@@ -300,25 +324,26 @@ export function UploadModal({
 
               {/* Note Field */}
               <div className="mb-6">
-                <label className="block text-xs font-semibold text-slate-700 mb-2 uppercase tracking-wide">
+                <label className="block text-xs font-semibold text-foreground mb-2 uppercase tracking-wide">
                   Note for installer (Optional)
                 </label>
-                <textarea 
+                <Textarea 
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder="e.g. Front door, show the whole doorway and nearby wall."
-                  className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:bg-white transition-all resize-none h-24"
+                  className="h-24"
                 />
               </div>
 
               {/* Toggle to Skip Mode */}
-              <button 
+              <Button 
                 type="button"
                 onClick={() => setIsSkipping(true)}
-                className="text-xs font-medium text-slate-400 hover:text-slate-600 underline decoration-slate-300 underline-offset-4"
+                variant="link"
+                className="text-xs underline decoration-border underline-offset-4"
               >
                 I cannot add a photo for this product
-              </button>
+              </Button>
             </>
           ) : (
             <SkipSection 
@@ -330,19 +355,21 @@ export function UploadModal({
         </div>
 
         {/* Modal Footer */}
-        <div className="p-5 border-t border-slate-100 flex gap-3 bg-white">
-          <button 
+        <div className="p-5 border-t border-border flex gap-3 bg-surface">
+          <Button 
             type="button"
             onClick={onClose}
-            className="flex-1 py-3.5 rounded-full font-semibold text-sm text-slate-500 hover:bg-slate-50 transition-colors"
+            variant="outline"
+            className="flex-1 rounded-full"
           >
             Cancel
-          </button>
-          <button 
+          </Button>
+          <Button 
             type="button"
             onClick={handleDone}
             disabled={saving}
-            className="flex-1 py-3.5 rounded-full font-bold text-sm bg-primary text-white shadow-lg hover:shadow-xl active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            variant="default"
+            className="flex-1 rounded-full shadow-lg hover:shadow-xl active:scale-[0.98]"
           >
             {saving ? (
               <>
@@ -355,9 +382,27 @@ export function UploadModal({
             ) : (
               isSkipping ? 'Skip' : 'Done'
             )}
-          </button>
+          </Button>
         </div>
       </div>
+
+      {/* Delete Photo Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this photo? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePhoto}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

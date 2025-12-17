@@ -53,7 +53,7 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
       <Head>
         <title>Customer Portal • CheapAlarms</title>
       </Head>
-      <main className="min-h-screen bg-[#f7f8fd] text-slate-900">
+      <main className="min-h-screen bg-background text-foreground">
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,83,117,0.15),transparent_45%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,rgba(47,182,201,0.18),transparent_50%)]" />
@@ -106,20 +106,21 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                       }}
                     />
                   ) : (
-                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="rounded-[32px] border border-error/30 bg-error-bg p-6 text-error shadow-[0_25px_80px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-red-100 p-2">
-                          <span className="text-red-600 text-xl">⚠</span>
+                        <div className="rounded-full bg-error-bg p-2">
+                          <span className="text-error text-xl">⚠</span>
                         </div>
                         <div className="flex-1">
                           <p className="text-lg font-semibold mb-1">Error loading estimate</p>
-                          <p className="text-sm text-red-600 mb-4">{error || estimateError?.message}</p>
-                          <button
+                          <p className="text-sm text-error mb-4">{error || estimateError?.message}</p>
+                          <Button
                             onClick={() => router.reload()}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                            variant="default"
+                            className="bg-error text-error-foreground hover:bg-error/90"
                           >
                             Retry
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>
@@ -168,20 +169,21 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                       }}
                     />
                   ) : (
-                    <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-[0_25px_80px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="rounded-[32px] border border-error/30 bg-error-bg p-6 text-error shadow-[0_25px_80px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-top-2 duration-300">
                       <div className="flex items-start gap-4">
-                        <div className="rounded-full bg-red-100 p-2">
-                          <span className="text-red-600 text-xl">⚠</span>
+                        <div className="rounded-full bg-error-bg p-2">
+                          <span className="text-error text-xl">⚠</span>
                         </div>
                         <div className="flex-1">
                           <p className="text-lg font-semibold mb-1">Error loading estimate</p>
-                          <p className="text-sm text-red-600 mb-4">{error}</p>
-                          <button
+                          <p className="text-sm text-error mb-4">{error}</p>
+                          <Button
                             onClick={() => router.reload()}
-                            className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors"
+                            variant="default"
+                            className="bg-error text-error-foreground hover:bg-error/90"
                           >
                             Retry
-                          </button>
+                          </Button>
                         </div>
                       </div>
                     </div>

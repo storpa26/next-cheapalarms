@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Sparkles, TrendingDown, TrendingUp, Info } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
 
 /**
  * Banner shown in customer portal when estimate has been revised
  * Highlights savings or changes with compelling visuals
  */
-export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
+export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalStatus }) {
   const [showDetails, setShowDetails] = useState(false);
 
   if (!revision || !revision.revisedAt) return null;
@@ -23,25 +25,25 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
       {/* Hero Banner */}
       <div className={`rounded-xl p-6 shadow-lg border-2 ${
         isSavings 
-          ? 'bg-gradient-to-br from-green-50 via-emerald-50 to-green-100 border-green-300'
-          : 'bg-gradient-to-br from-blue-50 via-sky-50 to-blue-100 border-blue-300'
+          ? 'bg-gradient-to-br from-success-bg via-success-bg/50 to-success-bg border-success/30'
+          : 'bg-gradient-to-br from-info-bg via-info-bg/50 to-info-bg border-info/30'
       }`}>
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           {isSavings ? (
-            <div className="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
-              <Sparkles className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-full bg-success flex items-center justify-center">
+              <Sparkles className="w-6 h-6 text-success-foreground" />
             </div>
           ) : (
-            <div className="w-12 h-12 rounded-full bg-blue-500 flex items-center justify-center">
-              <Info className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-full bg-info flex items-center justify-center">
+              <Info className="w-6 h-6 text-info-foreground" />
             </div>
           )}
           <div>
-            <h2 className={`text-2xl font-bold ${isSavings ? 'text-green-900' : 'text-blue-900'}`}>
+            <h2 className={`text-2xl font-bold ${isSavings ? 'text-success' : 'text-info'}`}>
               {isSavings ? '🎉 Great News - Your Estimate Has Been Updated!' : '📋 Your Estimate Has Been Updated'}
             </h2>
-            <p className={`text-sm ${isSavings ? 'text-green-700' : 'text-blue-700'}`}>
+            <p className={`text-sm ${isSavings ? 'text-success' : 'text-info'}`}>
               Updated {new Date(revision.revisedAt).toLocaleDateString()} after reviewing your photos
             </p>
           </div>
@@ -122,16 +124,17 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
 
         {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 mt-6">
-          <button
+          <Button
             onClick={() => setShowDetails(!showDetails)}
-            className="flex-1 px-6 py-3 bg-white border-2 border-slate-300 rounded-full font-semibold text-slate-700 hover:bg-slate-50 transition flex items-center justify-center gap-2"
+            variant="outline"
+            className="flex-1 rounded-full"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             {showDetails ? 'Hide Details' : 'View Full Changes'}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={() => {
               // Scroll to approval card
               const approvalCard = document.getElementById('approval-card');
@@ -139,43 +142,40 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
                 approvalCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
               }
             }}
-            className={`flex-1 px-6 py-3 rounded-xl font-bold text-white shadow-lg hover:opacity-90 transition flex items-center justify-center gap-2 ${
-              isSavings
-                ? 'bg-gradient-to-r from-green-500 to-emerald-600'
-                : 'bg-gradient-to-r from-[#2fb6c9] to-[#c95375]'
-            }`}
+            variant="gradient"
+            className="flex-1 rounded-xl shadow-lg hover:opacity-90"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
             {isSavings ? 'Accept & Lock In Savings' : 'Review & Accept'}
-          </button>
+          </Button>
         </div>
       </div>
 
       {/* Detailed Changes (Expandable) */}
       {showDetails && (
-        <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg mt-4 animate-slideDown">
-          <h3 className="text-xl font-bold text-slate-900 mb-6">What Changed & Why</h3>
+        <div className="rounded-xl border-2 border-border bg-surface p-6 shadow-lg mt-4 animate-slideDown">
+          <h3 className="text-xl font-bold text-foreground mb-6">What Changed & Why</h3>
 
           {/* Quantity Changes */}
           {revision.changedItems && revision.changedItems.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <TrendingUp className="w-5 h-5 text-blue-600" />
-                <h4 className="font-semibold text-slate-900">Quantities Adjusted</h4>
+                <TrendingUp className="w-5 h-5 text-info" />
+                <h4 className="font-semibold text-foreground">Quantities Adjusted</h4>
               </div>
               <div className="space-y-3">
                 {revision.changedItems.map((item, idx) => (
-                  <div key={idx} className="bg-slate-50 rounded-xl p-4">
+                  <div key={idx} className="bg-muted rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-slate-900">{item.name}</span>
-                      <span className="text-blue-600 font-semibold">
+                      <span className="font-medium text-foreground">{item.name}</span>
+                      <span className="text-info font-semibold">
                         {item.oldQty} → {item.newQty}
                       </span>
                     </div>
                     {item.reason && (
-                      <p className="text-sm text-slate-600 flex items-start gap-2">
+                      <p className="text-sm text-muted-foreground flex items-start gap-2">
                         <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
@@ -192,22 +192,22 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
           {revision.addedItems && revision.addedItems.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h4 className="font-semibold text-slate-900">Items Added</h4>
+                <h4 className="font-semibold text-foreground">Items Added</h4>
               </div>
               <div className="space-y-3">
                 {revision.addedItems.map((item, idx) => (
-                  <div key={idx} className="bg-green-50 rounded-xl p-4 border border-green-200">
+                  <div key={idx} className="bg-success-bg rounded-xl p-4 border border-success/30">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="font-medium text-slate-900">{item.name}</span>
-                      <span className="text-green-600 font-semibold">
+                      <span className="font-medium text-foreground">{item.name}</span>
+                      <span className="text-success font-semibold">
                         +{currency} {(item.amount * (item.qty || 1)).toFixed(2)}
                       </span>
                     </div>
                     {item.reason && (
-                      <p className="text-sm text-slate-600">{item.reason}</p>
+                      <p className="text-sm text-muted-foreground">{item.reason}</p>
                     )}
                   </div>
                 ))}
@@ -219,14 +219,14 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
           {hasDiscount && revision.discount.value !== 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
-                <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <h4 className="font-semibold text-slate-900">
+                <h4 className="font-semibold text-foreground">
                   {revision.discount.value > 0 ? '💚 Discount Applied' : 'Fee Applied'}
                 </h4>
               </div>
-              <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-6 text-white">
+              <div className="bg-gradient-to-r from-success to-success/80 rounded-xl p-6 text-success-foreground">
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-semibold">{revision.discount.name || 'Special Discount'}</span>
                   <span className="text-2xl font-black">
@@ -272,12 +272,13 @@ export function RevisionBanner({ revision, currency = 'AUD', portalStatus }) {
             )}
           </div>
 
-          <button
+          <Button
             onClick={() => setShowDetails(false)}
-            className="mt-4 w-full px-4 py-2 text-slate-600 hover:text-slate-800 transition text-sm font-medium"
+            variant="ghost"
+            className="mt-4 w-full"
           >
             Hide Details ↑
-          </button>
+          </Button>
         </div>
       )}
     </>

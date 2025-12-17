@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
 import { Modal } from './Modal';
 
 /**
  * Modal for applying discounts or surcharges to estimate
  * Used for photo-based price adjustments
  */
-export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estimateTotal, currency = 'AUD' }) {
+export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estimateTotal, currency = DEFAULT_CURRENCY }) {
   const [type, setType] = useState(currentDiscount?.type || 'percentage');
   const [value, setValue] = useState(currentDiscount?.value?.toString() || '');
   const [name, setName] = useState(currentDiscount?.name || '');
@@ -67,28 +70,22 @@ export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estim
             Type
           </label>
           <div className="flex gap-3">
-            <button
+            <Button
               type="button"
               onClick={() => setIsDiscount(true)}
-              className={`flex-1 px-4 py-2 rounded-lg border transition ${
-                isDiscount
-                  ? 'border-green-500 bg-green-50 text-green-700 font-semibold'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
-              }`}
+              variant={isDiscount ? "default" : "outline"}
+              className={`flex-1 ${isDiscount ? 'bg-success text-success-foreground border-success' : ''}`}
             >
               Discount
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setIsDiscount(false)}
-              className={`flex-1 px-4 py-2 rounded-lg border transition ${
-                !isDiscount
-                  ? 'border-orange-500 bg-orange-50 text-orange-700 font-semibold'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
-              }`}
+              variant={!isDiscount ? "default" : "outline"}
+              className={`flex-1 ${!isDiscount ? 'bg-warning text-warning-foreground border-warning' : ''}`}
             >
               Surcharge
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -97,12 +94,11 @@ export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estim
           <label className="block text-sm font-medium text-foreground mb-1">
             Description
           </label>
-          <input
+          <Input
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={isDiscount ? 'e.g., Easy install discount' : 'e.g., Difficult access fee'}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1EA6DF] bg-background text-foreground"
           />
         </div>
 
@@ -112,44 +108,37 @@ export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estim
             Amount Type
           </label>
           <div className="flex gap-3">
-            <button
+            <Button
               type="button"
               onClick={() => setType('fixed')}
-              className={`flex-1 px-4 py-2 rounded-lg border transition ${
-                type === 'fixed'
-                  ? 'border-[#1EA6DF] bg-[#1EA6DF]/10 text-[#1EA6DF] font-semibold'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
-              }`}
+              variant={type === 'fixed' ? "default" : "outline"}
+              className="flex-1"
             >
               Fixed ({currency})
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               onClick={() => setType('percentage')}
-              className={`flex-1 px-4 py-2 rounded-lg border transition ${
-                type === 'percentage'
-                  ? 'border-[#1EA6DF] bg-[#1EA6DF]/10 text-[#1EA6DF] font-semibold'
-                  : 'border-border bg-background text-muted-foreground hover:bg-muted'
-              }`}
+              variant={type === 'percentage' ? "default" : "outline"}
+              className="flex-1"
             >
               Percentage (%)
-            </button>
+            </Button>
           </div>
         </div>
 
         {/* Value */}
         <div>
           <label className="block text-sm font-medium text-foreground mb-1">
-            {type === 'percentage' ? 'Percentage' : `Amount (${currency})`} <span className="text-red-500">*</span>
+            {type === 'percentage' ? 'Percentage' : `Amount (${currency})`} <span className="text-error">*</span>
           </label>
-          <input
+          <Input
             type="number"
             value={value}
             onChange={(e) => setValue(e.target.value)}
             placeholder={type === 'percentage' ? '10' : '100.00'}
             min="0"
             step={type === 'percentage' ? '1' : '0.01'}
-            className="w-full px-3 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-[#1EA6DF] bg-background text-foreground"
             required
           />
         </div>
@@ -161,10 +150,10 @@ export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estim
             <span className="font-medium text-foreground">{currency} {estimateTotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between items-center text-sm">
-            <span className={isDiscount ? 'text-green-600' : 'text-orange-600'}>
+            <span className={isDiscount ? 'text-success' : 'text-warning'}>
               {isDiscount ? 'Discount:' : 'Surcharge:'}
             </span>
-            <span className={`font-medium ${isDiscount ? 'text-green-600' : 'text-orange-600'}`}>
+            <span className={`font-medium ${isDiscount ? 'text-success' : 'text-warning'}`}>
               {isDiscount ? '-' : '+'}{currency} {calculatedAmount.toFixed(2)}
             </span>
           </div>
@@ -178,23 +167,21 @@ export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estim
 
         {/* Buttons */}
         <div className="flex gap-3 pt-2">
-          <button
+          <Button
             type="button"
             onClick={handleCancel}
-            className="flex-1 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition"
+            variant="outline"
+            className="flex-1"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className={`flex-1 px-4 py-2 rounded-lg font-semibold text-white transition hover:shadow-lg ${
-              isDiscount
-                ? 'bg-gradient-to-r from-green-500 to-green-600'
-                : 'bg-gradient-to-r from-orange-500 to-orange-600'
-            }`}
+            variant="default"
+            className={`flex-1 ${isDiscount ? 'bg-success text-success-foreground hover:bg-success/90' : 'bg-warning text-warning-foreground hover:bg-warning/90'}`}
           >
             Apply {isDiscount ? 'Discount' : 'Surcharge'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

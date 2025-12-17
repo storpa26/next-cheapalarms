@@ -2,6 +2,7 @@ import Head from "next/head";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 
@@ -21,9 +22,9 @@ export default function AdminInvites() {
               <CardDescription>Resend, copy link, revoke.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <input
+              <Input
                 placeholder="Search customer, estimate…"
-                className="w-64 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="w-64"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />

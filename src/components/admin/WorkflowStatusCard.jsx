@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { 
   CheckCircle2, 
   Circle, 
@@ -40,15 +41,15 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
   // Map workflow status to display label and color
   const getStatusInfo = (status) => {
     const statusMap = {
-      requested: { label: "Requested", color: "bg-gray-100 text-gray-800 border-gray-300" },
-      reviewing: { label: "Reviewing", color: "bg-blue-100 text-blue-800 border-blue-300" },
-      reviewed: { label: "Reviewed", color: "bg-green-100 text-green-800 border-green-300" },
-      accepted: { label: "Accepted", color: "bg-green-100 text-green-800 border-green-300" },
-      booked: { label: "Booked", color: "bg-purple-100 text-purple-800 border-purple-300" },
-      paid: { label: "Paid", color: "bg-yellow-100 text-yellow-800 border-yellow-300" },
-      completed: { label: "Completed", color: "bg-emerald-100 text-emerald-800 border-emerald-300" },
+      requested: { label: "Requested", color: "bg-muted text-muted-foreground border-border" },
+      reviewing: { label: "Reviewing", color: "bg-info-bg text-info border-info/30" },
+      reviewed: { label: "Reviewed", color: "bg-success-bg text-success border-success/30" },
+      accepted: { label: "Accepted", color: "bg-success-bg text-success border-success/30" },
+      booked: { label: "Booked", color: "bg-secondary/10 text-secondary border-secondary/30" },
+      paid: { label: "Paid", color: "bg-warning-bg text-warning border-warning/30" },
+      completed: { label: "Completed", color: "bg-success-bg text-success border-success/30" },
     };
-    return statusMap[status] || { label: status, color: "bg-gray-100 text-gray-800 border-gray-300" };
+    return statusMap[status] || { label: status, color: "bg-muted text-muted-foreground border-border" };
   };
 
   const statusInfo = getStatusInfo(status);
@@ -157,13 +158,13 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
             {statusInfo.label}
           </Badge>
         </div>
-        <button className="text-muted-foreground hover:text-foreground transition">
+        <Button variant="ghost" size="icon-sm" className="text-muted-foreground hover:text-foreground">
           {isExpanded ? (
             <ChevronUp className="h-4 w-4" />
           ) : (
             <ChevronDown className="h-4 w-4" />
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Content */}
@@ -181,10 +182,10 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
                   <div className="flex flex-col items-center flex-1">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                       step.completed 
-                        ? 'bg-green-500 border-green-500 text-white' 
+                        ? 'bg-success border-success text-success-foreground' 
                         : externalStep === step.step
-                        ? 'bg-primary border-primary text-white animate-pulse'
-                        : 'bg-gray-100 border-gray-300 text-gray-400'
+                        ? 'bg-primary border-primary text-primary-foreground animate-pulse'
+                        : 'bg-muted border-border text-muted-foreground'
                     }`}>
                       {step.completed ? (
                         <CheckCircle2 className="h-5 w-5" />
@@ -198,7 +199,7 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
                   </div>
                   {idx < steps.length - 1 && (
                     <div className={`flex-1 h-0.5 mx-1 ${
-                      step.completed ? 'bg-green-500' : 'bg-gray-200'
+                      step.completed ? 'bg-success' : 'bg-border'
                     }`} />
                   )}
                 </div>
@@ -286,7 +287,7 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <Badge className={payment.status === 'paid' ? 'bg-green-100 text-green-800 border-green-300' : 'bg-gray-100 text-gray-800 border-gray-300'}>
+                  <Badge className={payment.status === 'paid' ? 'bg-success-bg text-success border-success/30' : 'bg-muted text-muted-foreground border-border'}>
                     {getPaymentStatusLabel(payment.status)}
                   </Badge>
                 </div>

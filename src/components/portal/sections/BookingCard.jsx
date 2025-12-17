@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Calendar, Clock, MessageSquare, ArrowRight, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
@@ -37,15 +39,15 @@ export function BookingCard({ estimateId, locationId, inviteToken, booking, work
     };
 
     return (
-      <div className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Installation Booking</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-900">Booking Confirmed</h3>
-            <p className="text-sm text-slate-500">Your installation has been scheduled</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Installation Booking</p>
+            <h3 className="mt-2 text-2xl font-semibold text-foreground">Booking Confirmed</h3>
+            <p className="text-sm text-muted-foreground">Your installation has been scheduled</p>
           </div>
-          <div className="rounded-full bg-emerald-100 p-4 animate-in zoom-in duration-300">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+          <div className="rounded-full bg-success-bg p-4 animate-in zoom-in duration-300">
+            <CheckCircle2 className="h-6 w-6 text-success" />
           </div>
         </div>
 
@@ -154,39 +156,39 @@ export function BookingCard({ estimateId, locationId, inviteToken, booking, work
       <form onSubmit={handleSubmit} className="mt-5 space-y-4" noValidate>
         <div className="grid gap-4 md:grid-cols-2">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Preferred Date
             </label>
-            <input
+            <Input
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
               min={today}
               required
               disabled={isSubmitting}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-xl"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
+            <label className="block text-sm font-medium text-foreground mb-2">
               Preferred Time
             </label>
-            <input
+            <Input
               type="time"
               value={time}
               onChange={(e) => setTime(e.target.value)}
               required
               disabled={isSubmitting}
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="rounded-xl"
             />
           </div>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">
+          <label className="block text-sm font-medium text-foreground mb-2">
             Additional Notes (Optional)
           </label>
-          <textarea
+          <Textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Any special instructions or access details..."

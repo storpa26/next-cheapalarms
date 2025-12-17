@@ -2,6 +2,7 @@ import Head from "next/head";
 import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/router";
 import { Settings, Plus, MoreVertical } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { useAdminEstimates } from "@/lib/react-query/hooks/admin";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
@@ -12,6 +13,7 @@ import { SummaryCard } from "@/components/admin/SummaryCard";
 import { StatusTabs } from "@/components/admin/StatusTabs";
 import { Avatar } from "@/components/admin/Avatar";
 import { SearchBar } from "@/components/admin/SearchBar";
+import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
 
 export default function EstimatesListPage() {
   const router = useRouter();
@@ -23,22 +25,11 @@ export default function EstimatesListPage() {
   const [workflowStatusFilter, setWorkflowStatusFilter] = useState(""); // NEW: Workflow status filter
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
-  const pageSize = 20;
+  const pageSize = DEFAULT_PAGE_SIZE;
 
   // Get estimateId from URL query for deep linking
   const estimateIdFromQuery = router.query.estimateId;
-  const [selectedEstimateId, setSelectedEstimateId] = useState(
-    estimateIdFromQuery || null
-  );
-
-  // Sync with URL query param
-  useEffect(() => {
-    if (estimateIdFromQuery && estimateIdFromQuery !== selectedEstimateId) {
-      setSelectedEstimateId(estimateIdFromQuery);
-    } else if (!estimateIdFromQuery && selectedEstimateId) {
-      setSelectedEstimateId(null);
-    }
-  }, [estimateIdFromQuery]);
+  const selectedEstimateId = estimateIdFromQuery || null;
 
   // Map tab to portal status filter
   const portalStatusFilter = activeTab === "all" ? "" : activeTab;
@@ -56,7 +47,7 @@ export default function EstimatesListPage() {
     refetch();
   };
 
-  const estimates = data?.items ?? [];
+  const estimates = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
 
@@ -111,7 +102,6 @@ export default function EstimatesListPage() {
   }, [data?.summary, estimates]);
 
   const handleRowClick = (estimateId) => {
-    setSelectedEstimateId(estimateId);
     router.replace(
       {
         pathname: router.pathname,
@@ -123,7 +113,6 @@ export default function EstimatesListPage() {
   };
 
   const handleCloseModal = () => {
-    setSelectedEstimateId(null);
     const { estimateId, ...restQuery } = router.query;
     router.replace(
       {
@@ -148,23 +137,23 @@ export default function EstimatesListPage() {
 
   const getStatusBadgeClass = (status) => {
     const classes = {
-      sent: "bg-amber-100 text-amber-700 border-amber-200",
-      accepted: "bg-green-100 text-green-700 border-green-200",
-      rejected: "bg-red-100 text-red-700 border-red-200",
+      sent: "bg-warning-bg text-warning border-warning/30",
+      accepted: "bg-success-bg text-success border-success/30",
+      rejected: "bg-error-bg text-error border-error/30",
     };
-    return classes[status] || "bg-gray-100 text-gray-700 border-gray-200";
+    return classes[status] || "bg-muted text-muted-foreground border-border";
   };
 
   const getWorkflowStatusBadgeClass = (status) => {
     const classes = {
-      requested: "bg-gray-100 text-gray-800 border-gray-300",
-      reviewing: "bg-blue-100 text-blue-800 border-blue-300",
-      accepted: "bg-green-100 text-green-800 border-green-300",
-      booked: "bg-purple-100 text-purple-800 border-purple-300",
-      paid: "bg-yellow-100 text-yellow-800 border-yellow-300",
-      completed: "bg-emerald-100 text-emerald-800 border-emerald-300",
+      requested: "bg-muted text-muted-foreground border-border",
+      reviewing: "bg-info-bg text-info border-info/30",
+      accepted: "bg-success-bg text-success border-success/30",
+      booked: "bg-secondary/10 text-secondary border-secondary/30",
+      paid: "bg-warning-bg text-warning border-warning/30",
+      completed: "bg-success-bg text-success border-success/30",
     };
-    return classes[status] || "bg-gray-100 text-gray-800 border-gray-300";
+    return classes[status] || "bg-muted text-muted-foreground border-border";
   };
 
   const getWorkflowStatusLabel = (status) => {
@@ -189,19 +178,19 @@ export default function EstimatesListPage() {
           {/* Page Header */}
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Estimates</h1>
-              <p className="mt-1 text-sm text-gray-600">
+              <h1 className="text-3xl font-bold text-foreground">Estimates</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
                 Create and manage all estimates generated for your business
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <button className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors">
-                <Settings className="h-5 w-5 text-gray-600" />
-              </button>
-              <button className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm">
+              <Button variant="outline" size="icon">
+                <Settings className="h-5 w-5" />
+              </Button>
+              <Button variant="default">
                 <Plus className="h-4 w-4" />
                 New Estimate
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -210,25 +199,25 @@ export default function EstimatesListPage() {
             <SummaryCard
               label={`${summaryMetrics.sent.count} in sent`}
               value={summaryMetrics.sent.total}
-              currency="AU$"
+              currency={DEFAULT_CURRENCY}
               variant="sent"
             />
             <SummaryCard
               label={`${summaryMetrics.accepted.count} in accepted`}
               value={summaryMetrics.accepted.total}
-              currency="AU$"
+              currency={DEFAULT_CURRENCY}
               variant="accepted"
             />
             <SummaryCard
               label={`${summaryMetrics.declined.count} in declined`}
               value={summaryMetrics.declined.total}
-              currency="AU$"
+              currency={DEFAULT_CURRENCY}
               variant="declined"
             />
             <SummaryCard
               label={`${summaryMetrics.invoiced.count} in invoiced`}
               value={summaryMetrics.invoiced.total}
-              currency="AU$"
+              currency={DEFAULT_CURRENCY}
               variant="invoiced"
             />
           </div>
@@ -267,7 +256,7 @@ export default function EstimatesListPage() {
               <Spinner />
             </div>
           ) : error ? (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+            <div className="rounded-lg border border-error/30 bg-error-bg p-4 text-sm text-error">
               <p className="font-semibold">Error loading estimates</p>
               <p className="mt-1">
                 {error.message?.includes('SSL') || error.message?.includes('SSL_ERROR') || error.message?.includes('cURL error 35')
@@ -276,16 +265,16 @@ export default function EstimatesListPage() {
               </p>
               {process.env.NODE_ENV === 'development' && (
                 <details className="mt-2 text-xs">
-                  <summary className="cursor-pointer text-red-600 dark:text-red-400">Technical details</summary>
-                  <pre className="mt-2 overflow-auto rounded bg-red-100 p-2 dark:bg-red-900/50">
+                  <summary className="cursor-pointer text-error">Technical details</summary>
+                  <pre className="mt-2 overflow-auto rounded bg-error-bg/50 p-2">
                     {JSON.stringify(error, null, 2)}
                   </pre>
                 </details>
               )}
             </div>
           ) : estimates.length === 0 ? (
-            <div className="rounded-lg border border-gray-200 bg-white p-12 text-center">
-              <p className="text-gray-600">No estimates found</p>
+            <div className="rounded-lg border border-border bg-surface p-12 text-center">
+              <p className="text-muted-foreground">No estimates found</p>
             </div>
           ) : (
             <>
@@ -295,14 +284,14 @@ export default function EstimatesListPage() {
                   <div
                     key={estimate.id}
                     onClick={() => handleRowClick(estimate.id)}
-                    className="bg-white rounded-lg border border-gray-200 p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
+                    className="bg-surface rounded-lg border border-border p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
                   >
                     <div className="flex items-start justify-between mb-3">
                       <div className="flex-1">
-                        <h3 className="font-semibold text-gray-900 text-sm mb-1">
+                        <h3 className="font-semibold text-foreground text-sm mb-1">
                           {estimate.title || "ESTIMATE"}
                         </h3>
-                        <p className="text-xs text-gray-500">
+                        <p className="text-xs text-muted-foreground">
                           #{estimate.estimateNumber || estimate.id}
                         </p>
                       </div>
@@ -335,27 +324,27 @@ export default function EstimatesListPage() {
                         size="sm"
                       />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">
+                        <p className="text-sm font-medium text-foreground truncate">
                           {estimate.contactName || "N/A"}
                         </p>
-                        <p className="text-xs text-gray-500 truncate">
+                        <p className="text-xs text-muted-foreground truncate">
                           {estimate.contactEmail || ""}
                         </p>
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between pt-3 border-t border-gray-100">
+                    <div className="flex items-center justify-between pt-3 border-t border-border">
                       <div>
-                        <p className="text-xs text-gray-500">Value</p>
-                        <p className="text-sm font-semibold text-gray-900">
+                        <p className="text-xs text-muted-foreground">Value</p>
+                        <p className="text-sm font-semibold text-foreground">
                           {estimate.total > 0
-                            ? `${estimate.currency || "AU$"} ${estimate.total.toFixed(2)}`
+                            ? `${estimate.currency || DEFAULT_CURRENCY} ${estimate.total.toFixed(2)}`
                             : "—"}
                         </p>
                       </div>
                       <div>
-                        <p className="text-xs text-gray-500">Created</p>
-                        <p className="text-sm text-gray-900">
+                        <p className="text-xs text-muted-foreground">Created</p>
+                        <p className="text-sm text-foreground">
                           {estimate.createdAt
                             ? new Date(estimate.createdAt).toLocaleDateString("en-US", {
                                 month: "short",
@@ -370,47 +359,48 @@ export default function EstimatesListPage() {
               </div>
 
               {/* Desktop Table View */}
-              <div className="hidden lg:block bg-white rounded-lg border border-gray-200 shadow-sm overflow-hidden">
+              <div className="hidden lg:block bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-gray-50 border-b border-gray-200">
+                    <thead className="bg-muted border-b border-border">
                       <tr>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Quote Name
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Estimate Number
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Customer
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Created
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Value
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Portal Status
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Workflow
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-gray-600">
+                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
+                    <tbody className="bg-surface divide-y divide-border">
                       {estimates.map((estimate) => (
                         <tr
                           key={estimate.id}
-                          className="cursor-pointer transition-colors hover:bg-blue-50/30"
+                          className="cursor-pointer transition-colors hover:bg-primary/5"
                           onClick={() => handleRowClick(estimate.id)}
                         >
                           <td className="px-6 py-4">
-                            <button
-                              className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-sm text-left max-w-xs truncate block"
+                            <Button
+                              variant="link"
+                              className="font-medium text-sm text-left max-w-xs truncate block p-0 h-auto"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRowClick(estimate.id);
@@ -418,9 +408,9 @@ export default function EstimatesListPage() {
                               title={estimate.title || "ESTIMATE"}
                             >
                               {estimate.title || "ESTIMATE"}
-                            </button>
+                            </Button>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-foreground">
                             {estimate.estimateNumber || estimate.id}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -431,16 +421,16 @@ export default function EstimatesListPage() {
                                 size="md"
                               />
                               <div>
-                                <div className="text-sm font-medium text-gray-900">
+                                <div className="text-sm font-medium text-foreground">
                                   {estimate.contactName || "N/A"}
                                 </div>
-                                <div className="text-xs text-gray-500">
+                                <div className="text-xs text-muted-foreground">
                                   {estimate.contactEmail || ""}
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                             {estimate.createdAt
                               ? new Date(estimate.createdAt).toLocaleDateString("en-US", {
                                   month: "short",
@@ -449,9 +439,9 @@ export default function EstimatesListPage() {
                                 })
                               : "—"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-foreground">
                             {estimate.total > 0
-                              ? `${estimate.currency || "AU$"} ${estimate.total.toFixed(2)}`
+                              ? `${estimate.currency || DEFAULT_CURRENCY} ${estimate.total.toFixed(2)}`
                               : "—"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -475,15 +465,16 @@ export default function EstimatesListPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <button
+                            <Button
                               onClick={(e) => {
                                 e.stopPropagation();
                                 // TODO: Add dropdown menu
                               }}
-                              className="p-1 rounded-md hover:bg-gray-100 text-gray-400 hover:text-gray-600"
+                              variant="ghost"
+                              size="icon-sm"
                             >
                               <MoreVertical className="h-4 w-4" />
-                            </button>
+                            </Button>
                           </td>
                         </tr>
                       ))}
@@ -494,25 +485,27 @@ export default function EstimatesListPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between bg-white px-6 py-4 border-t border-gray-200 rounded-b-lg">
-                  <p className="text-sm text-gray-600">
+                <div className="flex items-center justify-between bg-surface px-6 py-4 border-t border-border rounded-b-lg">
+                  <p className="text-sm text-muted-foreground">
                     Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total}
                   </p>
                   <div className="flex gap-2">
-                    <button
+                    <Button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      variant="outline"
+                      size="sm"
                     >
                       Previous
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page >= totalPages}
-                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      variant="outline"
+                      size="sm"
                     >
                       Next
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

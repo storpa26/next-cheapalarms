@@ -198,16 +198,17 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-amber-800">Invoice Creation Failed</p>
-                <p className="mt-1 text-xs text-amber-700">{invoiceError}</p>
-                <button
+                <p className="text-sm font-semibold text-warning">Invoice Creation Failed</p>
+                <p className="mt-1 text-xs text-warning">{invoiceError}</p>
+                <Button
                   type="button"
                   onClick={handleRetryInvoice}
                   disabled={isProcessing}
-                  className="mt-3 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow transition hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  variant="default"
+                  className="mt-3 rounded-xl bg-warning text-warning-foreground hover:bg-warning/90"
                 >
                   {isProcessing ? "Retrying..." : "Retry Invoice Creation"}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -224,11 +225,12 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
               </div>
             ) : (
               <>
-                <button
+                <Button
                   type="button"
                   onClick={handleAccept}
                   disabled={isProcessing}
-                  className="flex items-center justify-center gap-2 rounded-2xl bg-primary px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-lg transition hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  variant="default"
+                  className="flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
                 >
                   {isProcessing ? (
                     <>
@@ -240,12 +242,13 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                       Accept Estimate <ArrowRight className="h-4 w-4" />
                     </>
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={handleReject}
                   disabled={isProcessing}
-                  className="flex items-center justify-center gap-2 rounded-2xl border-2 border-red-300 bg-red-50 px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-red-700 shadow-lg transition hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  variant="destructive"
+                  className="flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
                 >
                   {isProcessing ? (
                     <>
@@ -257,7 +260,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                       Reject Estimate <XCircle className="h-4 w-4" />
                     </>
                   )}
-                </button>
+                </Button>
               </>
             )}
           </div>
@@ -265,10 +268,10 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
 
         {/* Info message when pending */}
         {isPending && !hasPhotos && (
-          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3">
+          <div className="mt-4 rounded-2xl border border-warning/30 bg-warning-bg p-3">
             <div className="flex items-start gap-2">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
-              <p className="text-xs text-amber-800">
+              <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+              <p className="text-xs text-warning">
                 Consider uploading photos before accepting. Your estimate cost may reduce once we review your property photos.
               </p>
             </div>
@@ -279,21 +282,21 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       {/* Photo Warning Modal */}
       {showPhotoWarning && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="rounded-2xl bg-white p-6 max-w-md w-full shadow-xl">
+          <div className="rounded-2xl bg-surface p-6 max-w-md w-full shadow-xl">
             <div className="flex items-start gap-3 mb-4">
-              <div className="rounded-full bg-amber-100 p-2">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
+              <div className="rounded-full bg-warning-bg p-2">
+                <AlertCircle className="h-5 w-5 text-warning" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-slate-900">No Photos Uploaded</h3>
-                <p className="mt-2 text-sm text-slate-600">
+                <h3 className="text-lg font-semibold text-foreground">No Photos Uploaded</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
                   You haven't uploaded photos yet. Your estimate cost may reduce once we review your property photos.
                   Do you want to proceed with acceptance anyway?
                 </p>
               </div>
             </div>
             <div className="flex gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -303,11 +306,12 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   }
                 }}
                 disabled={isProcessing}
-                className="flex-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="default"
+                className="flex-1 rounded-xl shadow-lg transition hover:shadow-xl"
               >
                 {isProcessing ? "Processing..." : "Accept Anyway"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -319,10 +323,11 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   }, 100);
                 }}
                 disabled={isProcessing}
-                className="flex-1 rounded-xl border-2 border-primary bg-white px-4 py-2.5 text-sm font-semibold text-primary transition hover:bg-primary/5 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="outline"
+                className="flex-1 rounded-xl"
               >
                 Upload Photos First
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -331,32 +336,31 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       {/* Reject Confirmation Modal */}
       {showRejectConfirm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="rounded-2xl bg-white p-6 max-w-md w-full shadow-xl">
+          <div className="rounded-2xl bg-surface p-6 max-w-md w-full shadow-xl">
             <div className="flex items-start gap-3 mb-4">
-              <div className="rounded-full bg-red-100 p-2">
-                <XCircle className="h-5 w-5 text-red-600" />
+              <div className="rounded-full bg-error-bg p-2">
+                <XCircle className="h-5 w-5 text-error" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-slate-900">Reject Estimate?</h3>
-                <p className="mt-2 text-sm text-slate-600">
+                <h3 className="text-lg font-semibold text-foreground">Reject Estimate?</h3>
+                <p className="mt-2 text-sm text-muted-foreground">
                   Are you sure you want to reject this estimate? This action cannot be undone.
                 </p>
               </div>
             </div>
             <div className="mb-4">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Reason (optional)
               </label>
-              <textarea
+              <Textarea
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
                 placeholder="Let us know why you're rejecting this estimate..."
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
                 rows={3}
               />
             </div>
             <div className="flex gap-3">
-              <button
+              <Button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -364,11 +368,12 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   handleConfirmReject();
                 }}
                 disabled={isProcessing}
-                className="flex-1 rounded-xl bg-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="destructive"
+                className="flex-1 rounded-xl shadow-lg transition"
               >
                 {isProcessing ? "Processing..." : "Confirm Reject"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={(e) => {
                   e.preventDefault();
@@ -377,10 +382,11 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   setRejectReason("");
                 }}
                 disabled={isProcessing}
-                className="flex-1 rounded-xl border-2 border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="outline"
+                className="flex-1 rounded-xl"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         </div>

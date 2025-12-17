@@ -3,7 +3,9 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
+import { Input } from "@/components/ui/input";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { useState, useCallback } from "react";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
 import { getWordPressUsers, getGHLContacts, matchContactsToUsers, getStatusBadge } from "@/lib/admin/services/customers-data";
 import { toast } from "@/components/ui/use-toast";
@@ -59,7 +61,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
     );
   });
 
-  async function handleRefresh() {
+  const handleRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
       await Promise.all([refetchUsers(), refetchContacts()]);
@@ -76,7 +78,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
     } finally {
       setRefreshing(false);
     }
-  }
+  }, [refetchUsers, refetchContacts]);
 
   async function handleInviteGhlContact(ghlContactId) {
     setInviting((prev) => ({ ...prev, [ghlContactId]: true }));
@@ -120,7 +122,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
       </Head>
       <AdminLayout title="Customers">
         {error && (
-          <Card className="mb-4 border border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          <Card className="mb-4 border border-error/30 bg-error-bg text-error">
             <CardHeader>
               <CardTitle>Error loading customers</CardTitle>
               <CardDescription>{error}</CardDescription>
@@ -138,9 +140,9 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
               <CardDescription>Portal access and GHL contacts.</CardDescription>
             </div>
             <div className="flex items-center gap-2">
-              <input
+              <Input
                 placeholder="Search name, email…"
-                className="w-64 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                className="w-64"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
               />
@@ -158,33 +160,19 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
           </CardHeader>
           <CardContent>
             {/* Tabs */}
-            <div className="mb-4 flex gap-2 border-b border-border/60">
-              <button
-                type="button"
-                onClick={() => setActiveTab("ghl")}
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  activeTab === "ghl"
-                    ? "border-b-2 border-primary text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                GHL Contacts ({filteredGhlContacts.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setActiveTab("wp")}
-                className={`px-4 py-2 text-sm font-medium transition ${
-                  activeTab === "wp"
-                    ? "border-b-2 border-primary text-primary"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                WordPress Users ({filteredWpUsers.length})
-              </button>
-            </div>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+              <TabsList>
+                <TabsTrigger value="ghl">
+                  GHL Contacts ({filteredGhlContacts.length})
+                </TabsTrigger>
+                <TabsTrigger value="wp">
+                  WordPress Users ({filteredWpUsers.length})
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
 
             {/* GHL Contacts Tab */}
-            {activeTab === "ghl" && (
+            <TabsContent value="ghl" className="mt-4">
               <div className="overflow-x-auto rounded-md border border-border/60">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
@@ -248,10 +236,10 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                   </tbody>
                 </table>
               </div>
-            )}
+            </TabsContent>
 
             {/* WordPress Users Tab */}
-            {activeTab === "wp" && (
+            <TabsContent value="wp" className="mt-4">
               <div className="overflow-x-auto rounded-md border border-border/60">
                 <table className="w-full text-left text-sm">
                   <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
@@ -299,7 +287,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                   </tbody>
                 </table>
               </div>
-            )}
+            </TabsContent>
           </CardContent>
         </Card>
       </AdminLayout>

@@ -1,5 +1,16 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Camera, Image, X, Eye, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/react-query/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
@@ -36,6 +47,8 @@ function ProductSlot({
   const [uploadState, setUploadState] = useState('idle'); // idle | uploading | success | error
   const [uploadProgress, setUploadProgress] = useState(0);
   const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [photoToDelete, setPhotoToDelete] = useState(null);
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
   const isMobile = isMobileDevice();
@@ -176,9 +189,14 @@ function ProductSlot({
     [handleFileSelect]
   );
 
+  const handleDeletePhotoClick = useCallback((photo) => {
+    setPhotoToDelete(photo);
+    setDeleteDialogOpen(true);
+  }, []);
+
   const handleDeletePhoto = useCallback(
-    async (photoToDelete) => {
-      if (!confirm(`Delete this photo?`)) return;
+    async () => {
+      if (!photoToDelete) return;
 
       try {
         // Get current photos from cache
@@ -202,6 +220,9 @@ function ProductSlot({
         // Force refetch
         await queryClient.invalidateQueries(['estimate-photos', estimateId]);
         await queryClient.refetchQueries(['estimate-photos', estimateId]);
+        
+        setDeleteDialogOpen(false);
+        setPhotoToDelete(null);
 
         toast.success('Photo deleted', {
           duration: 2000,
@@ -213,7 +234,7 @@ function ProductSlot({
         });
       }
     },
-    [estimateId, locationId, queryClient, storePhotosMutation]
+    [photoToDelete, estimateId, locationId, queryClient, storePhotosMutation]
   );
 
   // Register file input refs when component mounts (only for first slot)
@@ -274,24 +295,27 @@ function ProductSlot({
             </div>
             
             {/* Delete button - appears on hover */}
-            <button
+            <Button
               type="button"
-              onClick={() => handleDeletePhoto(photo)}
-              className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center shadow-lg z-10"
+              onClick={() => handleDeletePhotoClick(photo)}
+              variant="destructive"
+              size="icon-sm"
+              className="absolute -top-1 -right-1 w-5 h-5 rounded-full opacity-0 group-hover:opacity-100 transition-all shadow-lg z-10"
               title="Delete photo"
             >
               <X className="h-3 w-3" />
-            </button>
+            </Button>
             
             {/* Preview button - appears on hover */}
-            <button
+            <Button
               type="button"
               onClick={() => setPreviewPhoto(photo)}
-              className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors flex items-center justify-center"
+              variant="ghost"
+              className="absolute inset-0 bg-black/0 hover:bg-black/40 transition-colors"
               title="Preview photo"
             >
               <Eye className="h-4 w-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
-            </button>
+            </Button>
           </div>
         ))}
 
@@ -301,93 +325,96 @@ function ProductSlot({
             {isMobile ? (
               // Mobile: Two buttons side by side
               <>
-                <button
+                <Button
                   type="button"
                   onClick={() => cameraInputRef.current?.click()}
                   disabled={uploading}
+                  variant="outline"
                   className={`w-20 h-20 rounded-lg flex flex-col items-center justify-center transition-all shrink-0 ${
                     uploadState === 'idle' ? 'border-2 border-dashed border-border bg-muted/40 hover:border-primary/60' :
-                    uploadState === 'uploading' ? 'border-2 border-solid border-blue-500 bg-blue-50 animate-pulse' :
-                    uploadState === 'success' ? 'border-2 border-solid border-green-500 bg-green-50' :
-                    'border-2 border-solid border-red-500 bg-red-50'
+                    uploadState === 'uploading' ? 'border-2 border-solid border-info/30 bg-info-bg animate-pulse' :
+                    uploadState === 'success' ? 'border-2 border-solid border-success/30 bg-success-bg' :
+                    'border-2 border-solid border-error/30 bg-error-bg'
                   } disabled:opacity-50`}
                   title="Take Photo"
                 >
                   {uploadState === 'uploading' ? (
                     <>
                       <Spinner size="sm" />
-                      <span className="text-[9px] mt-1 text-blue-600">{uploadProgress}%</span>
+                      <span className="text-[9px] mt-1 text-info">{uploadProgress}%</span>
                     </>
                   ) : uploadState === 'success' ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-success" />
                   ) : uploadState === 'error' ? (
-                    <XCircle className="h-5 w-5 text-red-600" />
+                    <XCircle className="h-5 w-5 text-error" />
                   ) : (
                     <>
                       <Camera className="h-5 w-5 text-muted-foreground" />
                       <span className="text-[9px] mt-1 text-muted-foreground">Camera</span>
                     </>
                   )}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
                   onClick={() => fileInputRef.current?.click()}
                   disabled={uploading}
+                  variant="outline"
                   className={`w-20 h-20 rounded-lg flex flex-col items-center justify-center transition-all shrink-0 ${
                     uploadState === 'idle' ? 'border-2 border-dashed border-border bg-muted/40 hover:border-primary/60' :
-                    uploadState === 'uploading' ? 'border-2 border-solid border-blue-500 bg-blue-50 animate-pulse' :
-                    uploadState === 'success' ? 'border-2 border-solid border-green-500 bg-green-50' :
-                    'border-2 border-solid border-red-500 bg-red-50'
+                    uploadState === 'uploading' ? 'border-2 border-solid border-info/30 bg-info-bg animate-pulse' :
+                    uploadState === 'success' ? 'border-2 border-solid border-success/30 bg-success-bg' :
+                    'border-2 border-solid border-error/30 bg-error-bg'
                   } disabled:opacity-50`}
                   title="Upload Photo"
                 >
                   {uploadState === 'uploading' ? (
                     <>
                       <Spinner size="sm" />
-                      <span className="text-[9px] mt-1 text-blue-600">{uploadProgress}%</span>
+                      <span className="text-[9px] mt-1 text-info">{uploadProgress}%</span>
                     </>
                   ) : uploadState === 'success' ? (
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-success" />
                   ) : uploadState === 'error' ? (
-                    <XCircle className="h-5 w-5 text-red-600" />
+                    <XCircle className="h-5 w-5 text-error" />
                   ) : (
                     <>
                       <Image className="h-5 w-5 text-muted-foreground" />
                       <span className="text-[9px] mt-1 text-muted-foreground">Upload</span>
                     </>
                   )}
-                </button>
+                </Button>
               </>
             ) : (
               // Desktop: Single upload button
-              <button
+              <Button
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
+                variant="outline"
                 className={`w-20 h-20 rounded-lg flex flex-col items-center justify-center transition-all shrink-0 ${
                   uploadState === 'idle' ? 'border-2 border-dashed border-border bg-muted/40 hover:border-primary/60' :
-                  uploadState === 'uploading' ? 'border-2 border-solid border-blue-500 bg-blue-50 animate-pulse' :
-                  uploadState === 'success' ? 'border-2 border-solid border-green-500 bg-green-50' :
-                  'border-2 border-solid border-red-500 bg-red-50'
+                  uploadState === 'uploading' ? 'border-2 border-solid border-info/30 bg-info-bg animate-pulse' :
+                  uploadState === 'success' ? 'border-2 border-solid border-success/30 bg-success-bg' :
+                  'border-2 border-solid border-error/30 bg-error-bg'
                 } disabled:opacity-50`}
                 title="Add Photo"
               >
                 {uploadState === 'uploading' ? (
                   <>
                     <Spinner size="sm" />
-                    <span className="text-[9px] mt-1 text-blue-600">{uploadProgress}%</span>
+                    <span className="text-[9px] mt-1 text-info">{uploadProgress}%</span>
                   </>
                 ) : uploadState === 'success' ? (
-                  <CheckCircle className="h-5 w-5 text-green-600" />
+                  <CheckCircle className="h-5 w-5 text-success" />
                 ) : uploadState === 'error' ? (
-                  <XCircle className="h-5 w-5 text-red-600" />
+                  <XCircle className="h-5 w-5 text-error" />
                 ) : (
                   <>
                     <Camera className="h-5 w-5 text-muted-foreground" />
                     <span className="text-[9px] mt-1 text-muted-foreground">Add</span>
                   </>
                 )}
-              </button>
+              </Button>
             )}
           </>
         )}
@@ -426,15 +453,17 @@ function ProductSlot({
               alt={previewPhoto.filename}
               className="max-w-full max-h-[90vh] rounded-lg shadow-2xl"
             />
-            <button 
-              className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center hover:bg-gray-100 transition-colors"
+            <Button 
+              variant="ghost"
+              size="icon"
+              className="absolute -top-2 -right-2 w-8 h-8 bg-surface rounded-full shadow-lg hover:bg-muted"
               onClick={(e) => {
                 e.stopPropagation();
                 setPreviewPhoto(null);
               }}
             >
-              <X className="h-5 w-5 text-gray-600" />
-            </button>
+              <X className="h-5 w-5 text-foreground" />
+            </Button>
             <div className="absolute bottom-4 left-4 right-4 bg-black/60 text-white p-3 rounded-lg backdrop-blur-sm">
               <p className="text-sm font-medium">{previewPhoto.filename}</p>
               <p className="text-xs text-gray-300 mt-1">
@@ -681,7 +710,7 @@ export function ProductPhotoUpload({
 
   if (error) {
     return (
-      <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+      <div className="rounded-lg border border-error/30 bg-error-bg p-4 text-sm text-error">
         <p className="font-semibold">Error loading estimate</p>
         <p className="mt-1">{error}</p>
       </div>
@@ -713,6 +742,24 @@ export function ProductPhotoUpload({
            registerCameraInputRef={registerCameraInputRef}
          />
       ))}
+
+      {/* Delete Photo Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Photo?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this photo? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeletePhoto}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

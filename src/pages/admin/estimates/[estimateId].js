@@ -20,7 +20,7 @@ export default function EstimateDetailPage() {
         <div className="mb-4">
           <Link
             href="/admin/estimates"
-            className="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+            className="text-sm text-primary hover:text-primary-hover"
           >
             ← Back to Estimates
           </Link>

@@ -15,7 +15,7 @@ export default function AdminOverview({ stats, alerts, activity, error }) {
       </Head>
       <AdminLayout title="Overview">
         {error && (
-          <div className="mb-4 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+          <div className="mb-4 rounded-md border border-error/30 bg-error-bg p-4 text-sm text-error">
             <p className="font-semibold">Error loading dashboard data</p>
             <p className="mt-1">{error}</p>
           </div>

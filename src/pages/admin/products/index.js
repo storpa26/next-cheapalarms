@@ -1,9 +1,21 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const initialProduct = {
   type: "base",
@@ -36,6 +48,8 @@ export default function AdminProducts() {
   const [baseInput, setBaseInput] = useState("");
   const [search, setSearch] = useState("");
   const [loadingLists, setLoadingLists] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [productToDelete, setProductToDelete] = useState(null);
 
   useEffect(() => {
     fetchAll();
@@ -147,8 +161,12 @@ export default function AdminProducts() {
     }
   }
 
+  function handleDeleteClick(id) {
+    setProductToDelete(id);
+    setDeleteDialogOpen(true);
+  }
+
   async function remove(id) {
-    if (!confirm("Delete product?")) return;
     const resp = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
     const data = await resp.json();
     if (!resp.ok) {
@@ -156,6 +174,8 @@ export default function AdminProducts() {
       return;
     }
     await fetchAll();
+    setDeleteDialogOpen(false);
+    setProductToDelete(null);
   }
 
   return (
@@ -171,39 +191,41 @@ export default function AdminProducts() {
               <CardDescription>Single form with type-specific fields.</CardDescription>
             </CardHeader>
             <CardContent>
-              {error ? <p className="mb-4 text-sm text-red-600">{error}</p> : null}
+              {error ? <p className="mb-4 text-sm text-error">{error}</p> : null}
               <form onSubmit={submit} className="space-y-4 text-sm">
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <label className="block text-xs text-muted-foreground">Type</label>
-                    <select
-                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
-                      value={form.type}
-                      onChange={(e) => setForm((prev) => ({ ...prev, type: e.target.value }))}
-                    >
-                      <option value="base">base</option>
-                      <option value="addon">addon</option>
-                      <option value="package">package</option>
-                    </select>
+                    <Select value={form.type} onValueChange={(value) => setForm((prev) => ({ ...prev, type: value }))}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="base">base</SelectItem>
+                        <SelectItem value="addon">addon</SelectItem>
+                        <SelectItem value="package">package</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div>
                     <label className="block text-xs text-muted-foreground">Status</label>
-                    <select
-                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
-                      value={form.status}
-                      onChange={(e) => update("status", e.target.value)}
-                    >
-                      <option value="active">active</option>
-                      <option value="inactive">inactive</option>
-                    </select>
+                    <Select value={form.status} onValueChange={(value) => update("status", value)}>
+                      <SelectTrigger className="mt-1">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">active</SelectItem>
+                        <SelectItem value="inactive">inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <label className="block text-xs text-muted-foreground">Name</label>
-                    <input
-                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                    <Input
+                      className="mt-1"
                       value={form.name}
                       onChange={(e) => update("name", e.target.value)}
                       required
@@ -211,8 +233,8 @@ export default function AdminProducts() {
                   </div>
                   <div>
                     <label className="block text-xs text-muted-foreground">Brand</label>
-                    <input
-                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                    <Input
+                      className="mt-1"
                       value={form.brand || ""}
                       onChange={(e) => update("brand", e.target.value)}
                     />
@@ -222,10 +244,10 @@ export default function AdminProducts() {
                 <div className="grid gap-3 md:grid-cols-2">
                   <div>
                     <label className="block text-xs text-muted-foreground">Price (ex GST)</label>
-                    <input
+                    <Input
                       type="number"
                       step="0.01"
-                      className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                      className="mt-1"
                       value={form.price.oneOffExGst}
                       onChange={(e) => update("price.oneOffExGst", parseFloat(e.target.value || "0"))}
                     />
@@ -233,10 +255,10 @@ export default function AdminProducts() {
                   {form.type !== "package" ? null : (
                     <div>
                       <label className="block text-xs text-muted-foreground">GST rate</label>
-                      <input
+                      <Input
                         type="number"
                         step="0.01"
-                        className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                        className="mt-1"
                         value={form.gstRate}
                         onChange={(e) => update("gstRate", parseFloat(e.target.value || "0.1"))}
                       />
@@ -248,9 +270,9 @@ export default function AdminProducts() {
                   <div className="grid gap-3 md:grid-cols-3">
                     <div>
                       <label className="block text-xs text-muted-foreground">Install minutes</label>
-                      <input
+                      <Input
                         type="number"
-                        className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                        className="mt-1"
                         value={form.installMinutes}
                         onChange={(e) => update("installMinutes", parseInt(e.target.value || "0", 10))}
                       />
@@ -262,9 +284,9 @@ export default function AdminProducts() {
                   <div className="grid gap-3 md:grid-cols-2">
                     <div>
                       <label className="block text-xs text-muted-foreground">Max qty per site</label>
-                      <input
+                      <Input
                         type="number"
-                        className="mt-1 w-full rounded-md border border-border bg-background px-3 py-2"
+                        className="mt-1"
                         value={form.maxQtyPerSite || 0}
                         onChange={(e) => update("maxQtyPerSite", parseInt(e.target.value || "0", 10))}
                       />
@@ -292,9 +314,8 @@ export default function AdminProducts() {
                         </div>
                       ) : (
                         <div className="flex gap-2">
-                          <input
+                          <Input
                             placeholder="Enter baseId (e.g., base_ajax_hub2_4g)"
-                            className="w-full rounded-md border border-border bg-background px-3 py-2"
                             value={baseInput}
                             onChange={(e) => setBaseInput(e.target.value)}
                           />
@@ -321,43 +342,37 @@ export default function AdminProducts() {
                     </div>
                     {(form.components || []).map((row, idx) => (
                       <div key={idx} className="grid grid-cols-2 items-start gap-2 md:grid-cols-7">
-                        <input
+                        <Input
                           placeholder="addonId"
-                          className="rounded-md border border-border bg-background px-3 py-2"
                           value={row.addonId}
                           onChange={(e) => update(`components.${idx}.addonId`, e.target.value)}
                         />
-                        <input
+                        <Input
                           type="number"
                           placeholder="min qty"
-                          className="rounded-md border border-border bg-background px-3 py-2"
                           value={row.minQty}
                           onChange={(e) => update(`components.${idx}.minQty`, parseInt(e.target.value || "0", 10))}
                         />
-                        <input
+                        <Input
                           type="number"
                           placeholder="max qty"
-                          className="rounded-md border border-border bg-background px-3 py-2"
                           value={row.maxQty}
                           onChange={(e) => update(`components.${idx}.maxQty`, parseInt(e.target.value || "0", 10))}
                         />
-                        <input
+                        <Input
                           type="number"
                           placeholder="default qty"
-                          className="rounded-md border border-border bg-background px-3 py-2"
                           value={row.defaultQty}
                           onChange={(e) => update(`components.${idx}.defaultQty`, parseInt(e.target.value || "0", 10))}
                         />
-                        <input
+                        <Input
                           type="number"
                           placeholder="powerDraw mA"
-                          className="rounded-md border border-border bg-background px-3 py-2"
                           value={row.powerDrawmA || 0}
                           onChange={(e) => update(`components.${idx}.powerDrawmA`, parseInt(e.target.value || "0", 10))}
                         />
-                        <input
+                        <Input
                           placeholder="notes"
-                          className="rounded-md border border-border bg-background px-3 py-2"
                           value={row.notes || ""}
                           onChange={(e) => update(`components.${idx}.notes`, e.target.value)}
                         />
@@ -395,22 +410,22 @@ export default function AdminProducts() {
                     { key: "addons", label: "Addons" },
                     { key: "packages", label: "Packages" },
                   ].map(({ key, label }) => (
-                    <button
+                    <Button
                       key={key}
                       type="button"
                       onClick={() => setTab(key)}
-                      className={`rounded-full px-3 py-1 transition ${
-                        tab === key ? "bg-background text-foreground shadow" : "text-muted-foreground hover:text-foreground"
-                      }`}
+                      variant={tab === key ? "default" : "ghost"}
+                      size="sm"
+                      className="rounded-full"
                     >
                       {label}
-                    </button>
+                    </Button>
                   ))}
                 </div>
                 <div className="flex items-center gap-2">
-                  <input
+                  <Input
                     placeholder="Search name, brand, ID…"
-                    className="w-56 rounded-md border border-border bg-background px-3 py-2 text-sm"
+                    className="w-56"
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                   />
@@ -442,7 +457,7 @@ export default function AdminProducts() {
                       ) : null}
                     </div>
                     <div className="flex items-center gap-2">
-                      <Button variant="outline" size="sm" onClick={() => remove(p.id)}>
+                      <Button variant="outline" size="sm" onClick={() => handleDeleteClick(p.id)}>
                         Delete
                       </Button>
                     </div>
@@ -455,6 +470,24 @@ export default function AdminProducts() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Product</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete this product? This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={() => productToDelete && remove(productToDelete)}>
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </AdminLayout>
     </>
   );
