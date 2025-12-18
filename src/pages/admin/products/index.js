@@ -16,6 +16,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 const initialProduct = {
   type: "base",
@@ -170,7 +171,7 @@ export default function AdminProducts() {
     const resp = await fetch(`/api/products/${encodeURIComponent(id)}`, { method: "DELETE" });
     const data = await resp.json();
     if (!resp.ok) {
-      alert(data?.message || data?.err || "Delete failed");
+      toast.error(data?.message || data?.err || "Delete failed");
       return;
     }
     await fetchAll();

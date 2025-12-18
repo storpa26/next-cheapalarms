@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { wpFetch } from '@/lib/wp';
+import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
 
 /**
  * React Query hook for updating estimate items/prices
@@ -24,7 +25,7 @@ export function useUpdateEstimate() {
       const current = currentData;
 
       // Build compliant update payload
-      const currency = current.currency || 'AUD';
+      const currency = current.currency || DEFAULT_CURRENCY;
       const name40 = (current.title || 'Estimate').substring(0, 40);
       const title = current.title || 'ESTIMATE';
       

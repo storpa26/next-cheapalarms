@@ -121,10 +121,10 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
                         <EstStatusIcon className={`h-4 w-4 ${estStatusColor.split(" ")[0]}`} />
                       </div>
                       <div className="flex-1 text-left">
-                        <p className="font-semibold text-slate-900">
+                        <p className="font-semibold text-foreground">
                           {estimate.label || `Estimate #${estimate.number || estId}`}
                         </p>
-                        <p className="text-xs text-slate-500">
+                        <p className="text-xs text-muted-foreground">
                           {formatAddress(estimate.address || estimate.meta?.address) || "Site address pending"}
                         </p>
                       </div>
@@ -140,9 +140,9 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
 
           {/* Selected Estimate Details */}
           {selectedEstimate && (
-            <div className="mt-6 p-4 rounded-xl border-2 border-slate-200 bg-gradient-to-br from-white to-slate-50">
+            <div className="mt-6 p-4 rounded-xl border-2 border-border bg-gradient-to-br from-surface to-muted">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xs text-slate-500 uppercase tracking-wider">Status</span>
+                <span className="text-xs text-muted-foreground uppercase tracking-wider">Status</span>
                 <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg ${statusColor}`}>
                   <StatusIcon className="h-4 w-4" />
                   <span className="text-xs font-semibold capitalize">{selectedStatus.replace("_", " ")}</span>
@@ -150,14 +150,14 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
               </div>
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-sm text-slate-600">Address</span>
-                  <span className="text-sm font-semibold text-slate-900">
+                  <span className="text-sm text-muted-foreground">Address</span>
+                  <span className="text-sm font-semibold text-foreground">
                     {formatAddress(selectedEstimate.address || selectedEstimate.meta?.address) || "Pending"}
                   </span>
                 </div>
                 {selectedEstimate.total && (
                   <div className="flex justify-between">
-                    <span className="text-sm text-slate-600">Total</span>
+                    <span className="text-sm text-muted-foreground">Total</span>
                     <span className="text-lg font-bold bg-gradient-to-r from-[#c95375] to-[#2fb6c9] bg-clip-text text-transparent">
                       ${selectedEstimate.total.toLocaleString("en-AU", { minimumFractionDigits: 2 })}
                     </span>
@@ -168,8 +168,8 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
           )}
 
           {/* All Estimates Summary */}
-          <div className="mt-6 pt-6 border-t border-slate-200">
-            <p className="text-xs font-semibold text-slate-700 mb-3 uppercase tracking-wider">
+          <div className="mt-6 pt-6 border-t border-border">
+            <p className="text-xs font-semibold text-foreground mb-3 uppercase tracking-wider">
               All Estimates ({estimates.length})
             </p>
             <div className="space-y-2">
@@ -182,7 +182,7 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
                 return (
                   <div
                     key={estId}
-                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 hover:bg-slate-100 transition cursor-pointer"
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-muted/80 transition cursor-pointer"
                     onClick={() => {
                       setSelectedIndex(idx);
                       onSelectEstimate(estId);
@@ -190,12 +190,12 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
                   >
                     <div className="flex items-center gap-2">
                       <EstStatusIcon className={`h-4 w-4 ${estStatusColor.split(" ")[0]}`} />
-                      <span className="text-sm font-semibold text-slate-900">
+                      <span className="text-sm font-semibold text-foreground">
                         {estimate.label || `Estimate #${estimate.number || estId}`}
                       </span>
                     </div>
                     {estimate.total && (
-                      <span className="text-sm font-semibold text-slate-600">
+                      <span className="text-sm font-semibold text-muted-foreground">
                         ${estimate.total.toLocaleString("en-AU")}
                       </span>
                     )}
@@ -206,8 +206,8 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
           </div>
         </>
       ) : (
-        <div className="mt-6 rounded-2xl border border-slate-100 bg-slate-50 p-6 text-center">
-          <p className="text-sm text-slate-500">No estimates found. Check back later for updates.</p>
+        <div className="mt-6 rounded-2xl border border-border bg-muted p-6 text-center">
+          <p className="text-sm text-muted-foreground">No estimates found. Check back later for updates.</p>
         </div>
       )}
     </div>

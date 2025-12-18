@@ -211,7 +211,7 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
     return (
       <div className="flex items-center justify-center py-12">
         <Spinner size="lg" />
-        <p className="ml-3 text-sm text-slate-500">Loading products...</p>
+        <p className="ml-3 text-sm text-muted-foreground">Loading products...</p>
       </div>
     );
   }
@@ -219,7 +219,7 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
   // Error state
   if (estimateError) {
     return (
-      <div className="rounded-[32px] border border-red-200 bg-red-50 p-6 text-red-800">
+      <div className="rounded-[32px] border border-error/50 bg-error-bg p-6 text-error">
         <p className="font-semibold">Error loading estimate</p>
         <p className="text-sm mt-1">{estimateError.message}</p>
       </div>
@@ -229,9 +229,9 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
   // Empty state
   if (products.length === 0) {
     return (
-      <div className="rounded-[32px] border border-slate-100 bg-white p-8 text-center shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-        <p className="font-semibold text-slate-900">No products found</p>
-        <p className="text-sm text-slate-500 mt-1">This estimate doesn't have any products yet.</p>
+      <div className="rounded-[32px] border border-border-subtle bg-background p-8 text-center shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+        <p className="font-semibold text-foreground">No products found</p>
+        <p className="text-sm text-muted-foreground mt-1">This estimate doesn't have any products yet.</p>
       </div>
     );
   }
@@ -239,24 +239,24 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
   return (
     <div className="relative pb-32">
       {/* Sticky Header with Progress */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-sm border-b border-slate-100 pb-4 pt-6 px-5 transition-all">
+      <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-sm border-b border-border-subtle pb-4 pt-6 px-5 transition-all">
         <div className="w-full">
           <div className="flex justify-between items-start mb-1">
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">Installation Photos</h1>
+            <h1 className="text-xl font-bold tracking-tight text-foreground">Installation Photos</h1>
             <span className={`text-xs font-medium transition-colors ${
-              savingStatus === 'Saving...' ? 'text-primary' : 'text-slate-400'
+              savingStatus === 'Saving...' ? 'text-primary' : 'text-muted-foreground'
             }`}>
               {savingStatus}
             </span>
           </div>
-          <p className="text-sm text-slate-500 mb-4 leading-snug pr-4">
+          <p className="text-sm text-muted-foreground mb-4 leading-snug pr-4">
             Add photos for each product so installers can see where devices will go.
           </p>
           
           {/* Submission Status Warning */}
           {isAlreadySubmitted && (
-            <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
-              <p className="text-sm text-blue-800 font-medium">
+            <div className="mb-4 bg-info-bg border border-info/50 rounded-xl p-3">
+              <p className="text-sm text-info font-medium">
                 ✓ Photos already submitted {submittedAt && (() => {
                   try {
                     const date = new Date(submittedAt);
@@ -267,7 +267,7 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
                   return null;
                 })()}
               </p>
-              <p className="text-xs text-blue-600 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 You can still add or edit photos. Click "Submit photos" again when done.
               </p>
             </div>

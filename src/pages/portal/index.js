@@ -204,12 +204,12 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
                     onNavigateToPhotos={handleNavigateToPhotos}
                   />
                 ) : (
-                  <div className="rounded-[32px] border border-slate-100 bg-white p-8 text-center shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-                    <h2 className="text-2xl font-semibold text-slate-900">Estimate unavailable</h2>
-                    <p className="mt-2 text-sm text-slate-500">
-                      We couldn’t load that estimate. Refresh the page or request a new invite link from your concierge.
+                  <div className="rounded-[32px] border border-border bg-surface p-8 text-center shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+                    <h2 className="text-2xl font-semibold text-foreground">Estimate unavailable</h2>
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      We couldn't load that estimate. Refresh the page or request a new invite link from your concierge.
                     </p>
-                    <p className="mt-1 text-xs text-slate-400">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       (If you see this often, check that you’re logged in or that the invite token is still valid.)
                     </p>
                   </div>

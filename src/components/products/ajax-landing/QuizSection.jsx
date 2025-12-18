@@ -94,33 +94,33 @@ export default function QuizSection() {
   const answeredCurrent = answers[activeQuestion.id];
 
   return (
-    <section className="bg-white py-20">
+    <section className="bg-background py-20">
       <div className="mx-auto max-w-4xl px-6">
-        <div className="rounded-[32px] border border-slate-200 bg-slate-50 p-10 shadow-xl">
+        <div className="rounded-[32px] border border-border bg-muted p-10 shadow-xl">
           <div className="flex flex-col gap-3 text-center">
-            <p className="text-sm uppercase tracking-[0.4em] text-slate-400">Optional quiz</p>
-            <h2 className="text-3xl font-semibold text-slate-900">Did the story stick?</h2>
-            <p className="text-sm text-slate-600">
+            <p className="text-sm uppercase tracking-[0.4em] text-muted-foreground">Optional quiz</p>
+            <h2 className="text-3xl font-semibold text-foreground">Did the story stick?</h2>
+            <p className="text-sm text-muted-foreground">
               5 tiny questions. Collect badges and make sure Hub 2 makes total sense.
             </p>
           </div>
           <div className="mt-8">
-            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-slate-500">
+            <div className="flex items-center justify-between text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               <span>
                 Question {current + 1} / {questions.length}
               </span>
               <span>Score: {score}/{questions.length}</span>
             </div>
-            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-white">
+            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-background">
               <div
                 className="h-2 rounded-full bg-gradient-to-r from-emerald-400 to-blue-500"
                 style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>
-          <div className="mt-8 rounded-3xl border border-slate-200 bg-white p-6 shadow-inner">
-            <p className="text-sm font-semibold text-emerald-600">Security Sense Check</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-900">{activeQuestion.prompt}</h3>
+          <div className="mt-8 rounded-3xl border border-border bg-background p-6 shadow-inner">
+            <p className="text-sm font-semibold text-success">Security Sense Check</p>
+            <h3 className="mt-2 text-2xl font-semibold text-foreground">{activeQuestion.prompt}</h3>
             <div className="mt-6 grid gap-4 md:grid-cols-3">
               {activeQuestion.options.map((option) => {
                 const selected = answeredCurrent?.value === option.value;
@@ -140,7 +140,7 @@ export default function QuizSection() {
                         ? isCorrect
                           ? "border-emerald-500 bg-emerald-50 text-emerald-700"
                           : "border-rose-400 bg-rose-50 text-rose-700"
-                        : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
+                        : "border-border bg-background text-muted-foreground hover:border-border"
                     }`}
                   >
                     {option.label}
@@ -149,11 +149,11 @@ export default function QuizSection() {
               })}
             </div>
             {answeredCurrent ? (
-              <div className="mt-6 rounded-2xl bg-slate-900/90 p-4 text-sm text-white">
+              <div className="mt-6 rounded-2xl bg-foreground/90 p-4 text-sm text-primary-foreground">
                 <p className="font-semibold">
                   {answeredCurrent.isCorrect ? "Nice! ✅" : "Almost! 🤔"}
                 </p>
-                <p className="text-white/80">{activeQuestion.explanation}</p>
+                <p className="text-primary-foreground/80">{activeQuestion.explanation}</p>
               </div>
             ) : null}
             <div className="mt-6 flex flex-wrap gap-3">
@@ -162,32 +162,32 @@ export default function QuizSection() {
                   type="button"
                   onClick={nextQuestion}
                   disabled={!answeredCurrent}
-                  className={`rounded-full px-5 py-2 text-sm font-semibold ${
-                    answeredCurrent
-                      ? "bg-slate-900 text-white hover:bg-slate-800"
-                      : "bg-slate-200 text-slate-500"
-                  }`}
+                    className={`rounded-full px-5 py-2 text-sm font-semibold ${
+                      answeredCurrent
+                        ? "bg-foreground text-primary-foreground hover:bg-foreground/90"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    Next question →
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={restartQuiz}
+                    disabled={!answeredCurrent}
+                    className={`rounded-full px-5 py-2 text-sm font-semibold ${
+                      answeredCurrent
+                        ? "bg-success text-success-foreground hover:bg-success/90"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    Restart quiz
+                  </button>
+                )}
+                <Link
+                  href="/products/sample"
+                  className="rounded-full border border-border px-5 py-2 text-sm font-semibold text-muted-foreground hover:border-border"
                 >
-                  Next question →
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={restartQuiz}
-                  disabled={!answeredCurrent}
-                  className={`rounded-full px-5 py-2 text-sm font-semibold ${
-                    answeredCurrent
-                      ? "bg-emerald-500 text-slate-900 hover:bg-emerald-400"
-                      : "bg-slate-200 text-slate-500"
-                  }`}
-                >
-                  Restart quiz
-                </button>
-              )}
-              <Link
-                href="/products/sample"
-                className="rounded-full border border-slate-200 px-5 py-2 text-sm font-semibold text-slate-600 hover:border-slate-300"
-              >
                 Jump to builder
               </Link>
             </div>

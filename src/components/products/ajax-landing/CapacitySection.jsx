@@ -14,11 +14,11 @@ export default function CapacitySection() {
   }));
 
   return (
-    <section className="py-20 px-4 bg-[#F5FBFD]">
+    <section className="py-20 px-4 bg-muted">
       <div className="container max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">Capacity</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
             One Hub. A whole house full of protection.
           </h2>
         </div>
@@ -68,7 +68,7 @@ export default function CapacitySection() {
 
           {/* Capacity details */}
           <div className="space-y-6">
-            <p className="text-lg text-slate-700 mb-6">
+            <p className="text-lg text-muted-foreground mb-6">
               Ajax Hub 2 can be the brain for:
             </p>
 
@@ -79,10 +79,10 @@ export default function CapacitySection() {
                     📡
                   </span>
                   <div>
-                    <h3 className="font-semibold text-lg mb-1 text-slate-900">
+                    <h3 className="font-semibold text-lg mb-1 text-foreground">
                       Up to <span className="text-[#0AA9AB]">100</span> security devices
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       Sensors, sirens, keypads, relays—all talking to one Hub.
                     </p>
                   </div>
@@ -95,10 +95,10 @@ export default function CapacitySection() {
                     📢
                   </span>
                   <div>
-                    <h3 className="font-semibold text-lg mb-1 text-slate-900">
+                    <h3 className="font-semibold text-lg mb-1 text-foreground">
                       Up to <span className="text-[#0AA9AB]">10</span> sirens or keypads
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       With built-in buzzers for alerts throughout your home.
                     </p>
                   </div>
@@ -111,10 +111,10 @@ export default function CapacitySection() {
                     📶
                   </span>
                   <div>
-                    <h3 className="font-semibold text-lg mb-1 text-slate-900">
+                    <h3 className="font-semibold text-lg mb-1 text-foreground">
                       Up to <span className="text-[#0AA9AB]">5</span> range extenders
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       To reach big homes and outbuildings.
                     </p>
                   </div>
@@ -127,10 +127,10 @@ export default function CapacitySection() {
                     📹
                   </span>
                   <div>
-                    <h3 className="font-semibold text-lg mb-1 text-slate-900">
+                    <h3 className="font-semibold text-lg mb-1 text-foreground">
                       Up to <span className="text-[#0AA9AB]">25</span> IP cameras / recorders
                     </h3>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-sm text-muted-foreground">
                       For live view and recording.
                     </p>
                   </div>
@@ -138,9 +138,9 @@ export default function CapacitySection() {
               </Card>
             </div>
 
-            <Card className="mt-8 p-6 bg-gradient-to-br from-[#F2FEFE] to-[#E8F7F7] border-none">
-              <p className="text-slate-700 leading-relaxed">
-                <span className="font-semibold text-slate-900">In normal English:</span>
+            <Card className="mt-8 p-6 bg-gradient-to-br from-muted to-muted/80 border-none">
+              <p className="text-muted-foreground leading-relaxed">
+                <span className="font-semibold text-foreground">In normal English:</span>
                 <br />
                 One Hub can easily look after a whole home, town house or small business, with plenty of room to grow.
               </p>

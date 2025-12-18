@@ -5,6 +5,7 @@ import { usePortalStatus, usePortalDashboard, useEstimate } from "@/lib/react-qu
 import { normaliseStatus } from "@/components/portal/utils/status-normalizer";
 import { formatAddress } from "@/components/portal/utils/portal-utils";
 import { getEstimateDetails } from "@/lib/wp";
+import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
 
 /**
  * Custom hook to manage all portal state and data fetching
@@ -107,33 +108,64 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
     }
   }, [estimates.length, overviewIndex]);
 
-  // Fetch full details for ALL estimates when on overview page (no estimateId in URL)
-  const shouldFetchAllEstimates = activeNav === 'overview' && !estimateId && estimates.length > 0;
+  // Optimized: Only fetch current estimate + prefetch next/prev (not all at once)
+  const shouldFetchEstimates = activeNav === 'overview' && !estimateId && estimates.length > 0;
+  
+  // Determine which estimates to fetch: current + adjacent ones for smooth navigation
+  const estimatesToFetch = useMemo(() => {
+    if (!shouldFetchEstimates || estimates.length === 0) return [];
+    
+    const current = estimates[overviewIndex];
+    if (!current) return [];
+    
+    const toFetch = [current]; // Always fetch current
+    
+    // Prefetch next estimate for smooth navigation
+    if (overviewIndex < estimates.length - 1) {
+      toFetch.push(estimates[overviewIndex + 1]);
+    }
+    
+    // Prefetch previous estimate for smooth navigation
+    if (overviewIndex > 0) {
+      toFetch.push(estimates[overviewIndex - 1]);
+    }
+    
+    return toFetch;
+  }, [shouldFetchEstimates, estimates, overviewIndex]);
   
   const estimateDetailsQueries = useQueries({
-    queries: shouldFetchAllEstimates
-      ? estimates.map((est) => ({
-          queryKey: ['estimate-details', est.estimateId],
-          queryFn: () => getEstimateDetails({
-            estimateId: est.estimateId,
-            locationId: est.locationId,
-            inviteToken: inviteToken || undefined,
-          }),
-          staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-          gcTime: 10 * 60 * 1000,
-          refetchOnMount: false,
-          refetchOnWindowFocus: false,
-        }))
-      : [],
+    queries: estimatesToFetch.map((est) => ({
+      queryKey: ['estimate-details', est.estimateId],
+      queryFn: () => getEstimateDetails({
+        estimateId: est.estimateId,
+        locationId: est.locationId,
+        inviteToken: inviteToken || undefined,
+      }),
+      staleTime: 5 * 60 * 1000, // Cache for 5 minutes
+      gcTime: 10 * 60 * 1000,
+      refetchOnMount: false,
+      refetchOnWindowFocus: false,
+    })),
   });
+
+  // Create a map of estimate details by estimateId for quick lookup
+  const estimateDetailsMap = useMemo(() => {
+    const map = new Map();
+    estimatesToFetch.forEach((est, idx) => {
+      const query = estimateDetailsQueries[idx];
+      if (query?.data) {
+        map.set(est.estimateId, query.data);
+      }
+    });
+    return map;
+  }, [estimatesToFetch, estimateDetailsQueries]);
 
   // Combine basic estimate info from dashboard with full details from queries
   const enrichedEstimates = useMemo(() => {
-    if (!shouldFetchAllEstimates) return estimates;
+    if (!shouldFetchEstimates) return estimates;
     
-    return estimates.map((est, idx) => {
-      const query = estimateDetailsQueries[idx];
-      const details = query?.data;
+    return estimates.map((est) => {
+      const details = estimateDetailsMap.get(est.estimateId);
       
       if (!details) {
         // Return basic info while loading
@@ -152,11 +184,15 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
         lastInviteAt: est.lastInviteAt,
       };
     });
-  }, [estimates, estimateDetailsQueries, shouldFetchAllEstimates]);
+  }, [estimates, estimateDetailsMap, shouldFetchEstimates]);
 
-  // Check if we're still loading any estimate details
-  const isLoadingEstimateDetails = shouldFetchAllEstimates && 
-    estimateDetailsQueries.some(q => q.isLoading);
+  // Check if we're still loading the current estimate details
+  const currentEstimate = estimates[overviewIndex];
+  const currentEstimateQuery = currentEstimate 
+    ? estimateDetailsQueries.find((_, idx) => estimatesToFetch[idx]?.estimateId === currentEstimate.estimateId)
+    : null;
+  const isLoadingEstimateDetails = shouldFetchEstimates && 
+    currentEstimateQuery?.isLoading;
 
   const loading = estimateId ? statusLoading : (dashboardLoading || isLoadingEstimateDetails);
   // Check initialError first (from getServerSideProps) - it takes priority over React Query errors
@@ -401,7 +437,7 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
           total: current.total || current.quote?.total || 0,
           label: `Estimate #${current.quote?.number || current.number || current.estimateId}`,
           revision: current.revision || null, // Include revision data
-          currency: current.currency || 'AUD',
+          currency: current.currency || DEFAULT_CURRENCY,
         };
       }
       
@@ -444,7 +480,7 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
         ? (estimateData.title || `Estimate #${estimateData.estimateNumber || estimateId}`)
         : `Estimate #${view?.quote?.number || estimateId}`,
       revision: view?.revision || null, // Include revision data for RevisionBanner
-      currency: estimateData?.ok ? (estimateData.currency || 'AUD') : 'AUD',
+      currency: estimateData?.ok ? (estimateData.currency || DEFAULT_CURRENCY) : DEFAULT_CURRENCY,
     };
     
     return baseEstimate;

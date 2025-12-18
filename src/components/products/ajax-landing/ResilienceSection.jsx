@@ -18,12 +18,12 @@ const cards = [
 
 export default function ResilienceSection() {
   return (
-    <section className="bg-[#F9FEFF] py-20 text-slate-900">
+    <section className="bg-muted py-20 text-foreground">
       <div className="mx-auto max-w-5xl px-6">
         <div className="text-center">
           <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">Always on</p>
-          <h2 className="mt-2 text-3xl font-semibold text-slate-900">Redundancy is Percy&apos;s secret weapon.</h2>
-          <p className="mt-3 text-base text-slate-600">
+          <h2 className="mt-2 text-3xl font-semibold text-foreground">Redundancy is Percy&apos;s secret weapon.</h2>
+          <p className="mt-3 text-base text-muted-foreground">
             Hub 2 keeps sending alerts no matter what the wolf does to wires or Wi‑Fi.
           </p>
         </div>
@@ -31,11 +31,11 @@ export default function ResilienceSection() {
           {cards.map((card) => (
             <div
               key={card.title}
-              className="rounded-3xl border border-[#D8E9ED] bg-white p-6 shadow-[0_20px_60px_-35px_rgba(8,44,64,0.3)]"
+              className="rounded-3xl border border-border bg-background p-6 shadow-lg"
             >
               <div className="mb-4 text-3xl">{card.icon}</div>
-              <h3 className="text-xl font-semibold text-slate-900">{card.title}</h3>
-              <p className="mt-2 text-sm text-slate-600">{card.desc}</p>
+              <h3 className="text-xl font-semibold text-foreground">{card.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground">{card.desc}</p>
             </div>
           ))}
         </div>

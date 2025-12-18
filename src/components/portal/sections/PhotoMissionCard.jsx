@@ -145,10 +145,10 @@ export function PhotoMissionCard({
 
   if (isLoading) {
     return (
-      <div className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
         <div className="flex items-center justify-center gap-3 py-8">
           <Spinner size="md" />
-          <p className="text-sm text-slate-500">Loading products...</p>
+          <p className="text-sm text-muted-foreground">Loading products...</p>
         </div>
       </div>
     );
@@ -162,15 +162,15 @@ export function PhotoMissionCard({
 
   return (
     <>
-      <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
+      <div className="rounded-xl border-2 border-border bg-surface p-6 shadow-lg">
         {/* Header */}
         <div className="flex items-center gap-3 mb-4">
           <div className="p-2 rounded-xl bg-gradient-to-br from-rose-100 to-teal-100">
-            <Camera className="h-5 w-5 text-[#c95375]" />
+            <Camera className="h-5 w-5 text-primary" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-slate-900">Photo Upload System</h3>
-            <p className="text-xs text-slate-500">With limits & admin photo requests</p>
+            <h3 className="text-xl font-bold text-foreground">Photo Upload System</h3>
+            <p className="text-xs text-muted-foreground">With limits & admin photo requests</p>
           </div>
         </div>
 
@@ -196,8 +196,8 @@ export function PhotoMissionCard({
 
         {/* Submission Status */}
         {isSubmitted && (
-          <div className="mb-3 bg-green-50 border border-green-200 rounded-xl p-3">
-            <p className="text-sm text-green-800 font-medium flex items-center gap-2">
+          <div className="mb-3 bg-success-bg border border-success/30 rounded-xl p-3">
+            <p className="text-sm text-success font-medium flex items-center gap-2">
               <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
               </svg>
@@ -211,7 +211,7 @@ export function PhotoMissionCard({
                 return null;
               })()}
             </p>
-            <p className="text-xs text-green-600 mt-1">
+            <p className="text-xs text-success mt-1">
               You can still edit. Click a product to add or replace photos.
             </p>
           </div>
@@ -244,7 +244,7 @@ export function PhotoMissionCard({
               );
             })
           ) : (
-            <div className="rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3 text-center text-sm text-slate-500">
+            <div className="rounded-2xl border border-border bg-muted px-4 py-3 text-center text-sm text-muted-foreground">
               No products found
             </div>
           )}
@@ -252,21 +252,21 @@ export function PhotoMissionCard({
 
         {/* Submit Button - At bottom of card */}
         {products.length > 0 && (
-          <div className="mt-5 border-t border-slate-100 pt-4">
+          <div className="mt-5 border-t border-border pt-4">
             <div className="text-center mb-3">
               {validation.isComplete ? (
-                <p className="text-xs font-medium text-green-600 flex items-center justify-center gap-1">
+                <p className="text-xs font-medium text-success flex items-center justify-center gap-1">
                   <Check size={14} /> All required items are ready
                 </p>
               ) : (
-                <p className="text-xs font-medium text-orange-600 flex items-center justify-center gap-1">
+                <p className="text-xs font-medium text-warning flex items-center justify-center gap-1">
                   <AlertCircle size={14} /> {validation.incompleteCount} required item{validation.incompleteCount !== 1 ? 's' : ''} need attention
                 </p>
               )}
             </div>
             
             {isGuestMode ? (
-              <div className="w-full py-4 rounded-full bg-slate-100 text-slate-500 text-center text-sm font-medium">
+              <div className="w-full py-4 rounded-full bg-muted text-muted-foreground text-center text-sm font-medium">
                 Please create an account to submit photos
               </div>
             ) : (

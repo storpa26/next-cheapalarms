@@ -17,7 +17,7 @@ const starPositions = Array.from({ length: 30 }, (_, i) => {
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-[#031A27] via-[#052A3A] to-[#031A27] text-white min-h-screen flex items-center">
+    <section className="relative overflow-hidden bg-gradient-to-b from-[#031A27] via-[#052A3A] to-[#031A27] text-foreground min-h-screen flex items-center">
       {/* Night sky stars effect */}
       <div className="absolute inset-0 pointer-events-none">
         {starPositions.map((star, i) => (
@@ -49,7 +49,7 @@ export default function HeroSection() {
           />
           {/* House outline */}
           <div className="relative w-96 h-80">
-            <div className="absolute inset-0 bg-slate-800/30 rounded-3xl backdrop-blur-sm border-2 border-slate-700/50" />
+            <div className="absolute inset-0 bg-foreground/30 rounded-3xl backdrop-blur-sm border-2 border-border/50" />
             {/* Windows with light */}
             <div className="absolute top-1/4 left-1/4 w-16 h-20 bg-yellow-400/30 rounded-lg" />
             <div className="absolute top-1/4 right-1/4 w-16 h-20 bg-yellow-400/30 rounded-lg" />
@@ -88,21 +88,21 @@ export default function HeroSection() {
             Sleep like the Pig.
           </h1>
 
-          <p className="text-xl md:text-2xl text-slate-300 mb-8 leading-relaxed">
+          <p className="text-xl md:text-2xl text-muted-foreground mb-8 leading-relaxed">
             Ajax Hub 2 (4G) is the &quot;brain&quot; of your alarm system. It quietly connects all your sensors, sirens
             and cameras, and calls for help the instant something is wrong.
           </p>
 
           <div className="space-y-3 mb-10">
-            <div className="flex items-center gap-3 text-slate-300">
+            <div className="flex items-center gap-3 text-muted-foreground">
               <span className="text-[#0EF2D0]">✓</span>
               <span>Works even if Wi-Fi dies, thanks to 4G backup</span>
             </div>
-            <div className="flex items-center gap-3 text-slate-300">
+            <div className="flex items-center gap-3 text-muted-foreground">
               <span className="text-[#0EF2D0]">✓</span>
               <span>Talks to up to 100 security devices around your home</span>
             </div>
-            <div className="flex items-center gap-3 text-slate-300">
+            <div className="flex items-center gap-3 text-muted-foreground">
               <span className="text-[#0EF2D0]">✓</span>
               <span>Sends you alerts and photos in seconds</span>
             </div>
@@ -111,14 +111,14 @@ export default function HeroSection() {
           <div className="flex flex-wrap gap-4">
             <Link
               href="/products/sample"
-              className="rounded-full px-8 py-4 text-base font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105"
+              className="rounded-full px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all duration-300 hover:scale-105"
               style={{ background: `linear-gradient(135deg, ${brandTeal}, #0ab5b6)` }}
             >
               Build my Ajax system
             </Link>
             <a
               href="#story"
-              className="rounded-full border-2 border-white/30 bg-white/10 backdrop-blur-sm px-8 py-4 text-base font-semibold text-white hover:bg-white/20 transition-all duration-300"
+              className="rounded-full border-2 border-foreground/30 bg-foreground/10 backdrop-blur-sm px-8 py-4 text-base font-semibold text-foreground hover:bg-foreground/20 transition-all duration-300"
             >
               How it works (2 min story)
             </a>

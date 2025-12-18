@@ -9,14 +9,14 @@ export default function HowItProtects() {
   const [activeDevice, setActiveDevice] = useState(null);
 
   return (
-    <section className="py-20 px-4 bg-[#F5FBFD]">
+    <section className="py-20 px-4 bg-muted">
       <div className="container max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">How it protects</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
             How Your Home is Protected
           </h2>
-          <p className="text-xl text-center text-slate-600">
+          <p className="text-xl text-center text-muted-foreground">
             The Hub is the brain. Everything else are its senses.
           </p>
         </div>
@@ -24,7 +24,7 @@ export default function HowItProtects() {
         <div className="grid lg:grid-cols-2 gap-12 items-center">
           {/* Interactive house visualization */}
           <div className="relative aspect-square bg-gradient-to-br from-[#E8F7F7]/50 to-[#F0FCFC] rounded-3xl p-8 shadow-md">
-            <div className="absolute inset-8 bg-white/50 backdrop-blur-sm rounded-2xl border-2 border-dashed border-[#CFE5EC] flex items-center justify-center">
+            <div className="absolute inset-8 bg-background/50 backdrop-blur-sm rounded-2xl border-2 border-dashed border-border flex items-center justify-center">
               <div className="text-center">
                 <div
                   className={`w-24 h-24 mx-auto mb-4 rounded-2xl flex items-center justify-center transition-all duration-300 ${
@@ -41,8 +41,8 @@ export default function HowItProtects() {
                     🧠
                   </span>
                 </div>
-                <p className="text-lg font-semibold text-slate-900">Ajax Hub 2</p>
-                <p className="text-sm text-slate-600">The Brain</p>
+                <p className="text-lg font-semibold text-foreground">Ajax Hub 2</p>
+                <p className="text-sm text-muted-foreground">The Brain</p>
               </div>
             </div>
 
@@ -72,7 +72,7 @@ export default function HowItProtects() {
                 onClick={() => setActiveDevice(activeDevice === device.id ? null : device.id)}
                 aria-label={`${device.name}: ${device.description}`}
               >
-                <span className="text-2xl block text-white" role="img" aria-hidden>
+                <span className="text-2xl block text-primary-foreground" role="img" aria-hidden>
                   {device.icon}
                 </span>
               </button>
@@ -112,8 +112,8 @@ export default function HowItProtects() {
                     </span>
                   </div>
                   <div>
-                    <h3 className="font-semibold mb-1 text-slate-900">{device.name}</h3>
-                    <p className="text-sm text-slate-600">{device.description}</p>
+                    <h3 className="font-semibold mb-1 text-foreground">{device.name}</h3>
+                    <p className="text-sm text-muted-foreground">{device.description}</p>
                   </div>
                 </div>
               </Card>
@@ -122,12 +122,12 @@ export default function HowItProtects() {
         </div>
 
         {/* Summary */}
-        <Card className="mt-12 p-8 bg-[#F2FEFE]/50 border-none">
-          <p className="text-center text-lg max-w-3xl mx-auto text-slate-700">
+        <Card className="mt-12 p-8 bg-muted/50 border-none">
+          <p className="text-center text-lg max-w-3xl mx-auto text-muted-foreground">
             All of these devices send tiny radio messages back to one place: the{" "}
             <span className="font-semibold text-[#0AA9AB]">Ajax Hub 2</span>.
             <br />
-            <span className="font-semibold text-slate-900">
+            <span className="font-semibold text-foreground">
               The Hub listens, makes the decision, and tells everyone what to do next.
             </span>
           </p>

@@ -1,13 +1,14 @@
 import { ArrowRight, Camera, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo } from "react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
 import { RevisionBanner } from "../sections/RevisionBanner";
 import { WorkflowProgress } from "../sections/WorkflowProgress";
 import { BookingCard } from "../sections/BookingCard";
 import { PaymentCard } from "../sections/PaymentCard";
 
-export function OverviewView({ 
+export const OverviewView = memo(function OverviewView({ 
   estimate, 
   estimates = [], 
   currentEstimateIndex = 0,
@@ -31,11 +32,11 @@ export function OverviewView({
   if (!estimate) {
     return (
       <div 
-        className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg text-center"
+        className="rounded-xl border-2 border-border bg-surface p-6 shadow-lg text-center"
         suppressHydrationWarning
       >
-        <h1 className="text-3xl font-semibold text-slate-900">Welcome to Your Portal</h1>
-        <p className="mt-2 text-slate-500">Request a quote to get started.</p>
+        <h1 className="text-3xl font-semibold text-foreground">Welcome to Your Portal</h1>
+        <p className="mt-2 text-muted-foreground">Request a quote to get started.</p>
       </div>
     );
   }
@@ -65,7 +66,7 @@ export function OverviewView({
       {estimate.revision && (
         <RevisionBanner 
           revision={estimate.revision}
-          currency={estimate.currency || 'AUD'}
+          currency={estimate.currency || DEFAULT_CURRENCY}
           portalStatus={statusValue}
         />
       )}
@@ -101,14 +102,14 @@ export function OverviewView({
       )}
 
       {/* Hero Section */}
-      <div className="rounded-xl border-2 border-slate-200 bg-white p-6 shadow-lg">
+      <div className="rounded-xl border-2 border-border bg-surface p-6 shadow-lg">
         <div className="flex flex-wrap items-start justify-between gap-6">
           <div className="flex-1">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Your Estimate</p>
-            <h1 className="mt-2 text-4xl font-semibold text-slate-900">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Your Estimate</p>
+            <h1 className="mt-2 text-4xl font-semibold text-foreground">
               {estimate.label || `Estimate #${estimate.number || estimate.estimateId}`}
             </h1>
-            <p className="mt-2 text-sm text-slate-500">
+            <p className="mt-2 text-sm text-muted-foreground">
               {estimate.address || estimate.meta?.address || "Site address pending"}
             </p>
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2">
@@ -164,8 +165,8 @@ export function OverviewView({
                 <AlertCircle className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-slate-900">Upload Photos for Accurate Pricing</h3>
-                <p className="mt-1 text-sm text-slate-600">
+                <h3 className="text-lg font-semibold text-foreground">Upload Photos for Accurate Pricing</h3>
+                <p className="mt-1 text-sm text-muted-foreground">
                   Our team needs photos of your property to provide you with the most accurate pricing. The current
                   estimate is preliminary and may change once we review your photos.
                 </p>
@@ -176,33 +177,33 @@ export function OverviewView({
 
         {/* Pricing Section */}
         <div className="mt-8 grid gap-6 md:grid-cols-2">
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">
+          <div className="rounded-xl border border-border bg-muted p-4">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
               {needsPhotos ? "Estimated Total" : "Estimate Total"}
             </p>
-            <p className="mt-2 text-4xl font-semibold text-slate-900" suppressHydrationWarning>
+            <p className="mt-2 text-4xl font-semibold text-foreground" suppressHydrationWarning>
               {formatCurrency(total)}
             </p>
             {needsPhotos && (
-              <p className="mt-1 text-xs text-slate-500">Preliminary pricing • Updates after photo review</p>
+              <p className="mt-1 text-xs text-muted-foreground">Preliminary pricing • Updates after photo review</p>
             )}
             {hasPhotos && (
               <p className="mt-1 text-xs text-emerald-600">✓ Photos uploaded • Final pricing</p>
             )}
           </div>
-          <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Breakdown</p>
+          <div className="rounded-xl border border-border bg-muted p-4">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Breakdown</p>
             <div className="mt-3 space-y-2 text-sm">
               <div className="flex justify-between">
-                <span className="text-slate-600">Subtotal</span>
-                <span className="font-semibold text-slate-900" suppressHydrationWarning>
+                <span className="text-muted-foreground">Subtotal</span>
+                <span className="font-semibold text-foreground" suppressHydrationWarning>
                   {formatCurrency(subtotal)}
                 </span>
               </div>
               {taxTotal > 0 && (
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Tax</span>
-                  <span className="font-semibold text-slate-900" suppressHydrationWarning>
+                  <span className="text-muted-foreground">Tax</span>
+                  <span className="font-semibold text-foreground" suppressHydrationWarning>
                     {formatCurrency(taxTotal)}
                   </span>
                 </div>
@@ -214,28 +215,28 @@ export function OverviewView({
         {/* Product/Items List */}
         {estimate.items && estimate.items.length > 0 && (
           <div className="mt-8">
-            <h3 className="text-lg font-semibold text-slate-900">Products & Services</h3>
+            <h3 className="text-lg font-semibold text-foreground">Products & Services</h3>
             <div className="mt-4 space-y-3">
               {estimate.items.map((item, index) => (
                 <div
                   key={item.id || index}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-4"
+                  className="flex items-center justify-between rounded-xl border border-border bg-surface p-4"
                 >
                   <div className="flex-1">
-                    <p className="font-medium text-slate-900">{item.name || "Item"}</p>
+                    <p className="font-medium text-foreground">{item.name || "Item"}</p>
                     {item.description && (
-                      <p className="mt-1 text-sm text-slate-500">{item.description}</p>
+                      <p className="mt-1 text-sm text-muted-foreground">{item.description}</p>
                     )}
                     {item.sku && (
-                      <p className="mt-1 text-xs text-slate-400">SKU: {item.sku}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">SKU: {item.sku}</p>
                     )}
                   </div>
                   <div className="ml-4 text-right">
-                    <p className="text-sm font-semibold text-slate-900">
+                    <p className="text-sm font-semibold text-foreground">
                       Qty: {item.qty || item.quantity || 1}
                     </p>
                     {item.amount && (
-                      <p className="mt-1 text-sm text-slate-600" suppressHydrationWarning>
+                      <p className="mt-1 text-sm text-muted-foreground" suppressHydrationWarning>
                         {formatCurrency(item.amount * (item.qty || item.quantity || 1))}
                       </p>
                     )}
@@ -252,7 +253,7 @@ export function OverviewView({
             <Button
               size="lg"
               onClick={onUploadImages}
-              className="flex-1 bg-linear-to-r from-primary to-secondary text-white shadow-lg shadow-primary/30"
+              className="flex-1 bg-gradient-to-r from-primary to-secondary text-white shadow-lg shadow-primary/30"
             >
               <Camera className="mr-2 h-5 w-5" />
               Upload Images
@@ -262,7 +263,7 @@ export function OverviewView({
             size="lg"
             variant="outline"
             onClick={onViewDetails}
-            className="flex-1 border-slate-200"
+            className="flex-1 border-border"
           >
             View Full Details <ArrowRight className="ml-2 h-5 w-5" />
           </Button>
@@ -270,5 +271,5 @@ export function OverviewView({
       </div>
     </div>
   );
-}
+});
 

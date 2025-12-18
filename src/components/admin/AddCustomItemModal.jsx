@@ -4,6 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
 import { Modal } from './Modal';
+import { toast } from 'sonner';
 
 /**
  * Modal for adding custom line items to estimate
@@ -19,7 +20,7 @@ export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = DEFAULT_
     e.preventDefault();
     
     if (!name.trim()) {
-      alert('Item name is required');
+      toast.error('Item name is required');
       return;
     }
 
@@ -27,7 +28,7 @@ export function AddCustomItemModal({ isOpen, onClose, onAdd, currency = DEFAULT_
     const numQty = parseInt(qty, 10) || 1;
 
     if (numAmount <= 0) {
-      alert('Unit price must be greater than 0');
+      toast.error('Unit price must be greater than 0');
       return;
     }
 

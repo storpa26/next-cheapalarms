@@ -37,24 +37,24 @@ export default function KitSection() {
   ];
 
   return (
-    <section className="py-20 px-4 bg-white">
+    <section className="py-20 px-4 bg-background">
       <div className="container max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">What you get</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
             What do I actually get?
           </h2>
-          <p className="text-xl text-center text-slate-600">
+          <p className="text-xl text-center text-muted-foreground">
             The real hardware that keeps the wolf out.
           </p>
         </div>
 
         {/* Starter kit visual placeholder */}
         <div className="mb-12 max-w-4xl mx-auto">
-          <div className="relative aspect-video rounded-3xl bg-gradient-to-br from-slate-100 to-slate-200 border-2 border-dashed border-slate-300 flex items-center justify-center">
+          <div className="relative aspect-video rounded-3xl bg-gradient-to-br from-muted to-muted/80 border-2 border-dashed border-border flex items-center justify-center">
             <div className="text-center">
-              <p className="text-slate-500 text-sm mb-2">Starter kit photo</p>
-              <p className="text-slate-400 text-xs">
+              <p className="text-muted-foreground text-sm mb-2">Starter kit photo</p>
+              <p className="text-muted-foreground/70 text-xs">
                 Hub, 2× PIRs, door contact, keypad, internal siren, external siren, keyfob
               </p>
             </div>
@@ -77,8 +77,8 @@ export default function KitSection() {
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2 text-slate-900">{item.title}</h3>
-                  <p className="text-sm text-slate-600 leading-relaxed">{item.description}</p>
+                  <h3 className="font-semibold mb-2 text-foreground">{item.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.description}</p>
                 </div>
               </div>
             </Card>

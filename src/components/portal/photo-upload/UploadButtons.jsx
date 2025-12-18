@@ -50,7 +50,7 @@ export function UploadButtons({ onFileSelect, uploading = false }) {
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="flex flex-col items-center justify-center gap-2 py-6 bg-slate-50 border border-slate-100 rounded-xl text-slate-600 font-medium hover:bg-slate-100 transition-colors active:scale-95 disabled:opacity-50"
+          className="flex flex-col items-center justify-center gap-2 py-6 bg-muted border border-border-subtle rounded-xl text-muted-foreground font-medium hover:bg-muted/80 transition-colors active:scale-95 disabled:opacity-50"
         >
           <ImageIcon size={28} />
           <span className="text-sm">{isMobile ? 'Gallery' : 'Upload file'}</span>

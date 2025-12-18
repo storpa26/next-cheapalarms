@@ -5,14 +5,14 @@ const brandPink = "#F78AB3";
 
 export default function MeetTheCast() {
   return (
-    <section className="py-20 px-4 bg-white">
+    <section className="py-20 px-4 bg-background">
       <div className="container max-w-7xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">Meet the cast</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
             The Pig, the Wolf, and the Brain
           </h2>
-          <p className="text-xl text-center text-slate-600">
+          <p className="text-xl text-center text-muted-foreground">
             Three characters. One story. Your home stays safe.
           </p>
         </div>
@@ -32,8 +32,8 @@ export default function MeetTheCast() {
                 </span>
               </div>
             </div>
-            <h3 className="text-2xl font-bold mb-3 text-slate-900">Pig – the Homeowner</h3>
-            <p className="text-slate-600 leading-relaxed">
+            <h3 className="text-2xl font-bold mb-3 text-foreground">Pig – the Homeowner</h3>
+            <p className="text-muted-foreground leading-relaxed">
               This is you. You just want to lock up, sleep, and know someone will yell if the wolf tries anything.
             </p>
           </Card>
@@ -52,8 +52,8 @@ export default function MeetTheCast() {
                 </span>
               </div>
             </div>
-            <h3 className="text-2xl font-bold mb-3 text-slate-900">Wolf – the Problem</h3>
-            <p className="text-slate-600 leading-relaxed">
+            <h3 className="text-2xl font-bold mb-3 text-foreground">Wolf – the Problem</h3>
+            <p className="text-muted-foreground leading-relaxed">
               This is the troublemaker. He jiggles windows, tries doors, maybe checks if the Wi-Fi is down.
             </p>
           </Card>
@@ -73,11 +73,11 @@ export default function MeetTheCast() {
                 </span>
               </div>
             </div>
-            <h3 className="text-2xl font-bold mb-3 text-slate-900">Ajax Hub 2 (4G) – the Brain</h3>
-            <p className="text-slate-600 leading-relaxed">
+            <h3 className="text-2xl font-bold mb-3 text-foreground">Ajax Hub 2 (4G) – the Brain</h3>
+            <p className="text-muted-foreground leading-relaxed">
               This is the brain of the system. All sensors talk to it. It talks to you and the monitoring centre.
               <br />
-              <span className="font-semibold text-slate-900 mt-2 inline-block">
+              <span className="font-semibold text-foreground mt-2 inline-block">
                 If anything feels wrong, it screams for you.
               </span>
             </p>

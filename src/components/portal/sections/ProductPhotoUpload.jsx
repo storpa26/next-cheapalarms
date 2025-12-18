@@ -466,7 +466,7 @@ function ProductSlot({
             </Button>
             <div className="absolute bottom-4 left-4 right-4 bg-black/60 text-white p-3 rounded-lg backdrop-blur-sm">
               <p className="text-sm font-medium">{previewPhoto.filename}</p>
-              <p className="text-xs text-gray-300 mt-1">
+              <p className="text-xs text-muted-foreground mt-1">
                 {productName} #{slotIndex} - Photo {previewPhoto.photoIndex}
               </p>
             </div>

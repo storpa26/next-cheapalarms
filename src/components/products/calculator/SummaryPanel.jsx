@@ -1,3 +1,5 @@
+import { AlertCircle, CheckCircle2 } from "lucide-react";
+
 function LimitMeter({ label, used, max }) {
   const percentage = Math.min(100, Math.round((used / max) * 100));
   return (
@@ -22,7 +24,35 @@ export default function SummaryPanel({
   limitUsage,
   onAddToCart,
   inCart,
+  hasConfigChanged = false,
 }) {
+  // Determine button text and styling
+  const getButtonState = () => {
+    if (!inCart) {
+      return {
+        text: "Add configuration",
+        className: "bg-primary text-white hover:bg-primary/90",
+        disabled: false,
+      };
+    }
+    
+    if (hasConfigChanged) {
+      return {
+        text: "Update configuration",
+        className: "bg-primary text-white hover:bg-primary/90",
+        disabled: false,
+      };
+    }
+    
+    return {
+      text: "Configuration saved",
+      className: "bg-success text-success-foreground cursor-default",
+      disabled: false,
+    };
+  };
+
+  const buttonState = getButtonState();
+
   return (
     <aside className="space-y-6 lg:sticky lg:top-8">
       <div className="rounded-3xl border bg-white p-6 shadow-lg">
@@ -66,15 +96,32 @@ export default function SummaryPanel({
           </div>
         </div>
 
+        {/* Configuration Status Indicator */}
+        {inCart && hasConfigChanged && (
+          <div className="mt-4 rounded-lg border border-warning/30 bg-warning-bg/50 p-3 flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 text-warning flex-shrink-0" />
+            <p className="text-xs text-warning font-medium">
+              Configuration has been modified
+            </p>
+          </div>
+        )}
+
+        {inCart && !hasConfigChanged && (
+          <div className="mt-4 rounded-lg border border-success/30 bg-success-bg/50 p-3 flex items-center gap-2">
+            <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
+            <p className="text-xs text-success font-medium">
+              Configuration saved
+            </p>
+          </div>
+        )}
+
         <button
           type="button"
           onClick={onAddToCart}
-          disabled={inCart}
-          className={`mt-6 w-full rounded-full px-5 py-3 text-sm font-semibold ${
-            inCart ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-primary text-white hover:bg-primary/90"
-          }`}
+          disabled={buttonState.disabled}
+          className={`mt-6 w-full rounded-full px-5 py-3 text-sm font-semibold transition-all duration-200 ${buttonState.className}`}
         >
-          {inCart ? "Configuration saved" : "Add configuration"}
+          {buttonState.text}
         </button>
       </div>
 

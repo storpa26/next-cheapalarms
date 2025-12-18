@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
 import { Modal } from './Modal';
+import { toast } from 'sonner';
 
 /**
  * Modal for applying discounts or surcharges to estimate
@@ -18,7 +19,7 @@ export function DiscountModal({ isOpen, onClose, onApply, currentDiscount, estim
     e.preventDefault();
 
     if (!value || parseFloat(value) <= 0) {
-      alert('Please enter a valid amount');
+      toast.error('Please enter a valid amount');
       return;
     }
 

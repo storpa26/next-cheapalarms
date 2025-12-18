@@ -46,7 +46,7 @@ export default function InvoicesListPage() {
     refetch();
   };
 
-  const invoices = data?.items ?? [];
+  const invoices = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
 
@@ -81,7 +81,6 @@ export default function InvoicesListPage() {
   }, [invoices]);
 
   const handleRowClick = (invoiceId) => {
-    setSelectedInvoiceId(invoiceId);
     router.replace(
       {
         pathname: router.pathname,

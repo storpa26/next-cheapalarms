@@ -398,7 +398,7 @@ export default function StoryRail() {
                     <div className="flex items-start gap-4">
                       {/* Scene number badge */}
                       <div className={`
-                        w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-white font-bold
+                        w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 text-primary-foreground font-bold
                         ${scene.color === 'wolf' ? 'bg-wolf' : 
                           scene.color === 'primary' ? 'gradient-accent' : 
                           'gradient-teal'}

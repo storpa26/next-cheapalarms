@@ -55,11 +55,11 @@ export default function MiniCalculator() {
   const rec = recommendations[selectedSize];
 
   return (
-    <section className="py-20 px-4 bg-[#F5FBFD]">
+    <section className="py-20 px-4 bg-muted">
       <div className="container max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">Size calculator</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
             What size is your castle?
           </h2>
         </div>
@@ -75,7 +75,7 @@ export default function MiniCalculator() {
                 className={`flex items-center gap-3 rounded-full px-6 py-4 text-base font-medium transition-all duration-300 ${
                   selectedSize === size.id
                     ? "bg-gradient-to-r from-[#0DC5C7] to-[#0ab5b6] text-white shadow-lg scale-105"
-                    : "bg-white border-2 border-slate-200 text-slate-700 hover:border-[#0DC5C7] hover:shadow-md"
+                    : "bg-background border-2 border-border text-foreground hover:border-[#0DC5C7] hover:shadow-md"
                 }`}
               >
                 <span className="text-2xl" role="img" aria-hidden>
@@ -89,8 +89,8 @@ export default function MiniCalculator() {
 
         {/* Recommended bundle */}
         <div className="max-w-4xl mx-auto">
-          <Card className="p-8 bg-white">
-            <h3 className="text-2xl font-bold mb-6 text-slate-900 text-center">
+          <Card className="p-8 bg-background">
+            <h3 className="text-2xl font-bold mb-6 text-foreground text-center">
               Suggested protection for a typical {homeSizes.find((s) => s.id === selectedSize)?.label.toLowerCase()}:
             </h3>
 
@@ -100,7 +100,7 @@ export default function MiniCalculator() {
                   <span className="text-2xl" role="img" aria-hidden>
                     🧠
                   </span>
-                  <span className="text-slate-700">
+                  <span className="text-muted-foreground">
                     {rec.hub} × Ajax Hub 2 (4G)
                   </span>
                 </div>
@@ -108,7 +108,7 @@ export default function MiniCalculator() {
                   <span className="text-2xl" role="img" aria-hidden>
                     👁️
                   </span>
-                  <span className="text-slate-700">
+                  <span className="text-muted-foreground">
                     {rec.motion} × indoor motion &quot;eyes&quot;
                   </span>
                 </div>
@@ -116,7 +116,7 @@ export default function MiniCalculator() {
                   <span className="text-2xl" role="img" aria-hidden>
                     🚪
                   </span>
-                  <span className="text-slate-700">
+                  <span className="text-muted-foreground">
                     {rec.contacts} × door / window contacts
                   </span>
                 </div>
@@ -125,7 +125,7 @@ export default function MiniCalculator() {
                     <span className="text-2xl" role="img" aria-hidden>
                       🔍
                     </span>
-                    <span className="text-slate-700">
+                    <span className="text-muted-foreground">
                       {rec.outdoor} × outside motion detector
                     </span>
                   </div>
@@ -137,7 +137,7 @@ export default function MiniCalculator() {
                   <span className="text-2xl" role="img" aria-hidden>
                     📢
                   </span>
-                  <span className="text-slate-700">
+                  <span className="text-muted-foreground">
                     {rec.sirens.indoor} × indoor siren, {rec.sirens.outdoor} × outdoor siren
                   </span>
                 </div>
@@ -145,7 +145,7 @@ export default function MiniCalculator() {
                   <span className="text-2xl" role="img" aria-hidden>
                     📱
                   </span>
-                  <span className="text-slate-700">
+                  <span className="text-muted-foreground">
                     {rec.keypad} × keypad, {rec.keyfobs} × keyfobs
                   </span>
                 </div>
@@ -154,16 +154,16 @@ export default function MiniCalculator() {
 
             <div className="grid md:grid-cols-3 gap-4 mb-8">
               <Card className="p-4 bg-[#F2FEFE] border-l-4" style={{ borderLeftColor: brandTeal }}>
-                <h4 className="font-semibold mb-2 text-slate-900">Good</h4>
-                <p className="text-sm text-slate-600">Stops the Wolf at the doors.</p>
+                <h4 className="font-semibold mb-2 text-foreground">Good</h4>
+                <p className="text-sm text-muted-foreground">Stops the Wolf at the doors.</p>
               </Card>
               <Card className="p-4 bg-[#F2FEFE] border-l-4" style={{ borderLeftColor: brandTeal }}>
-                <h4 className="font-semibold mb-2 text-slate-900">Better</h4>
-                <p className="text-sm text-slate-600">Add cameras for extra proof.</p>
+                <h4 className="font-semibold mb-2 text-foreground">Better</h4>
+                <p className="text-sm text-muted-foreground">Add cameras for extra proof.</p>
               </Card>
               <Card className="p-4 bg-[#F2FEFE] border-l-4" style={{ borderLeftColor: brandTeal }}>
-                <h4 className="font-semibold mb-2 text-slate-900">Best</h4>
-                <p className="text-sm text-slate-600">
+                <h4 className="font-semibold mb-2 text-foreground">Best</h4>
+                <p className="text-sm text-muted-foreground">
                   Add fire and leak sensors so your home is protected from more than just intruders.
                 </p>
               </Card>
@@ -172,12 +172,12 @@ export default function MiniCalculator() {
             <div className="text-center">
               <Link
                 href="/products/sample"
-                className="inline-block rounded-full px-8 py-4 text-base font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105"
+                className="inline-block rounded-full px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all duration-300 hover:scale-105"
                 style={{ background: `linear-gradient(135deg, ${brandTeal}, #0ab5b6)` }}
               >
                 Get this designed properly
               </Link>
-              <p className="mt-4 text-sm text-slate-600">
+              <p className="mt-4 text-sm text-muted-foreground">
                 We design and install Ajax systems across Australia. Tell us about your place and we&apos;ll do the
                 thinking for you.
               </p>

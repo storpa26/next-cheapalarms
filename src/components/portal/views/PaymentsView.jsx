@@ -14,10 +14,10 @@ export function PaymentsView({ view }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[32px] border border-slate-100 bg-white p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
-        <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Financial overview</p>
-        <h1 className="mt-2 text-3xl font-semibold text-slate-900">Payments & Documents</h1>
-        <p className="mt-1 text-sm text-slate-500">
+      <div className="rounded-[32px] border border-border-subtle bg-background p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+        <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Financial overview</p>
+        <h1 className="mt-2 text-3xl font-semibold text-foreground">Payments & Documents</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
           Track your balance, view payment history, and access all important documents.
         </p>
       </div>

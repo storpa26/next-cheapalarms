@@ -3,7 +3,7 @@ import { Topbar } from "./Topbar";
 
 export default function AdminLayout({ title = "Admin", children }) {
   return (
-    <main className="bg-gray-50 text-gray-900 min-h-screen">
+    <main className="bg-muted text-foreground min-h-screen">
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex-1 flex flex-col">

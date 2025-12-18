@@ -17,10 +17,10 @@ export function ProductListCard({
     <div
       onClick={onClick}
       className={`
-        relative bg-white rounded-2xl p-4 border transition-all active:scale-[0.99] cursor-pointer
+        relative bg-background rounded-2xl p-4 border transition-all active:scale-[0.99] cursor-pointer
         ${hasError 
-          ? 'border-red-300 shadow-[0_0_0_1px_rgba(239,68,68,0.2)]' 
-          : 'border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200'
+          ? 'border-error/50 shadow-[0_0_0_1px_rgba(239,68,68,0.2)]' 
+          : 'border-border-subtle shadow-sm hover:shadow-md hover:border-border'
         }
       `}
     >
@@ -28,9 +28,9 @@ export function ProductListCard({
         {/* Icon Area */}
         <div className={`
           w-12 h-12 rounded-2xl flex items-center justify-center shrink-0
-          ${status === 'ready' ? 'bg-primary/10' : 'bg-slate-50'}
+          ${status === 'ready' ? 'bg-primary/10' : 'bg-muted'}
         `}>
-          <Package className={`h-6 w-6 ${status === 'ready' ? 'text-primary' : 'text-slate-600'}`} />
+          <Package className={`h-6 w-6 ${status === 'ready' ? 'text-primary' : 'text-muted-foreground'}`} />
         </div>
 
         {/* Content Area */}
@@ -38,7 +38,7 @@ export function ProductListCard({
           <div className="flex justify-between items-start mb-1">
             <h3 className="font-semibold text-sm truncate pr-2">
               {name} {quantity > 1 && `(x${quantity})`}
-              {required && <span className="text-red-500 ml-1">*</span>}
+              {required && <span className="text-error ml-1">*</span>}
             </h3>
             <div className="shrink-0 ml-2">
               <StatusPill status={status} />
@@ -46,7 +46,7 @@ export function ProductListCard({
           </div>
 
           {/* Helper Text */}
-          <p className={`text-xs mb-3 ${hasError ? 'text-red-500 font-medium' : 'text-slate-500'}`}>
+          <p className={`text-xs mb-3 ${hasError ? 'text-error font-medium' : 'text-muted-foreground'}`}>
             {hasError 
               ? "Action required" 
               : status === 'skipped' 
@@ -63,7 +63,7 @@ export function ProductListCard({
               {photos.slice(0, 3).map((photo, idx) => (
                 <div 
                   key={photo.attachmentId || photo.url || idx} 
-                  className="w-8 h-8 rounded-lg border-2 border-white overflow-hidden bg-slate-200 relative z-0"
+                  className="w-8 h-8 rounded-lg border-2 border-background overflow-hidden bg-muted relative z-0"
                 >
                   <img 
                     src={photo.url} 
@@ -73,7 +73,7 @@ export function ProductListCard({
                 </div>
               ))}
               {photos.length > 3 && (
-                <div className="w-8 h-8 rounded-lg border-2 border-white overflow-hidden bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">
+                <div className="w-8 h-8 rounded-lg border-2 border-background overflow-hidden bg-muted flex items-center justify-center text-[10px] font-bold text-muted-foreground">
                   +{photos.length - 3}
                 </div>
               )}
@@ -83,7 +83,7 @@ export function ProductListCard({
         
         {/* Chevron for affordance */}
         {!showThumbnails && (
-          <div className="self-center text-slate-300">
+          <div className="self-center text-muted-foreground/50">
             <ChevronRight size={20} />
           </div>
         )}

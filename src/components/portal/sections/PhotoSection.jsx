@@ -195,7 +195,7 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
             </form>
           )}
           {emailError && (
-            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{emailError}</p>
+            <p className="mt-2 text-xs text-error">{emailError}</p>
           )}
         </div>
         {photoTab === "uploaded" ? (
@@ -241,7 +241,7 @@ export const PhotoSection = memo(function PhotoSection({ photos, photoTab, setPh
               Upload photos for each product in your estimate. Click on a slot to add photos (up to 2 per slot).
             </p>
             {uploadError && (
-              <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
+              <div className="rounded-md bg-error-bg p-3 text-sm text-error">
                 {uploadError}
               </div>
             )}

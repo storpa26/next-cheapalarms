@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { wpFetch } from '@/lib/wp';
+import { DEFAULT_PAGE_SIZE } from '@/lib/admin/constants';
 
 /**
  * React Query hook for fetching admin estimates list
  */
-export function useAdminEstimates({ search, status, portalStatus, workflowStatus, page = 1, pageSize = 20, enabled = true } = {}) {
+export function useAdminEstimates({ search, status, portalStatus, workflowStatus, page = 1, pageSize = DEFAULT_PAGE_SIZE, enabled = true } = {}) {
   return useQuery({
     queryKey: ['admin-estimates', search, status, portalStatus, workflowStatus, page, pageSize],
     queryFn: async () => {

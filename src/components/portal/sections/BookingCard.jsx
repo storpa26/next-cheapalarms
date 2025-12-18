@@ -141,12 +141,12 @@ export function BookingCard({ estimateId, locationId, inviteToken, booking, work
   const today = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in duration-300">
+    <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Installation Booking</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Schedule Installation</h3>
-          <p className="text-sm text-slate-500">Choose your preferred date and time</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Installation Booking</p>
+          <h3 className="mt-2 text-2xl font-semibold text-foreground">Schedule Installation</h3>
+          <p className="text-sm text-muted-foreground">Choose your preferred date and time</p>
         </div>
         <div className="rounded-full bg-primary/15 p-4">
           <Calendar className="h-6 w-6 text-primary" />
@@ -194,14 +194,14 @@ export function BookingCard({ estimateId, locationId, inviteToken, booking, work
             placeholder="Any special instructions or access details..."
             rows={3}
             disabled={isSubmitting}
-            className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full rounded-xl border border-border px-4 py-3 text-sm transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 disabled:opacity-50 disabled:cursor-not-allowed"
           />
         </div>
 
         {error && (
-          <div className="rounded-xl border border-red-200 bg-red-50 p-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <p className="text-sm text-red-800 flex items-center gap-2">
-              <span className="text-red-600">⚠</span>
+          <div className="rounded-xl border border-error/30 bg-error-bg p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <p className="text-sm text-error flex items-center gap-2">
+              <span className="text-error">⚠</span>
               {error}
             </p>
           </div>

@@ -4,7 +4,7 @@ const brandTeal = "#0DC5C7";
 
 export default function CtaStrip() {
   return (
-    <section className="bg-gradient-to-br from-[#F2FCFD] to-[#E8F7F7] py-20 px-4">
+    <section className="bg-gradient-to-br from-muted to-muted/80 py-20 px-4">
       <div className="container max-w-6xl mx-auto">
         <div className="text-center mb-12">
           <div className="inline-flex items-center gap-3 mb-6">
@@ -18,10 +18,10 @@ export default function CtaStrip() {
               🐺
             </span>
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-bold mb-4 text-foreground">
             Let the Hub stay up late so you don&apos;t have to.
           </h2>
-          <p className="text-xl text-slate-700 max-w-3xl mx-auto leading-relaxed">
+          <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Tell us about your home and we&apos;ll design an Ajax Hub 2 system that keeps the Wolf out and your Pig
             brain in rest mode.
           </p>
@@ -30,7 +30,7 @@ export default function CtaStrip() {
         <div className="flex flex-wrap justify-center gap-4">
           <Link
             href="/products/sample"
-            className="rounded-full px-8 py-4 text-base font-semibold text-white shadow-lg transition-all duration-300 hover:scale-105"
+            className="rounded-full px-8 py-4 text-base font-semibold text-primary-foreground shadow-lg transition-all duration-300 hover:scale-105"
             style={{ background: `linear-gradient(135deg, ${brandTeal}, #0ab5b6)` }}
           >
             Talk to a security designer

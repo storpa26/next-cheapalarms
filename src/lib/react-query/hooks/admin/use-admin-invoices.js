@@ -1,10 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { wpFetch } from '@/lib/wp';
+import { DEFAULT_PAGE_SIZE } from '@/lib/admin/constants';
 
 /**
  * React Query hook for fetching admin invoices list
  */
-export function useAdminInvoices({ search, status, page = 1, pageSize = 20, enabled = true } = {}) {
+export function useAdminInvoices({ search, status, page = 1, pageSize = DEFAULT_PAGE_SIZE, enabled = true } = {}) {
   return useQuery({
     queryKey: ['admin-invoices', search, status, page, pageSize],
     queryFn: async () => {

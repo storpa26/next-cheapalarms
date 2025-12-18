@@ -56,7 +56,7 @@ function RouteProgressOverlay() {
 
   return (
     <div className="fixed inset-0 z-9999 flex items-center justify-center bg-background/80 backdrop-blur">
-      <div className="w-[320px] rounded-2xl border border-primary/30 bg-linear-to-br from-card via-background to-card px-8 py-6 text-center shadow-[0_30px_80px_-40px_rgba(201,83,117,0.9)]">
+      <div className="w-[320px] rounded-2xl border border-primary/30 bg-gradient-to-br from-card via-background to-card px-8 py-6 text-center shadow-[0_30px_80px_-40px_rgba(201,83,117,0.9)]">
         <div className="flex justify-center">
           <Spinner size="xl" className="text-primary" />
         </div>

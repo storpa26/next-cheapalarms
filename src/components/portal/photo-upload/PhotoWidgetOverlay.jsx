@@ -38,20 +38,20 @@ export function PhotoWidgetOverlay({ isOpen, onClose, estimateId, locationId }) 
     <div className="fixed inset-0 z-50 flex items-center justify-center md:justify-end">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-in fade-in"
+        className="absolute inset-0 bg-foreground/60 backdrop-blur-sm transition-opacity animate-in fade-in"
         onClick={onClose}
         aria-hidden="true"
       />
 
       {/* Widget Container - Side drawer on desktop, full screen on mobile */}
-      <div className="relative w-full h-full md:w-[480px] bg-white shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
+      <div className="relative w-full h-full md:w-[480px] bg-background shadow-2xl animate-in slide-in-from-right duration-300 flex flex-col">
         {/* Close button - visible on mobile */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 p-2 bg-white/90 backdrop-blur rounded-full shadow-lg hover:bg-white transition-colors md:hidden"
+          className="absolute top-4 right-4 z-10 p-2 bg-background/90 backdrop-blur rounded-full shadow-lg hover:bg-background transition-colors md:hidden"
           aria-label="Close"
         >
-          <X className="h-5 w-5 text-slate-600" />
+          <X className="h-5 w-5 text-muted-foreground" />
         </button>
 
         {/* Scrollable content */}

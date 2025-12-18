@@ -18,12 +18,12 @@ export function PhotoGrid({ photos = [], onDelete, uploading = false }) {
         {photos.map((photo) => (
           <div 
             key={photo.attachmentId || photo.url || photo.id} 
-            className="aspect-square rounded-xl bg-slate-100 relative overflow-hidden group border border-slate-100"
+            className="aspect-square rounded-xl bg-muted relative overflow-hidden group border border-border-subtle"
           >
             {photo.status === 'uploading' ? (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-50">
+              <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted">
                 <Loader2 className="animate-spin text-primary mb-1" size={20} />
-                <span className="text-[10px] text-slate-400 font-medium">Uploading...</span>
+                <span className="text-[10px] text-muted-foreground font-medium">Uploading...</span>
               </div>
             ) : (
               <>
@@ -41,7 +41,7 @@ export function PhotoGrid({ photos = [], onDelete, uploading = false }) {
                       e.stopPropagation();
                       setPreviewPhoto(photo);
                     }}
-                    className="p-1.5 bg-white rounded-full text-slate-700 hover:scale-110 transition-transform"
+                    className="p-1.5 bg-background rounded-full text-foreground hover:scale-110 transition-transform"
                     title="Preview"
                   >
                     <Eye size={14} />
@@ -52,7 +52,7 @@ export function PhotoGrid({ photos = [], onDelete, uploading = false }) {
                       e.stopPropagation();
                       onDelete?.(photo);
                     }}
-                    className="p-1.5 bg-white rounded-full text-red-500 hover:scale-110 transition-transform"
+                    className="p-1.5 bg-background rounded-full text-error hover:scale-110 transition-transform"
                     title="Delete"
                   >
                     <Trash2 size={14} />
@@ -60,7 +60,7 @@ export function PhotoGrid({ photos = [], onDelete, uploading = false }) {
                 </div>
                 
                 {/* Saved badge */}
-                <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-green-500/90 backdrop-blur text-white text-[9px] font-bold rounded">
+                <div className="absolute bottom-1 right-1 px-1.5 py-0.5 bg-success/90 backdrop-blur text-success-foreground text-[9px] font-bold rounded">
                   Saved
                 </div>
               </>

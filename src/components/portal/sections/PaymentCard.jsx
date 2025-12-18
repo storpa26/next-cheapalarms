@@ -26,28 +26,28 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
     };
 
     return (
-      <div className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Payment</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-900">Payment Confirmed</h3>
-            <p className="text-sm text-slate-500">Your payment has been processed</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Payment</p>
+            <h3 className="mt-2 text-2xl font-semibold text-foreground">Payment Confirmed</h3>
+            <p className="text-sm text-muted-foreground">Your payment has been processed</p>
           </div>
-          <div className="rounded-full bg-emerald-100 p-4 animate-in zoom-in duration-300">
-            <CheckCircle2 className="h-6 w-6 text-emerald-600" />
+          <div className="rounded-full bg-success-bg p-4 animate-in zoom-in duration-300">
+            <CheckCircle2 className="h-6 w-6 text-success" />
           </div>
         </div>
 
-        <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+        <div className="mt-5 rounded-2xl border border-success/30 bg-success-bg p-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <span className="text-sm text-emerald-600">Amount Paid</span>
-              <span className="text-2xl font-semibold text-emerald-900">
+              <span className="text-sm text-success">Amount Paid</span>
+              <span className="text-2xl font-semibold text-success">
                 {formatAmount(payment.amount)}
               </span>
             </div>
             {payment.paidAt && (
-              <p className="text-xs text-emerald-600">
+              <p className="text-xs text-success">
                 Paid on {new Date(payment.paidAt).toLocaleDateString('en-AU', {
                   year: 'numeric',
                   month: 'long',
@@ -140,12 +140,12 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
   };
 
   return (
-    <div className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in duration-300">
+    <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Payment</p>
-          <h3 className="mt-2 text-2xl font-semibold text-slate-900">Complete Payment</h3>
-          <p className="text-sm text-slate-500">Finalize your estimate payment</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Payment</p>
+          <h3 className="mt-2 text-2xl font-semibold text-foreground">Complete Payment</h3>
+          <p className="text-sm text-muted-foreground">Finalize your estimate payment</p>
         </div>
         <div className="rounded-full bg-secondary/15 p-4">
           <CreditCard className="h-6 w-6 text-secondary" />
@@ -153,24 +153,24 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
       </div>
 
       <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Total Amount</p>
-          <p className="mt-2 text-3xl font-semibold text-slate-900">
+        <div className="rounded-2xl border border-border bg-muted p-4">
+          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Total Amount</p>
+          <p className="mt-2 text-3xl font-semibold text-foreground">
             {formatAmount(amount)}
           </p>
         </div>
-        <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-          <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Payment Method</p>
-          <p className="mt-2 text-lg font-semibold text-slate-900">Mock Payment</p>
-          <p className="text-xs text-slate-500">For testing purposes</p>
+        <div className="rounded-2xl border border-border bg-muted p-4">
+          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Payment Method</p>
+          <p className="mt-2 text-lg font-semibold text-foreground">Mock Payment</p>
+          <p className="text-xs text-muted-foreground">For testing purposes</p>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="mt-5" noValidate>
         {error && (
-          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 animate-in fade-in slide-in-from-top-2 duration-300">
-            <p className="text-sm text-red-800 flex items-center gap-2">
-              <span className="text-red-600">⚠</span>
+          <div className="mb-4 rounded-xl border border-error/30 bg-error-bg p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+            <p className="text-sm text-error flex items-center gap-2">
+              <span className="text-error">⚠</span>
               {error}
             </p>
           </div>

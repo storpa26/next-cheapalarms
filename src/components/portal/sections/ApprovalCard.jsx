@@ -2,6 +2,9 @@ import { ArrowRight, Shield, Sparkles, CheckCircle2, XCircle, AlertCircle } from
 import { useState, useEffect } from "react";
 import { useAcceptEstimate, useRejectEstimate, useRetryInvoice } from "@/lib/react-query/hooks";
 import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const quoteStatus = view?.quote?.status || "sent";
@@ -41,7 +44,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
 
   const handleConfirmAccept = async () => {
     if (!estimateId) {
-      alert("Missing estimate ID");
+      toast.error("Missing estimate ID");
       return;
     }
     try {
@@ -53,7 +56,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       // Success - the mutation will automatically refetch and update the UI
     } catch (error) {
       // Error is handled by React Query's onError callback
-      alert(error.message || "Failed to accept estimate. Please try again.");
+      toast.error(error.message || "Failed to accept estimate. Please try again.");
     }
   };
 
@@ -68,7 +71,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       setShowRejectConfirm(false);
       setRejectReason("");
     } catch (error) {
-      alert(error.message || "Failed to reject estimate");
+      toast.error(error.message || "Failed to reject estimate");
     }
   };
 
@@ -87,12 +90,12 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
 
   return (
     <>
-      <div className="rounded-[28px] border border-slate-100 bg-white p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Approval & payment</p>
-            <h3 className="mt-2 text-2xl font-semibold text-slate-900">Finalize estimate</h3>
-            <p className="text-sm text-slate-500">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Approval & payment</p>
+            <h3 className="mt-2 text-2xl font-semibold text-foreground">Finalize estimate</h3>
+            <p className="text-sm text-muted-foreground">
               {isPending
                 ? "Review and accept or reject your estimate"
                 : isAccepted
@@ -106,18 +109,18 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
         </div>
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Estimate total</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
+          <div className="rounded-2xl border border-border bg-muted p-4">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Estimate total</p>
+            <p className="mt-2 text-3xl font-semibold text-foreground">
               {mounted && total > 0 ? `$${total.toLocaleString("en-AU")}` : total > 0 ? `$${total}` : "—"}
             </p>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-muted-foreground">
               {hasPhotos ? "Final pricing" : "Preliminary pricing"}
             </p>
           </div>
-          <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Install window</p>
-            <p className="mt-2 text-3xl font-semibold text-slate-900">
+          <div className="rounded-2xl border border-border bg-muted p-4">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Install window</p>
+            <p className="mt-2 text-3xl font-semibold text-foreground">
               {mounted && scheduledFor
                 ? new Date(scheduledFor).toLocaleDateString("en-US", {
                     month: "short",
@@ -127,19 +130,19 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   ? new Date(scheduledFor).toISOString().split("T")[0]
                   : "TBD"}
             </p>
-            <p className="text-xs text-slate-500">Tentative until approval</p>
+            <p className="text-xs text-muted-foreground">Tentative until approval</p>
           </div>
         </div>
 
         {/* Status Display */}
         {isAccepted && (
-          <div className="mt-5 rounded-2xl bg-emerald-50 border border-emerald-200 p-4">
+          <div className="mt-5 rounded-2xl bg-success-bg border border-success/30 p-4">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-              <p className="text-sm font-semibold text-emerald-800">✓ Estimate Accepted</p>
+              <CheckCircle2 className="h-5 w-5 text-success" />
+              <p className="text-sm font-semibold text-success">✓ Estimate Accepted</p>
             </div>
             {acceptedAt && (
-              <p className="text-xs text-emerald-600 mt-1">
+              <p className="text-xs text-success mt-1">
                 Accepted on{" "}
                 {mounted
                   ? new Date(acceptedAt).toLocaleDateString("en-AU", {
@@ -154,14 +157,14 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
         )}
 
         {invoice && (
-          <div className="mt-4 rounded-2xl border border-slate-100 bg-white p-4">
+          <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-slate-400">Invoice</p>
-                <p className="mt-1 text-sm font-semibold text-slate-900">
+                <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Invoice</p>
+                <p className="mt-1 text-sm font-semibold text-foreground">
                   {invoice.number || invoice.id || "Pending number"}
                 </p>
-                <p className="text-xs text-slate-500 capitalize">
+                <p className="text-xs text-muted-foreground capitalize">
                   Status: {invoice.status || "pending"}
                 </p>
               </div>
@@ -181,12 +184,12 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
         )}
 
         {isRejected && (
-          <div className="mt-5 rounded-2xl bg-red-50 border border-red-200 p-4">
+          <div className="mt-5 rounded-2xl bg-error-bg border border-error/30 p-4">
             <div className="flex items-center gap-2">
-              <XCircle className="h-5 w-5 text-red-600" />
-              <p className="text-sm font-semibold text-red-800">✗ Estimate Rejected</p>
+              <XCircle className="h-5 w-5 text-error" />
+              <p className="text-sm font-semibold text-error">✗ Estimate Rejected</p>
             </div>
-            <p className="text-xs text-red-600 mt-1">
+            <p className="text-xs text-error mt-1">
               If you have questions, please contact support.
             </p>
           </div>
@@ -216,10 +219,10 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
 
         {/* Action Buttons - Only show when pending and not rejected */}
         {isPending && !isRejected && (
-          <div className="mt-5 grid gap-3 md:grid-cols-2">
+          <div className="mt-5 space-y-3">
             {isGuestMode ? (
-              <div className="col-span-2 rounded-2xl border-2 border-slate-200 bg-slate-50 px-4 py-4 text-center">
-                <p className="text-sm font-medium text-slate-600">
+              <div className="rounded-2xl border-2 border-border bg-muted px-4 py-4 text-center">
+                <p className="text-sm font-medium text-muted-foreground">
                   Please create an account to accept or reject this estimate
                 </p>
               </div>
@@ -230,7 +233,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   onClick={handleAccept}
                   disabled={isProcessing}
                   variant="default"
-                  className="flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
+                  className="w-full h-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
                 >
                   {isProcessing ? (
                     <>
@@ -239,7 +242,8 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                     </>
                   ) : (
                     <>
-                      Accept Estimate <ArrowRight className="h-4 w-4" />
+                      <span>Accept</span>
+                      <ArrowRight className="h-4 w-4" />
                     </>
                   )}
                 </Button>
@@ -248,7 +252,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   onClick={handleReject}
                   disabled={isProcessing}
                   variant="destructive"
-                  className="flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
+                  className="w-full h-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
                 >
                   {isProcessing ? (
                     <>
@@ -257,7 +261,8 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                     </>
                   ) : (
                     <>
-                      Reject Estimate <XCircle className="h-4 w-4" />
+                      <span>Reject</span>
+                      <XCircle className="h-4 w-4" />
                     </>
                   )}
                 </Button>

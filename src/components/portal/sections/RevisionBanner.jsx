@@ -52,9 +52,9 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
         {/* Pricing Impact */}
         <div className="grid md:grid-cols-2 gap-6 my-6">
           {/* Original Price */}
-          <div className="bg-white/70 rounded-xl p-4 border border-slate-200">
-            <p className="text-xs uppercase tracking-wide text-slate-500 mb-2">Original Estimate</p>
-            <p className="text-2xl font-semibold text-slate-400 line-through">
+          <div className="bg-surface/70 rounded-xl p-4 border border-border">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Original Estimate</p>
+            <p className="text-2xl font-semibold text-muted-foreground line-through">
               {currency} {(revision.oldTotal || 0).toFixed(2)}
             </p>
           </div>
@@ -62,8 +62,8 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           {/* New Price */}
           <div className={`rounded-xl p-4 border-2 ${
             isSavings 
-              ? 'bg-gradient-to-br from-green-500 to-emerald-600 border-green-400' 
-              : 'bg-gradient-to-br from-blue-500 to-sky-600 border-blue-400'
+              ? 'bg-gradient-to-br from-success to-success/80 border-success/50' 
+              : 'bg-gradient-to-br from-info to-info/80 border-info/50'
           }`}>
             <p className="text-xs uppercase tracking-wide text-white/80 mb-2">Your New Price</p>
             <p className="text-3xl font-bold text-white">
@@ -76,8 +76,8 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
         {netChange !== 0 && (
           <div className={`rounded-xl p-4 text-center ${
             isSavings 
-              ? 'bg-gradient-to-r from-green-600 to-emerald-700'
-              : 'bg-gradient-to-r from-blue-600 to-sky-700'
+              ? 'bg-gradient-to-r from-success to-success/90'
+              : 'bg-gradient-to-r from-info to-info/90'
           }`}>
             {isSavings ? (
               <>
@@ -105,18 +105,18 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
 
         {/* Admin Note */}
         {revision.adminNote && (
-          <div className="mt-4 bg-white/80 rounded-xl p-4 border border-slate-200">
+          <div className="mt-4 bg-surface/80 rounded-xl p-4 border border-border">
             <div className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                isSavings ? 'bg-green-100' : 'bg-blue-100'
+                isSavings ? 'bg-success-bg' : 'bg-info-bg'
               }`}>
-                <svg className={`w-4 h-4 ${isSavings ? 'text-green-600' : 'text-blue-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className={`w-4 h-4 ${isSavings ? 'text-success' : 'text-info'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                 </svg>
               </div>
               <div>
-                <p className="text-xs uppercase tracking-wide text-slate-500 mb-1">From Your Installer</p>
-                <p className="text-slate-700 leading-relaxed">{revision.adminNote}</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">From Your Installer</p>
+                <p className="text-foreground leading-relaxed">{revision.adminNote}</p>
               </div>
             </div>
           </div>
@@ -243,7 +243,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           )}
 
           {/* Net Impact Summary */}
-          <div className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-2xl p-6 text-white">
+          <div className="bg-gradient-to-r from-foreground/90 to-foreground rounded-2xl p-6 text-white">
             <div className="flex items-center justify-between mb-4">
               <div>
                 <p className="text-white/70 text-sm mb-1">Original Estimate</p>
@@ -264,7 +264,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
                   <span className="text-white/90 font-medium">
                     {isSavings ? '🎊 Total Savings:' : 'Net Change:'}
                   </span>
-                  <span className={`text-2xl font-black ${isSavings ? 'text-green-300' : 'text-blue-300'}`}>
+                  <span className={`text-2xl font-black ${isSavings ? 'text-success' : 'text-info'}`}>
                     {isSavings && '🎉 '}{isSavings ? '-' : '+'}{currency} {Math.abs(netChange).toFixed(2)}
                   </span>
                 </div>

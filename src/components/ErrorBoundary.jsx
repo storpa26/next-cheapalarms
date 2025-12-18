@@ -49,33 +49,33 @@ export class ErrorBoundary extends React.Component {
       const isDevelopment = process.env.NODE_ENV === 'development';
       
       return (
-        <div className="flex min-h-screen items-center justify-center bg-slate-50 p-4">
-          <div className="w-full max-w-md rounded-2xl border border-red-200 bg-white p-8 shadow-lg">
+        <div className="flex min-h-screen items-center justify-center bg-muted p-4">
+          <div className="w-full max-w-md rounded-2xl border border-error/50 bg-background p-8 shadow-lg">
             <div className="flex items-center justify-center">
-              <div className="rounded-full bg-red-100 p-4">
-                <AlertCircle className="h-8 w-8 text-red-600" />
+              <div className="rounded-full bg-error-bg p-4">
+                <AlertCircle className="h-8 w-8 text-error" />
               </div>
             </div>
             
-            <h1 className="mt-6 text-center text-2xl font-bold text-slate-900">
+            <h1 className="mt-6 text-center text-2xl font-bold text-foreground">
               Something went wrong
             </h1>
             
-            <p className="mt-3 text-center text-sm text-slate-600">
+            <p className="mt-3 text-center text-sm text-muted-foreground">
               We encountered an unexpected error. Please try reloading the page.
             </p>
 
             {isDevelopment && this.state.error && (
-              <details className="mt-4 rounded-lg bg-red-50 p-4">
-                <summary className="cursor-pointer text-sm font-semibold text-red-800">
+              <details className="mt-4 rounded-lg bg-error-bg p-4">
+                <summary className="cursor-pointer text-sm font-semibold text-error">
                   Error Details (Development Only)
                 </summary>
                 <div className="mt-2 space-y-2">
-                  <p className="text-xs font-medium text-red-700">
+                  <p className="text-xs font-medium text-error">
                     {this.state.error.toString()}
                   </p>
                   {this.state.errorInfo && (
-                    <pre className="overflow-auto rounded bg-red-100 p-2 text-xs text-red-900">
+                    <pre className="overflow-auto rounded bg-error-bg/50 p-2 text-xs text-foreground">
                       {this.state.errorInfo.componentStack}
                     </pre>
                   )}
@@ -86,19 +86,19 @@ export class ErrorBoundary extends React.Component {
             <div className="mt-6 flex gap-3">
               <button
                 onClick={this.handleReload}
-                className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="flex-1 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/50"
               >
                 Reload Page
               </button>
               <button
                 onClick={this.handleGoHome}
-                className="flex-1 rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                className="flex-1 rounded-xl border-2 border-border bg-background px-4 py-3 text-sm font-semibold text-foreground transition hover:bg-muted focus:outline-none focus:ring-2 focus:ring-border"
               >
                 Go Home
               </button>
             </div>
 
-            <p className="mt-4 text-center text-xs text-slate-500">
+            <p className="mt-4 text-center text-xs text-muted-foreground">
               If this problem persists, please contact support.
             </p>
           </div>

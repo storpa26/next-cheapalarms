@@ -5,6 +5,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAdminInvoice, useSendInvoice } from "@/lib/react-query/hooks/admin";
 import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
+import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
 import { toast } from "sonner";
 
 export function InvoiceDetailContent({ invoiceId, locationId }) {
@@ -64,7 +65,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
 
   if (error || !invoice) {
     return (
-      <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200">
+      <div className="rounded-md border border-error/50 bg-error-bg p-4 text-sm text-error">
         <p className="font-semibold">Error loading invoice</p>
         <p className="mt-1">{error?.message || "Invoice not found"}</p>
       </div>
@@ -118,13 +119,13 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
             <p className="mt-1 text-2xl font-bold text-foreground">
-              {invoice.currency || "AUD"} {invoice.total?.toFixed(2) || "0.00"}
+              {invoice.currency || DEFAULT_CURRENCY} {invoice.total?.toFixed(2) || "0.00"}
             </p>
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Amount Due</p>
             <p className="mt-1 text-xl font-semibold text-foreground">
-              {invoice.currency || "AUD"} {invoice.amountDue?.toFixed(2) || "0.00"}
+              {invoice.currency || DEFAULT_CURRENCY} {invoice.amountDue?.toFixed(2) || "0.00"}
             </p>
             {invoice.dueDate && (
               <p className="mt-1 text-xs text-muted-foreground">
@@ -177,7 +178,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                           }}
                           className={`cursor-pointer transition ${
                             isSelected
-                              ? "bg-blue-50/50 dark:bg-blue-950/20 ring-2 ring-blue-200 dark:ring-blue-800"
+                              ? "bg-info-bg ring-2 ring-info/50"
                               : "hover:bg-muted/30"
                           }`}
                         >
@@ -190,7 +191,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                                 )}
                               </div>
                               {photoCount > 0 && (
-                                <div className="flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                                <div className="flex items-center gap-1 rounded-full bg-info-bg px-2 py-0.5 text-xs text-info">
                                   <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -202,10 +203,10 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                           </td>
                           <td className="px-4 py-3 text-right text-sm text-foreground">{item.qty || item.quantity || 1}</td>
                           <td className="px-4 py-3 text-right text-sm text-foreground">
-                            {invoice.currency || "AUD"} {(item.amount || 0).toFixed(2)}
+                            {invoice.currency || DEFAULT_CURRENCY} {(item.amount || 0).toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
-                            {invoice.currency || "AUD"} {((item.amount || 0) * (item.qty || item.quantity || 1)).toFixed(2)}
+                            {invoice.currency || DEFAULT_CURRENCY} {((item.amount || 0) * (item.qty || item.quantity || 1)).toFixed(2)}
                           </td>
                         </tr>
                       );
@@ -216,7 +217,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                       <tr>
                         <td colSpan={3} className="px-4 py-3 text-right text-sm text-foreground">Subtotal</td>
                         <td className="px-4 py-3 text-right text-sm text-foreground">
-                          {invoice.currency || "AUD"} {invoice.subtotal?.toFixed(2) || "0.00"}
+                          {invoice.currency || DEFAULT_CURRENCY} {invoice.subtotal?.toFixed(2) || "0.00"}
                         </td>
                       </tr>
                     )}
@@ -224,7 +225,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                       <tr>
                         <td colSpan={3} className="px-4 py-3 text-right text-sm text-foreground">Tax</td>
                         <td className="px-4 py-3 text-right text-sm text-foreground">
-                          {invoice.currency || "AUD"} {invoice.tax?.toFixed(2) || "0.00"}
+                          {invoice.currency || DEFAULT_CURRENCY} {invoice.tax?.toFixed(2) || "0.00"}
                         </td>
                       </tr>
                     )}
@@ -232,14 +233,14 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                       <tr>
                         <td colSpan={3} className="px-4 py-3 text-right text-sm text-foreground">Discount</td>
                         <td className="px-4 py-3 text-right text-sm text-foreground">
-                          -{invoice.currency || "AUD"} {invoice.discount?.toFixed(2) || "0.00"}
+                          -{invoice.currency || DEFAULT_CURRENCY} {invoice.discount?.toFixed(2) || "0.00"}
                         </td>
                       </tr>
                     )}
                     <tr>
                       <td colSpan={3} className="px-4 py-3 text-right font-semibold text-foreground">Total</td>
                       <td className="px-4 py-3 text-right font-bold text-foreground">
-                        {invoice.currency || "AUD"} {invoice.total?.toFixed(2) || "0.00"}
+                        {invoice.currency || DEFAULT_CURRENCY} {invoice.total?.toFixed(2) || "0.00"}
                       </td>
                     </tr>
                   </tfoot>
@@ -262,7 +263,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                       </p>
                     </div>
                     <p className="font-semibold text-foreground">
-                      {invoice.currency || "AUD"} {payment.amount?.toFixed(2) || "0.00"}
+                      {invoice.currency || DEFAULT_CURRENCY} {payment.amount?.toFixed(2) || "0.00"}
                     </p>
                   </div>
                 ))}
@@ -282,7 +283,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                   <span className="text-muted-foreground">Number:</span>{" "}
                   <Link
                     href={`/admin/estimates/${linkedEstimate.id}`}
-                    className="font-medium text-blue-600 hover:underline dark:text-blue-400"
+                    className="font-medium text-info hover:underline"
                   >
                     {linkedEstimate.estimateNumber || linkedEstimate.id}
                   </Link>
@@ -298,7 +299,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
               <button
                 onClick={handleSendInvoice}
                 disabled={sendInvoiceMutation.isPending}
-                className="w-full rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white transition hover:bg-green-700 disabled:opacity-50"
+                className="w-full rounded-md bg-success px-3 py-2 text-sm font-medium text-success-foreground transition hover:bg-success/90 disabled:opacity-50"
               >
                 {sendInvoiceMutation.isPending ? "Sending..." : "Send Invoice"}
               </button>

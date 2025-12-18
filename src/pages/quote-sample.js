@@ -233,7 +233,7 @@ export default function QuoteSamplePage() {
                   </div>
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-linear-to-br from-white to-slate-50 p-6 text-right shadow-inner">
+              <div className="rounded-2xl border border-slate-100 bg-gradient-to-br from-white to-slate-50 p-6 text-right shadow-inner">
                 <p className="text-xs uppercase tracking-[0.4em] text-slate-400">Currently exploring</p>
                 <p className="mt-2 text-2xl font-semibold text-slate-900">{activeQuote.label}</p>
                 <p className="text-sm text-slate-500">{activeQuote.status}</p>
@@ -347,7 +347,7 @@ export default function QuoteSamplePage() {
                   </div>
                 ))}
               </div>
-              <button className="mt-5 w-full rounded-2xl bg-linear-to-r from-primary to-secondary px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5">
+              <button className="mt-5 w-full rounded-2xl bg-gradient-to-r from-primary to-secondary px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-primary/30 transition hover:-translate-y-0.5">
                 Launch camera
               </button>
             </div>
@@ -395,7 +395,7 @@ export default function QuoteSamplePage() {
                 ))}
               </div>
               <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-                <div className="flex h-16 w-24 items-center justify-center rounded-2xl bg-linear-to-br from-primary/30 to-secondary/30 text-xs font-semibold uppercase tracking-[0.35em] text-white/80 shadow-inner">
+                <div className="flex h-16 w-24 items-center justify-center rounded-2xl bg-gradient-to-br from-primary/30 to-secondary/30 text-xs font-semibold uppercase tracking-[0.35em] text-white/80 shadow-inner">
                   15s
                 </div>
                 <div>
@@ -427,7 +427,7 @@ export default function QuoteSamplePage() {
           </section>
         </div>
 
-        <div className="fixed bottom-6 right-6 flex items-center gap-3 rounded-full border border-slate-200 bg-linear-to-r from-primary to-secondary px-5 py-3 text-white shadow-[0_15px_35px_rgba(201,83,117,0.35)]">
+        <div className="fixed bottom-6 right-6 flex items-center gap-3 rounded-full border border-slate-200 bg-gradient-to-r from-primary to-secondary px-5 py-3 text-white shadow-[0_15px_35px_rgba(201,83,117,0.35)]">
           <PhoneCall className="h-4 w-4" />
           <div>
             <p className="text-xs text-white/80">Need a human?</p>

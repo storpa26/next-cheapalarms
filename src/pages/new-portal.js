@@ -328,7 +328,7 @@ export default function NewPortalSketch() {
                     </div>
                   ))}
                 </div>
-                <button className="mt-5 w-full rounded-2xl bg-linear-to-r from-primary to-secondary px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-primary/30">
+                <button className="mt-5 w-full rounded-2xl bg-gradient-to-r from-primary to-secondary px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] text-white shadow-lg shadow-primary/30">
                   Launch camera
                 </button>
               </div>

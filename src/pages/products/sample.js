@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useRouter } from "next/router";
+import { User, Mail, Phone, CheckCircle2, AlertCircle, Sparkles, FileText, ArrowLeft } from "lucide-react";
 import CalculatorHero from "../../components/products/calculator/CalculatorHero";
 import PropertyProfileSelector from "../../components/products/calculator/PropertyProfileSelector";
 import CoveragePlanner from "../../components/products/calculator/CoveragePlanner";
@@ -7,6 +8,10 @@ import AddonsGrid from "../../components/products/calculator/AddonsGrid";
 import ServiceOptions from "../../components/products/calculator/ServiceOptions";
 import SummaryPanel from "../../components/products/calculator/SummaryPanel";
 import AddonDetailModal from "../../components/products/calculator/AddonDetailModal";
+import PropertyProfileModal from "../../components/products/calculator/PropertyProfileModal";
+import QuoteWizardProgress from "../../components/products/calculator/QuoteWizardProgress";
+import ConfigurationSummaryCard from "../../components/products/calculator/ConfigurationSummaryCard";
+import TransitionOverlay from "../../components/products/calculator/TransitionOverlay";
 import { LoginModal } from "../../components/ui/login-modal";
 import { useAjaxCalculator } from "../../hooks/useAjaxCalculator";
 
@@ -45,8 +50,12 @@ export default function SampleProductPage() {
     applyPreset,
   } = useAjaxCalculator();
 
+  const [currentStep, setCurrentStep] = useState(1); // 1 = Configuration, 2 = Contact Form
   const [inCart, setInCart] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [transitionProgress, setTransitionProgress] = useState(0);
+  const [configSnapshot, setConfigSnapshot] = useState(null);
 
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
@@ -57,6 +66,7 @@ export default function SampleProductPage() {
 
   const router = useRouter();
   const [detailAddonId, setDetailAddonId] = useState(null);
+  const [detailProfileId, setDetailProfileId] = useState(null);
 
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
@@ -72,8 +82,108 @@ export default function SampleProductPage() {
     [addonCatalog, detailAddonId],
   );
 
+  // Configuration change detection
+  const hasConfigChanged = useMemo(() => {
+    if (!configSnapshot || !inCart) return false;
+    
+    // Compare profile
+    if (configSnapshot.profileId !== profileId) return true;
+    
+    // Compare property flags
+    const flagsChanged = Object.keys(propertyFlags).some(
+      (key) => configSnapshot.propertyFlags[key] !== propertyFlags[key]
+    );
+    if (flagsChanged) return true;
+    
+    // Compare coverage
+    const coverageChanged = Object.keys(coverage).some(
+      (key) => configSnapshot.coverage[key] !== coverage[key]
+    );
+    if (coverageChanged) return true;
+    
+    // Compare addon quantities
+    const addonKeys = new Set([
+      ...Object.keys(configSnapshot.addonQuantities),
+      ...Object.keys(addonQuantities),
+    ]);
+    for (const key of addonKeys) {
+      if ((configSnapshot.addonQuantities[key] || 0) !== (addonQuantities[key] || 0)) {
+        return true;
+      }
+    }
+    
+    // Compare services
+    const servicesChanged = Object.keys(services).some(
+      (key) => configSnapshot.services[key] !== services[key]
+    );
+    if (servicesChanged) return true;
+    
+    return false;
+  }, [configSnapshot, inCart, profileId, propertyFlags, coverage, addonQuantities, services]);
+
+  // Save configuration snapshot
+  const saveConfigSnapshot = () => {
+    setConfigSnapshot({
+      profileId,
+      propertyFlags: { ...propertyFlags },
+      coverage: { ...coverage },
+      addonQuantities: { ...addonQuantities },
+      services: { ...services },
+    });
+  };
+
   function handleAddToCart() {
-    setInCart(true);
+    // If updating, reset inCart first
+    if (inCart && hasConfigChanged) {
+      setInCart(false);
+    }
+    
+    // Scroll to top immediately (before transition)
+    window.scrollTo({ top: 0, behavior: 'instant' });
+    
+    // Start transition
+    setIsTransitioning(true);
+    setTransitionProgress(0);
+    
+    // Animate progress bar
+    const startTime = Date.now();
+    const duration = 600; // 600ms transition
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, (elapsed / duration) * 100);
+      
+      setTransitionProgress(progress);
+      
+      if (progress < 100) {
+        requestAnimationFrame(animate);
+      } else {
+        // Transition complete
+        setIsTransitioning(false);
+        setInCart(true);
+        setCurrentStep(2);
+        saveConfigSnapshot();
+        
+        // Ensure we're at the top after transition
+        window.scrollTo({ top: 0, behavior: 'instant' });
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }
+
+  function handleStepNavigation(step) {
+    if (step === 1) {
+      setCurrentStep(1);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else if (step === 2 && inCart) {
+      setCurrentStep(2);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }
+
+  function handleBackToConfiguration() {
+    setCurrentStep(1);
   }
 
   async function handleSubmitQuote(e) {
@@ -245,9 +355,30 @@ export default function SampleProductPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <CalculatorHero />
-      <main className="mx-auto flex max-w-6xl flex-col gap-6 px-6 py-10 lg:flex-row">
+    <div className="min-h-screen bg-slate-50 relative">
+      {currentStep === 1 && <CalculatorHero />}
+      
+      {/* Transition Overlay */}
+      <TransitionOverlay
+        isVisible={isTransitioning}
+        progress={transitionProgress}
+        message="Preparing your quote..."
+      />
+      
+      {/* Step Container - Relative positioning for smooth transitions */}
+      <div className="relative min-h-screen lg:min-h-[calc(100vh-200px)]">
+        {/* Step 1: Configuration */}
+        <main 
+          className={`mx-auto flex max-w-6xl flex-col gap-6 px-4 sm:px-6 py-6 sm:py-10 lg:flex-row ${
+            currentStep === 1 
+              ? "opacity-100 translate-x-0 pointer-events-auto relative z-10 block" 
+              : "opacity-0 pointer-events-none absolute inset-0 z-0 hidden lg:block lg:-translate-x-full"
+          } transition-all duration-normal ease-standard`}
+          style={{ 
+            willChange: currentStep === 1 ? "auto" : "transform, opacity",
+            transitionProperty: "transform, opacity",
+          }}
+        >
         <div className="flex-1 space-y-6">
           <PropertyProfileSelector
             profiles={propertyProfiles}
@@ -255,6 +386,7 @@ export default function SampleProductPage() {
             onSelect={setProfileId}
             propertyFlags={propertyFlags}
             onToggleFlag={toggleFlag}
+            onShowDetails={setDetailProfileId}
           />
           <CoveragePlanner
             coverage={coverage}
@@ -279,127 +411,245 @@ export default function SampleProductPage() {
             limitUsage={limitUsage}
             onAddToCart={handleAddToCart}
             inCart={inCart}
+            hasConfigChanged={hasConfigChanged}
           />
         </div>
       </main>
 
-      <section className="border-t bg-white">
-        <div className="mx-auto max-w-5xl px-6 py-10">
-          <div className="mb-6 text-center">
-            <p className="text-sm uppercase tracking-wide text-muted-foreground">Ready to proceed?</p>
-            <h2 className="text-2xl font-semibold">Submit Your Quote Request</h2>
-            <p className="text-sm text-muted-foreground">
-              Enter your contact details below. We'll create your contact and estimate, then send you a portal link.
-            </p>
-          </div>
-          <div className="grid gap-8 md:grid-cols-2">
-            <div className="rounded-2xl border p-6">
-              <h3 className="text-lg font-semibold">Contact Details & Quote Request</h3>
-              <p className="text-sm text-muted-foreground mb-4">
-                We'll create your contact and estimate, then send you a portal link to view your quote.
-              </p>
-              <form onSubmit={handleSubmitQuote} className="space-y-4">
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">First name</label>
-                    <input
-                      type="text"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    />
+        {/* Step 2: Contact Form */}
+        <section 
+          id="contact-form-section"
+          className={`border-t bg-gradient-to-b from-background via-background to-muted/20 py-6 sm:py-8 md:py-10 ${
+            currentStep === 2
+              ? "opacity-100 translate-x-0 pointer-events-auto relative z-10 block"
+              : "opacity-0 pointer-events-none absolute inset-0 z-0 hidden lg:block lg:translate-x-full"
+          } transition-all duration-normal ease-standard`}
+          style={{ 
+            willChange: currentStep === 2 ? "auto" : "transform, opacity",
+            transitionProperty: "transform, opacity",
+          }}
+        >
+          <div className="mx-auto max-w-6xl px-4 sm:px-6">
+            {/* Sticky Progress Bar */}
+            <div className="mb-4 sm:mb-6">
+              <QuoteWizardProgress 
+                currentStep={currentStep} 
+                onStepClick={handleStepNavigation}
+                sticky
+              />
+            </div>
+
+            {/* Back Button */}
+            <div className="mb-3 sm:mb-4">
+              <button
+                type="button"
+                onClick={handleBackToConfiguration}
+                className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back to Configuration
+              </button>
+            </div>
+
+            {/* Configuration Summary Card - Moved to top for immediate visibility */}
+            <div className="mb-4 sm:mb-6">
+              <ConfigurationSummaryCard
+                profile={activeProfile}
+                addons={selectedAddons}
+                coverage={coverage}
+                onEdit={handleBackToConfiguration}
+              />
+            </div>
+
+          <div className="grid gap-4 sm:gap-6 md:gap-8 md:grid-cols-2 lg:grid-cols-3">
+            {/* Main Form Card - Enhanced */}
+            <div className="md:col-span-2">
+              <div className="rounded-2xl md:rounded-[32px] border border-border bg-surface p-4 sm:p-6 md:p-8 shadow-[0_25px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm">
+                {/* Form Header with Icon */}
+                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8 pb-4 sm:pb-6 border-b border-border/50">
+                  <div className="p-2 sm:p-3 rounded-xl bg-gradient-to-br from-primary/10 to-secondary/10">
+                    <User className="h-5 w-5 sm:h-6 sm:w-6 text-primary" />
                   </div>
                   <div>
-                    <label className="mb-1 block text-sm font-medium">Last name</label>
-                    <input
-                      type="text"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    />
+                    <h3 className="text-lg sm:text-xl font-semibold text-foreground">Contact Information</h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">We'll use this to create your account and send your quote</p>
                   </div>
                 </div>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">
-                      Email <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                      required
-                    />
+
+                <form onSubmit={handleSubmitQuote} className="space-y-4 sm:space-y-6">
+                  {/* Name Fields with Icons */}
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        First name
+                      </label>
+                      <input
+                        type="text"
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm transition-all duration-fast ease-standard focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 hover:border-border-subtle"
+                        placeholder="John"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        Last name
+                      </label>
+                      <input
+                        type="text"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm transition-all duration-fast ease-standard focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 hover:border-border-subtle"
+                        placeholder="Doe"
+                      />
+                    </div>
                   </div>
-                  <div>
-                    <label className="mb-1 block text-sm font-medium">Phone</label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                    />
+
+                  {/* Contact Fields with Icons */}
+                  <div className="grid gap-5 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        Email address
+                        <span className="text-error text-xs font-semibold">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm transition-all duration-fast ease-standard focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 hover:border-border-subtle"
+                        placeholder="john.doe@example.com"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        Phone number
+                      </label>
+                      <input
+                        type="tel"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="w-full rounded-xl border border-border bg-background px-4 py-3 text-sm transition-all duration-fast ease-standard focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 hover:border-border-subtle"
+                        placeholder="+61 400 000 000"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Enhanced Error/Success Messages */}
+                  {submitError ? (
+                    <div className="rounded-xl border border-error/30 bg-error-bg p-4 animate-in fade-in slide-in-from-top-2 duration-normal">
+                      <div className="flex items-center gap-3">
+                        <AlertCircle className="h-5 w-5 text-error flex-shrink-0" />
+                        <p className="text-sm text-error font-medium">{submitError}</p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {submitSuccess && !showLoginModal ? (
+                    <div className="rounded-xl border border-success/30 bg-success-bg p-4 animate-in fade-in slide-in-from-top-2 duration-normal">
+                      <div className="flex items-center gap-3">
+                        <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
+                        <p className="text-sm text-success font-medium">
+                          Quote request submitted! Redirecting to portal...
+                        </p>
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {/* Enhanced Submit Button */}
+                  <button
+                    type="submit"
+                    disabled={!inCart || !email || isSubmitting}
+                    className={`w-full rounded-xl px-6 py-4 text-sm font-semibold transition-all duration-fast ease-standard flex items-center justify-center gap-2 ${
+                      !inCart || !email || isSubmitting
+                        ? "cursor-not-allowed bg-muted text-muted-foreground opacity-50"
+                        : "bg-gradient-to-r from-primary via-secondary to-primary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+                    }`}
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <span className="h-4 w-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        Creating Contact & Estimate…
+                      </>
+                    ) : submitSuccess ? (
+                      <>
+                        <CheckCircle2 className="h-4 w-4" />
+                        Redirecting to Portal…
+                      </>
+                    ) : (
+                      <>
+                        Submit & Request Quote
+                        <Sparkles className="h-4 w-4" />
+                      </>
+                    )}
+                  </button>
+
+                  {!inCart ? (
+                    <div className="rounded-xl border border-warning/30 bg-warning-bg/50 p-3 text-center">
+                      <p className="text-xs text-warning font-medium flex items-center justify-center gap-2">
+                        <AlertCircle className="h-4 w-4" />
+                        Please add configuration to cart first
+                      </p>
+                    </div>
+                  ) : null}
+                </form>
+              </div>
+            </div>
+
+            {/* Enhanced Quote Summary Sidebar */}
+            <div className="lg:col-span-1">
+              <div className="rounded-2xl md:rounded-[32px] border border-border bg-gradient-to-br from-primary/5 via-secondary/5 to-primary/5 p-4 sm:p-6 shadow-lg lg:sticky lg:top-6 backdrop-blur-sm">
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 rounded-xl bg-primary/10">
+                    <FileText className="h-5 w-5 text-primary" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground">Quote Summary</h3>
+                </div>
+                
+                <div className="space-y-4">
+                  <div className="rounded-xl bg-background/80 backdrop-blur-sm p-4 border border-border/50">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Property Profile</p>
+                    <p className="text-base font-semibold text-foreground">
+                      {activeProfile?.title ?? "Custom"}
+                    </p>
+                  </div>
+                  
+                  <div className="rounded-xl bg-background/80 backdrop-blur-sm p-4 border border-border/50">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium uppercase tracking-wide">Status</p>
+                    <p className="text-sm font-semibold text-success flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4" />
+                      Ready for quote
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t border-border/50">
+                    <p className="text-xs text-muted-foreground mb-3 font-medium uppercase tracking-wide">What happens next?</p>
+                    <ul className="space-y-2.5 text-xs text-muted-foreground">
+                      <li className="flex items-start gap-2.5">
+                        <span className="text-primary mt-0.5 font-bold">✓</span>
+                        <span>We'll create your contact & estimate</span>
+                      </li>
+                      <li className="flex items-start gap-2.5">
+                        <span className="text-primary mt-0.5 font-bold">✓</span>
+                        <span>You'll receive a portal link via email</span>
+                      </li>
+                      <li className="flex items-start gap-2.5">
+                        <span className="text-primary mt-0.5 font-bold">✓</span>
+                        <span>View & manage your quote online</span>
+                      </li>
+                    </ul>
                   </div>
                 </div>
-
-                <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
-                  <p className="font-medium mb-1">Quote Summary</p>
-                  <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
-                    <li>Property profile: {activeProfile?.title ?? "Custom"}</li>
-                    <li>Configuration ready for personalized quote</li>
-                  </ul>
-                </div>
-
-                {submitError ? (
-                  <div className="rounded-md bg-red-50 p-3 text-sm text-red-800 dark:bg-red-950 dark:text-red-200">
-                    {submitError}
-                  </div>
-                ) : null}
-
-                {submitSuccess && !showLoginModal ? (
-                  <div className="rounded-md bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-200">
-                    Quote request submitted! Redirecting to portal...
-                  </div>
-                ) : null}
-
-                <button
-                  type="submit"
-                  disabled={!inCart || !email || isSubmitting}
-                  className={`w-full inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-all ${
-                    !inCart || !email || isSubmitting
-                      ? "cursor-not-allowed bg-gray-200 text-gray-500"
-                      : "text-white"
-                  }`}
-                  style={!inCart || !email || isSubmitting ? {} : { backgroundColor: '#c95375' }}
-                  onMouseEnter={(e) => {
-                    if (!(!inCart || !email || isSubmitting)) {
-                      e.target.style.backgroundColor = '#b34563';
-                    }
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!(!inCart || !email || isSubmitting)) {
-                      e.target.style.backgroundColor = '#c95375';
-                    }
-                  }}
-                >
-                  {isSubmitting
-                    ? "Creating Contact & Estimate…"
-                    : submitSuccess
-                    ? "Redirecting to Portal…"
-                    : "Submit & Request Quote"}
-                </button>
-
-                {!inCart ? (
-                  <p className="text-xs text-muted-foreground text-center">
-                    Please add configuration to cart first.
-                  </p>
-                ) : null}
-              </form>
+              </div>
             </div>
           </div>
         </div>
-      </section>
+        </section>
+      </div>
 
       <AddonDetailModal
         addon={detailAddon}
@@ -407,6 +657,14 @@ export default function SampleProductPage() {
         onClose={() => setDetailAddonId(null)}
         onAdd={handleAddFromModal}
         quantity={detailAddonId ? addonQuantities[detailAddonId] ?? 0 : 0}
+        activeProfile={activeProfile}
+      />
+
+      <PropertyProfileModal
+        profile={propertyProfiles.find((p) => p.id === detailProfileId)}
+        open={Boolean(detailProfileId)}
+        onClose={() => setDetailProfileId(null)}
+        onSelect={setProfileId}
       />
 
       {/* Login Modal - shown when account exists */}

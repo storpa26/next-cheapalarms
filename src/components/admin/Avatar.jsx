@@ -1,16 +1,18 @@
+import { memo } from "react";
+
 // Generate consistent color based on name
 function getAvatarColor(name) {
-  if (!name) return "bg-gray-400";
+  if (!name) return "bg-muted";
   
   const colors = [
-    "bg-blue-500",
-    "bg-green-500",
-    "bg-purple-500",
-    "bg-pink-500",
-    "bg-indigo-500",
-    "bg-yellow-500",
-    "bg-red-500",
-    "bg-teal-500",
+    "bg-info",
+    "bg-success",
+    "bg-primary",
+    "bg-secondary",
+    "bg-primary/80",
+    "bg-warning",
+    "bg-error",
+    "bg-info/80",
   ];
   
   let hash = 0;
@@ -31,7 +33,7 @@ function getInitials(name) {
   return name.substring(0, 2).toUpperCase();
 }
 
-export function Avatar({ name, email, size = "md" }) {
+export const Avatar = memo(function Avatar({ name, email, size = "md" }) {
   const sizeClasses = {
     sm: "h-8 w-8 text-xs",
     md: "h-10 w-10 text-sm",
@@ -47,7 +49,7 @@ export function Avatar({ name, email, size = "md" }) {
         ${sizeClasses[size]}
         ${colorClass}
         rounded-full flex items-center justify-center
-        text-white font-semibold
+        text-primary-foreground font-semibold
         flex-shrink-0
       `}
       title={name || email || ""}
@@ -55,5 +57,5 @@ export function Avatar({ name, email, size = "md" }) {
       {initials}
     </div>
   );
-}
+});
 

@@ -38,11 +38,11 @@ export default function FaqSection() {
   const [openIndex, setOpenIndex] = useState(null);
 
   return (
-    <section className="py-20 px-4 bg-white">
+    <section className="py-20 px-4 bg-background">
       <div className="container max-w-4xl mx-auto">
         <div className="text-center mb-16">
           <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">Questions</p>
-          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-slate-900">
+          <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
             FAQs written like normal human questions
           </h2>
         </div>
@@ -55,13 +55,13 @@ export default function FaqSection() {
               onClick={() => setOpenIndex(openIndex === index ? null : index)}
             >
               <div className="flex items-start justify-between gap-4">
-                <h3 className="font-semibold text-lg text-slate-900 flex-1">{faq.question}</h3>
+                <h3 className="font-semibold text-lg text-foreground flex-1">{faq.question}</h3>
                 <span className="text-2xl text-[#0AA9AB] flex-shrink-0">
                   {openIndex === index ? "−" : "+"}
                 </span>
               </div>
               {openIndex === index && (
-                <p className="mt-4 text-slate-600 leading-relaxed">{faq.answer}</p>
+                <p className="mt-4 text-muted-foreground leading-relaxed">{faq.answer}</p>
               )}
             </Card>
           ))}

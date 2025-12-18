@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 /**
  * React Query mutation for accepting an estimate
@@ -123,6 +124,9 @@ export function useAcceptEstimate() {
       });
       queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
+      
+      // Show success toast
+      toast.success('Estimate accepted successfully!');
     },
   });
 }
@@ -223,6 +227,9 @@ export function useRejectEstimate() {
       });
       queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
+      
+      // Show success toast
+      toast.success('Estimate rejected successfully');
     },
   });
 }
