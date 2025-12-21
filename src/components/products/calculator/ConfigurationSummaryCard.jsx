@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useState, memo } from "react";
 import { ChevronDown, ChevronUp, Edit, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function ConfigurationSummaryCard({
+function ConfigurationSummaryCard({
   profile,
   addons,
   coverage,
@@ -21,7 +21,7 @@ export default function ConfigurationSummaryCard({
     <div className="rounded-2xl border border-border bg-surface/50 p-5 shadow-sm">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-success/10">
+          <div className="p-2 rounded-lg bg-success/10" aria-hidden="true">
             <CheckCircle2 className="h-5 w-5 text-success" />
           </div>
           <div>
@@ -36,6 +36,7 @@ export default function ConfigurationSummaryCard({
             size="sm"
             onClick={onEdit}
             className="text-xs"
+            aria-label="Edit configuration"
           >
             <Edit className="h-3 w-3 mr-1.5" />
             Edit
@@ -43,13 +44,15 @@ export default function ConfigurationSummaryCard({
           <button
             type="button"
             onClick={() => setIsExpanded(!isExpanded)}
-            className="p-1.5 rounded-lg hover:bg-muted transition-colors"
-            aria-label={isExpanded ? "Collapse" : "Expand"}
+            aria-expanded={isExpanded}
+            aria-controls="config-details"
+            aria-label={isExpanded ? "Collapse configuration details" : "Expand configuration details"}
+            className="p-1.5 rounded-lg hover:bg-muted transition-colors duration-fast ease-standard"
           >
             {isExpanded ? (
-              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+              <ChevronUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             ) : (
-              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+              <ChevronDown className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
             )}
           </button>
         </div>
@@ -61,14 +64,14 @@ export default function ConfigurationSummaryCard({
           <p className="text-xs text-muted-foreground mb-1">Profile</p>
           <p className="font-medium text-foreground">{profile?.title ?? "Custom"}</p>
         </div>
-        <div className="h-8 w-px bg-border" />
+        <div className="h-8 w-px bg-border" aria-hidden="true" />
         <div>
           <p className="text-xs text-muted-foreground mb-1">Add-ons</p>
           <p className="font-medium text-foreground">
             {addonCount} {addonCount === 1 ? "item" : "items"}
           </p>
         </div>
-        <div className="h-8 w-px bg-border" />
+        <div className="h-8 w-px bg-border" aria-hidden="true" />
         <div>
           <p className="text-xs text-muted-foreground mb-1">Coverage</p>
           <p className="font-medium text-foreground">
@@ -79,7 +82,12 @@ export default function ConfigurationSummaryCard({
 
       {/* Expanded View (Conditional) */}
       {isExpanded && (
-        <div className="mt-4 pt-4 border-t border-border space-y-3 animate-in slide-in-from-top-2 duration-200">
+        <div 
+          id="config-details"
+          role="region"
+          aria-label="Configuration details"
+          className="mt-4 pt-4 border-t border-border space-y-3 animate-in slide-in-from-top-2 duration-fast"
+        >
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-2">Property Profile</p>
             <p className="text-sm text-foreground">{profile?.title ?? "Custom"}</p>
@@ -128,4 +136,6 @@ export default function ConfigurationSummaryCard({
     </div>
   );
 }
+
+export default memo(ConfigurationSummaryCard);
 

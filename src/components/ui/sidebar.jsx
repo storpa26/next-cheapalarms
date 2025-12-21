@@ -292,7 +292,7 @@ export function Sidebar({
 
   const baseClasses = cn(
     "flex w-64 shrink-0 flex-col overflow-hidden transition-all duration-normal ease-standard font-sans",
-    inContainer && isMobile ? "h-full" : "h-screen"
+    inContainer && isMobile ? "h-full" : "h-screen max-h-screen"
   )
 
   const variantClasses = {

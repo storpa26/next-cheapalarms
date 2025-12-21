@@ -1,10 +1,11 @@
 import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { formatAddress } from "@/components/portal/utils/portal-utils";
 
 import { useState } from "react";
-import { ChevronDown, CheckCircle, Clock, AlertCircle, FileText, X } from "lucide-react";
+import { CheckCircle, Clock, AlertCircle, FileText, X } from "lucide-react";
 
 const statusIcons = {
   sent: Clock,
@@ -21,13 +22,14 @@ const statusColors = {
 };
 
 export function EstimatesListView({ estimates, loading, error, onSelectEstimate, resumeEstimate }) {
-  const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const selectedEstimate = estimates[selectedIndex];
   const selectedStatus = selectedEstimate?.status || "sent";
   const StatusIcon = statusIcons[selectedStatus] || FileText;
   const statusColor = statusColors[selectedStatus] || statusColors.sent;
+  
+  const selectedEstimateId = selectedEstimate?.estimateId || selectedEstimate?.id || String(selectedIndex);
 
   return (
     <div className="rounded-xl border-2 border-border bg-surface p-6 shadow-lg">
@@ -69,31 +71,38 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
       ) : estimates.length > 0 ? (
         <>
           {/* Estimate Switcher Dropdown */}
-          <div className="mt-6 relative">
-            <Button
-              onClick={() => setIsOpen(!isOpen)}
-              variant="outline"
-              className="w-full px-4 py-3 rounded-xl border-2 hover:border-primary transition-all duration-300 flex items-center justify-between h-auto"
+          <div className="mt-6">
+            <Select 
+              value={String(selectedEstimateId)}
+              onValueChange={(value) => {
+                const idx = estimates.findIndex(est => 
+                  String(est.estimateId || est.id) === value
+                );
+                if (idx !== -1) {
+                  setSelectedIndex(idx);
+                  onSelectEstimate(estimates[idx].estimateId || estimates[idx].id);
+                }
+              }}
             >
-              <div className="flex items-center gap-3">
-                <div className={`p-2 rounded-lg ${statusColor.split(" ")[1]} ${statusColor.split(" ")[2]}`}>
-                  <StatusIcon className={`h-4 w-4 ${statusColor.split(" ")[0]}`} />
-                </div>
-                <div className="text-left">
-                  <p className="font-semibold text-foreground">
-                    {selectedEstimate?.label || `Estimate #${selectedEstimate?.number || selectedEstimate?.estimateId || selectedIndex + 1}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatAddress(selectedEstimate?.address || selectedEstimate?.meta?.address) || "Site address pending"}
-                  </p>
-                </div>
-              </div>
-              <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
-            </Button>
-
-            {/* Dropdown Menu */}
-            {isOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 rounded-xl border-2 border-border bg-surface shadow-2xl z-20 overflow-hidden">
+              <SelectTrigger className="w-full px-4 py-3 rounded-xl border-2 h-auto">
+                <SelectValue>
+                  <div className="flex items-center gap-3 w-full">
+                    <div className={`p-2 rounded-lg ${statusColor.split(" ")[1]} ${statusColor.split(" ")[2]}`}>
+                      <StatusIcon className={`h-4 w-4 ${statusColor.split(" ")[0]}`} />
+                    </div>
+                    <div className="text-left flex-1">
+                      <p className="font-semibold text-foreground">
+                        {selectedEstimate?.label || `Estimate #${selectedEstimate?.number || selectedEstimate?.estimateId || selectedIndex + 1}`}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatAddress(selectedEstimate?.address || selectedEstimate?.meta?.address) || "Site address pending"}
+                      </p>
+                    </div>
+                  </div>
+                </SelectValue>
+              </SelectTrigger>
+              
+              <SelectContent className="w-full rounded-xl border-2 border-border shadow-2xl p-0">
                 {estimates.map((estimate, idx) => {
                   const estId = estimate.estimateId || estimate.id;
                   const estStatus = estimate.status || "sent";
@@ -102,40 +111,36 @@ export function EstimatesListView({ estimates, loading, error, onSelectEstimate,
                   const isSelected = idx === selectedIndex;
 
                   return (
-                    <Button
-                      key={estId}
-                      onClick={() => {
-                        setSelectedIndex(idx);
-                        setIsOpen(false);
-                        onSelectEstimate(estId);
-                      }}
-                      variant={isSelected ? "default" : "ghost"}
-                      className={`w-full px-4 py-3 flex items-center gap-3 h-auto ${
-                        isSelected ? "border-l-4 border-primary" : ""
+                    <SelectItem 
+                      key={estId} 
+                      value={String(estId)}
+                      className={`px-4 py-3 h-auto rounded-none ${
+                        isSelected 
+                          ? "border-l-4 border-primary bg-gradient-to-r from-primary/10 to-secondary/10 text-foreground" 
+                          : ""
                       }`}
-                      style={{
-                        borderLeftColor: isSelected ? "hsl(var(--color-primary))" : "transparent",
-                      }}
                     >
-                      <div className={`p-2 rounded-lg ${estStatusColor.split(" ")[1]} ${estStatusColor.split(" ")[2]}`}>
-                        <EstStatusIcon className={`h-4 w-4 ${estStatusColor.split(" ")[0]}`} />
+                      <div className="flex items-center gap-3 w-full">
+                        <div className={`p-2 rounded-lg ${estStatusColor.split(" ")[1]} ${estStatusColor.split(" ")[2]}`}>
+                          <EstStatusIcon className={`h-4 w-4 ${estStatusColor.split(" ")[0]}`} />
+                        </div>
+                        <div className="flex-1 text-left">
+                          <p className="font-semibold text-foreground">
+                            {estimate.label || `Estimate #${estimate.number || estId}`}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatAddress(estimate.address || estimate.meta?.address) || "Site address pending"}
+                          </p>
+                        </div>
+                        {isSelected && (
+                          <CheckCircle className="h-5 w-5 text-primary" />
+                        )}
                       </div>
-                      <div className="flex-1 text-left">
-                        <p className="font-semibold text-foreground">
-                          {estimate.label || `Estimate #${estimate.number || estId}`}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatAddress(estimate.address || estimate.meta?.address) || "Site address pending"}
-                        </p>
-                      </div>
-                      {isSelected && (
-                        <CheckCircle className="h-5 w-5 text-primary" />
-                      )}
-                    </Button>
+                    </SelectItem>
                   );
                 })}
-              </div>
-            )}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Selected Estimate Details */}

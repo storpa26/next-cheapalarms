@@ -48,7 +48,7 @@ export function PortalSidebar({ activeNav, onNavChange, estimateId, onBackToList
         inContainer={false}
       >
         {/* Custom footer with help section and sign out */}
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full max-h-screen">
           {/* Header */}
           <div className="px-6 py-6 border-b border-primary/10">
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground font-medium">CheapAlarms</p>

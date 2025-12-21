@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo, useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/router";
 import { User, Mail, Phone, CheckCircle2, AlertCircle, Sparkles, FileText, ArrowLeft } from "lucide-react";
 import CalculatorHero from "../../components/products/calculator/CalculatorHero";
@@ -13,6 +13,15 @@ import QuoteWizardProgress from "../../components/products/calculator/QuoteWizar
 import ConfigurationSummaryCard from "../../components/products/calculator/ConfigurationSummaryCard";
 import TransitionOverlay from "../../components/products/calculator/TransitionOverlay";
 import { LoginModal } from "../../components/ui/login-modal";
+import {
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
 import { useAjaxCalculator } from "../../hooks/useAjaxCalculator";
 
 function extractContactId(result) {
@@ -82,12 +91,18 @@ export default function SampleProductPage() {
     [addonCatalog, detailAddonId],
   );
 
-  // Configuration change detection
+  // Configuration change detection (optimized with early returns)
   const hasConfigChanged = useMemo(() => {
     if (!configSnapshot || !inCart) return false;
     
-    // Compare profile
+    // Early return: Check profile first (cheapest comparison)
     if (configSnapshot.profileId !== profileId) return true;
+    
+    // Early return: Check services (simple object comparison)
+    const servicesChanged = Object.keys(services).some(
+      (key) => configSnapshot.services[key] !== services[key]
+    );
+    if (servicesChanged) return true;
     
     // Compare property flags
     const flagsChanged = Object.keys(propertyFlags).some(
@@ -101,7 +116,7 @@ export default function SampleProductPage() {
     );
     if (coverageChanged) return true;
     
-    // Compare addon quantities
+    // Compare addon quantities (most expensive, check last)
     const addonKeys = new Set([
       ...Object.keys(configSnapshot.addonQuantities),
       ...Object.keys(addonQuantities),
@@ -112,17 +127,11 @@ export default function SampleProductPage() {
       }
     }
     
-    // Compare services
-    const servicesChanged = Object.keys(services).some(
-      (key) => configSnapshot.services[key] !== services[key]
-    );
-    if (servicesChanged) return true;
-    
     return false;
   }, [configSnapshot, inCart, profileId, propertyFlags, coverage, addonQuantities, services]);
 
   // Save configuration snapshot
-  const saveConfigSnapshot = () => {
+  const saveConfigSnapshot = useCallback(() => {
     setConfigSnapshot({
       profileId,
       propertyFlags: { ...propertyFlags },
@@ -130,9 +139,9 @@ export default function SampleProductPage() {
       addonQuantities: { ...addonQuantities },
       services: { ...services },
     });
-  };
+  }, [profileId, propertyFlags, coverage, addonQuantities, services]);
 
-  function handleAddToCart() {
+  const handleAddToCart = useCallback(() => {
     // If updating, reset inCart first
     if (inCart && hasConfigChanged) {
       setInCart(false);
@@ -147,11 +156,11 @@ export default function SampleProductPage() {
     
     // Animate progress bar
     const startTime = Date.now();
-    const duration = 600; // 600ms transition
+    const TRANSITION_DURATION = 600; // Use design token value (duration-slow is 350ms, but 600ms feels better for this transition)
     
     const animate = () => {
       const elapsed = Date.now() - startTime;
-      const progress = Math.min(100, (elapsed / duration) * 100);
+      const progress = Math.min(100, (elapsed / TRANSITION_DURATION) * 100);
       
       setTransitionProgress(progress);
       
@@ -170,9 +179,9 @@ export default function SampleProductPage() {
     };
     
     requestAnimationFrame(animate);
-  }
+  }, [inCart, hasConfigChanged, saveConfigSnapshot]);
 
-  function handleStepNavigation(step) {
+  const handleStepNavigation = useCallback((step) => {
     if (step === 1) {
       setCurrentStep(1);
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -180,13 +189,13 @@ export default function SampleProductPage() {
       setCurrentStep(2);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  }
+  }, [inCart]);
 
-  function handleBackToConfiguration() {
+  const handleBackToConfiguration = useCallback(() => {
     setCurrentStep(1);
-  }
+  }, []);
 
-  async function handleSubmitQuote(e) {
+  const handleSubmitQuote = useCallback(async (e) => {
     e.preventDefault();
 
     // Validate required fields
@@ -333,7 +342,7 @@ export default function SampleProductPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }
+  }, [email, inCart, firstName, lastName, phone, activeProfile, baseKit, selectedAddons, services, router]);
 
   const handleLoginSuccess = (loginResult) => {
     // User logged in successfully
@@ -348,11 +357,25 @@ export default function SampleProductPage() {
     }
   };
 
-  function handleAddFromModal() {
+  const handleAddFromModal = useCallback(() => {
     if (!detailAddonId) return;
     const currentQty = addonQuantities[detailAddonId] ?? 0;
     setAddonQuantity(detailAddonId, currentQty + 1);
-  }
+  }, [detailAddonId, addonQuantities, setAddonQuantity]);
+
+  // Focus management: Focus first input when entering step 2
+  useEffect(() => {
+    if (currentStep === 2) {
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        const firstInput = document.querySelector('#contact-form-section input');
+        if (firstInput) {
+          firstInput.focus();
+        }
+      }, 100);
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep]);
 
   return (
     <div className="min-h-screen bg-slate-50 relative">
@@ -476,7 +499,19 @@ export default function SampleProductPage() {
                   </div>
                 </div>
 
-                <form onSubmit={handleSubmitQuote} className="space-y-4 sm:space-y-6">
+                <form 
+                  onSubmit={handleSubmitQuote} 
+                  onKeyDown={(e) => {
+                    // Ctrl/Cmd + Enter to submit
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                      e.preventDefault();
+                      if (!isSubmitting && inCart && email) {
+                        handleSubmitQuote(e);
+                      }
+                    }
+                  }}
+                  className="space-y-4 sm:space-y-6"
+                >
                   {/* Name Fields with Icons */}
                   <div className="grid gap-5 md:grid-cols-2">
                     <div className="space-y-2">
@@ -541,7 +576,10 @@ export default function SampleProductPage() {
 
                   {/* Enhanced Error/Success Messages */}
                   {submitError ? (
-                    <div className="rounded-xl border border-error/30 bg-error-bg p-4 animate-in fade-in slide-in-from-top-2 duration-normal">
+                    <div 
+                      role="alert"
+                      className="rounded-xl border border-error/30 bg-error-bg p-4 animate-in fade-in slide-in-from-top-2 duration-normal"
+                    >
                       <div className="flex items-center gap-3">
                         <AlertCircle className="h-5 w-5 text-error flex-shrink-0" />
                         <p className="text-sm text-error font-medium">{submitError}</p>
@@ -550,7 +588,10 @@ export default function SampleProductPage() {
                   ) : null}
 
                   {submitSuccess && !showLoginModal ? (
-                    <div className="rounded-xl border border-success/30 bg-success-bg p-4 animate-in fade-in slide-in-from-top-2 duration-normal">
+                    <div 
+                      role="status"
+                      className="rounded-xl border border-success/30 bg-success-bg p-4 animate-in fade-in slide-in-from-top-2 duration-normal"
+                    >
                       <div className="flex items-center gap-3">
                         <CheckCircle2 className="h-5 w-5 text-success flex-shrink-0" />
                         <p className="text-sm text-success font-medium">
@@ -559,6 +600,17 @@ export default function SampleProductPage() {
                       </div>
                     </div>
                   ) : null}
+
+                  {/* Accessibility: Live region for form status updates */}
+                  <div 
+                    aria-live="polite" 
+                    aria-atomic="true"
+                    className="sr-only"
+                  >
+                    {submitError && <span>Error: {submitError}</span>}
+                    {submitSuccess && <span>Quote request submitted successfully</span>}
+                    {isSubmitting && <span>Submitting quote request...</span>}
+                  </div>
 
                   {/* Enhanced Submit Button */}
                   <button
@@ -677,29 +729,24 @@ export default function SampleProductPage() {
       />
 
       {/* Email Sent Modal - shown when account doesn't exist */}
-      {showEmailSentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl border border-gray-200">
-            <h2 className="text-xl font-semibold mb-4 text-gray-900">Quote Submitted Successfully! 📧</h2>
-            <p className="text-gray-600 mb-4">
-              We've sent your quote details to <strong className="text-gray-900">{email}</strong>. 
+      <AlertDialog open={showEmailSentModal} onOpenChange={setShowEmailSentModal}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Quote Submitted Successfully! 📧</AlertDialogTitle>
+            <AlertDialogDescription>
+              We've sent your quote details to <strong>{email}</strong>. 
               Please check your inbox for a link to access your portal.
-            </p>
-            <p className="text-sm text-gray-500 mb-6">
+              <br /><br />
               Use the portal link in the email to view your quote and upload installation photos.
-            </p>
-            <button
-              onClick={() => setShowEmailSentModal(false)}
-              className="w-full text-white rounded-md px-4 py-2 transition-colors font-medium"
-              style={{ backgroundColor: '#c95375' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#b34563'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#c95375'}
-            >
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowEmailSentModal(false)}>
               Got it
-            </button>
-          </div>
-        </div>
-      )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -53,12 +53,12 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
       <Head>
         <title>Customer Portal • CheapAlarms</title>
       </Head>
-      <main className="min-h-screen bg-background text-foreground">
+      <main className="h-screen w-full bg-background text-foreground overflow-hidden">
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,83,117,0.15),transparent_45%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,rgba(47,182,201,0.18),transparent_50%)]" />
         </div>
-        <div className="mx-auto flex min-h-screen max-w-7xl gap-6 px-6 py-10">
+        <div className="flex h-full w-full gap-6">
           <PortalSidebar
             activeNav={activeNav}
             onNavChange={handleNavigateToSection}
@@ -66,7 +66,7 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
             onBackToList={handleBackToList}
           />
 
-          <section className="flex-1 space-y-6">
+          <section className="flex-1 overflow-y-auto px-6 py-10 space-y-6">
             {/* Guest Access Banner */}
             {view?.isGuestMode && (
               <GuestAccessBanner 
