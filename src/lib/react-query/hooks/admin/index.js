@@ -5,5 +5,6 @@ export { useAdminInvoice } from './use-admin-invoice';
 export { useCreateInvoiceFromEstimate, useSendEstimate, useCompleteReview, useSendRevisionNotification } from './use-admin-estimate-actions';
 export { useSendInvoice } from './use-admin-invoice-actions';
 export { useUpdateEstimate } from './use-update-estimate';
+export { useXeroStatus, useXeroAuthorize, useXeroDisconnect, useSyncInvoiceToXero } from './use-xero';
 // Note: useSyncEstimate and useSyncInvoice are kept in files but not exported (for potential future use)
 

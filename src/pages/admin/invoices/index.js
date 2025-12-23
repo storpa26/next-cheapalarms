@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Settings, Plus, MoreVertical } from "lucide-react";
@@ -15,6 +15,7 @@ import { StatusTabs } from "@/components/admin/StatusTabs";
 import { Avatar } from "@/components/admin/Avatar";
 import { SearchBar } from "@/components/admin/SearchBar";
 import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { toast } from "sonner";
 
 export default function InvoicesListPage() {
   const router = useRouter();
@@ -45,6 +46,26 @@ export default function InvoicesListPage() {
     queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
     refetch();
   };
+
+  // Handle Xero OAuth callback messages
+  useEffect(() => {
+    const { xero_connected, xero_error, tenant_id } = router.query;
+    
+    if (xero_connected === 'true') {
+      toast.success('Xero connected successfully!');
+      // Clean up URL
+      const { xero_connected: _, tenant_id: __, ...restQuery } = router.query;
+      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true });
+    }
+    
+    if (xero_error) {
+      toast.error(`Xero connection failed: ${decodeURIComponent(xero_error)}`);
+      // Clean up URL
+      const { xero_error: _, ...restQuery } = router.query;
+      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.query]);
 
   const invoices = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;

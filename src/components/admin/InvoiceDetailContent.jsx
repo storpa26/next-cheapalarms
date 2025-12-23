@@ -2,11 +2,12 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { useAdminInvoice, useSendInvoice } from "@/lib/react-query/hooks/admin";
+import { useAdminInvoice, useSendInvoice, useSyncInvoiceToXero, useXeroStatus } from "@/lib/react-query/hooks/admin";
 import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
 import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
 import { toast } from "sonner";
+import { CheckCircle2, XCircle } from "lucide-react";
 
 export function InvoiceDetailContent({ invoiceId, locationId }) {
   const { data, isLoading, error, refetch } = useAdminInvoice({
@@ -15,6 +16,9 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
   });
 
   const sendInvoiceMutation = useSendInvoice();
+  const syncToXeroMutation = useSyncInvoiceToXero();
+  const { data: xeroStatus } = useXeroStatus();
+  const isXeroConnected = xeroStatus?.ok && xeroStatus?.connected;
 
   const invoice = data?.ok ? data : null;
   const linkedEstimate = invoice?.linkedEstimate;
@@ -52,6 +56,25 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
       refetch();
     } catch (err) {
       toast.error(err.message || "Failed to send invoice");
+    }
+  };
+
+  const handleSyncToXero = async () => {
+    if (!isXeroConnected) {
+      toast.error("Xero is not connected. Please connect Xero first in Settings > Integrations.");
+      return;
+    }
+
+    try {
+      const result = await syncToXeroMutation.mutateAsync({ invoiceId, locationId });
+      if (result?.ok) {
+        toast.success(`Invoice synced to Xero successfully${result.xeroInvoiceNumber ? ` (Invoice #${result.xeroInvoiceNumber})` : ''}`);
+        refetch();
+      } else {
+        throw new Error(result?.message || "Failed to sync invoice to Xero");
+      }
+    } catch (err) {
+      toast.error(err.message || "Failed to sync invoice to Xero");
     }
   };
 
@@ -303,6 +326,36 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
               >
                 {sendInvoiceMutation.isPending ? "Sending..." : "Send Invoice"}
               </button>
+              
+              <div className="pt-2 border-t border-border/60">
+                <div className="flex items-center gap-2 mb-2">
+                  {isXeroConnected ? (
+                    <>
+                      <CheckCircle2 className="h-3 w-3 text-success" />
+                      <span className="text-xs text-muted-foreground">Xero Connected</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="h-3 w-3 text-muted-foreground" />
+                      <span className="text-xs text-muted-foreground">Xero Not Connected</span>
+                    </>
+                  )}
+                </div>
+                <button
+                  onClick={handleSyncToXero}
+                  disabled={syncToXeroMutation.isPending || !isXeroConnected}
+                  className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {syncToXeroMutation.isPending ? "Syncing..." : "Sync to Xero"}
+                </button>
+                {!isXeroConnected && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    <Link href="/admin/integrations" className="text-primary hover:underline">
+                      Connect Xero
+                    </Link> to sync invoices
+                  </p>
+                )}
+              </div>
             </div>
           </div>
 
