@@ -57,6 +57,8 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
+  const [deleteItemDialogOpen, setDeleteItemDialogOpen] = useState(false);
+  const [itemToDeleteIndex, setItemToDeleteIndex] = useState(null);
   
   // Fetch photos to determine which items have photos
   const { data: photosData } = useEstimatePhotos({
