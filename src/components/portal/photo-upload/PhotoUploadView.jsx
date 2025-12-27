@@ -8,6 +8,7 @@ import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/re
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
+import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
 
 /**
  * Main photo upload view component
@@ -165,9 +166,21 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
     
     try {
       // Submit photos to backend
+      const nonce = await getWpNonceSafe({ inviteToken: view?.account?.inviteToken, estimateId }).catch((err) => {
+        const msg = err?.code === 'AUTH_REQUIRED'
+          ? 'Session expired. Please log in again.'
+          : (err?.message || 'Failed to submit photos.');
+        toast.error('Submission failed', { description: msg });
+        return null;
+      });
+      if (!nonce) {
+        setIsSubmitting(false);
+        return;
+      }
+
       const response = await fetch('/api/portal/submit-photos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
         body: JSON.stringify({ estimateId, locationId }),
       });

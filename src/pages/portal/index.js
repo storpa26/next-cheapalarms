@@ -12,7 +12,8 @@ import { PreferencesView } from "@/components/portal/views/PreferencesView";
 import { GuestAccessBanner } from "@/components/portal/GuestAccessBanner";
 import { Spinner } from "@/components/ui/spinner";
 import { WorkflowProgressSkeleton, CardSkeleton } from "@/components/ui/skeleton";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { getAuthContext } from "@/lib/auth/getAuthContext";
+import { getLoginRedirect } from "@/lib/auth";
 import { usePortalState } from "@/hooks/usePortalState";
 import { ExpiredInviteMessage } from "@/components/portal/ExpiredInviteMessage";
 
@@ -236,11 +237,11 @@ export async function getServerSideProps({ query, req }) {
   const estimateId = Array.isArray(query.estimateId) ? query.estimateId[0] : query.estimateId;
   const inviteToken = Array.isArray(query.inviteToken) ? query.inviteToken[0] : query.inviteToken;
 
-  const hasAuth = isAuthenticated(req);
+  const authContext = await getAuthContext(req);
 
   // If no estimateId (dashboard view), require authentication
   if (!estimateId) {
-    if (!hasAuth) {
+    if (!authContext) {
       // Redirect to login if not authenticated
       return {
         redirect: {
@@ -297,7 +298,7 @@ export async function getServerSideProps({ query, req }) {
 
   // If estimateId exists, allow access with either auth OR inviteToken
   // If neither is present, redirect to login
-  if (!hasAuth && !inviteToken) {
+  if (!authContext && !inviteToken) {
     return {
       redirect: {
         destination: getLoginRedirect(`/portal?estimateId=${estimateId}`),

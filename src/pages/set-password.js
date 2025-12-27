@@ -56,11 +56,8 @@ export default function SetPasswordPage() {
         throw new Error(json.err || json.error || "Failed to reset password");
       }
 
-      // Store token in cookie
-      if (json.token) {
-        document.cookie = `${TOKEN_COOKIE}=${json.token}; path=/; max-age=${json.expiresIn || 3600}; SameSite=Lax`;
-        localStorage.setItem('auth_token', json.token);
-      }
+      // Token is stored in httpOnly cookie by the API
+      // No need to store in localStorage or set cookie manually
 
       // Redirect to portal
       if (estId) {

@@ -697,17 +697,25 @@ function SidebarNavItem({ item, enableNestedNav }) {
           />
         )}
         {isActive && variant === "split" && <ChevronRight className="h-4 w-4 text-primary" />}
-        {/* Pin/Unpin Button (on hover) */}
+        {/* Pin/Unpin control (avoid nested button) */}
         {!hasSubmenu && (
-          <button
-            type="button"
+          <span
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               e.stopPropagation()
               onPinItem(item.href)
             }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault()
+                e.stopPropagation()
+                onPinItem(item.href)
+              }
+            }}
             className={cn(
               "absolute right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-fast ease-standard",
-              "p-1 rounded hover:bg-state-hover-bg"
+              "p-1 rounded hover:bg-state-hover-bg cursor-pointer select-none"
             )}
             aria-label={pinnedItems.includes(item.href) ? "Unpin" : "Pin"}
           >
@@ -717,7 +725,7 @@ function SidebarNavItem({ item, enableNestedNav }) {
                 pinnedItems.includes(item.href) ? "fill-primary text-primary" : "text-muted-foreground"
               )}
             />
-          </button>
+          </span>
         )}
       </button>
       {/* Submenu */}

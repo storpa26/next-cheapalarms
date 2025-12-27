@@ -11,12 +11,12 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
+import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
 
 // Initialize Stripe (publishable key from backend config)
 // We'll get this from an API endpoint or environment variable
-const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || 'pk_test_51SgyW7PZnmpzepwm77Y1I1VeheOhybZgTrzmml7pneZ0N821hpGGqKtS3wtGbkAW7ugayllCOiUBmzc5UftAeCPC00nwmDV0Fg';
-
-const stripePromise = loadStripe(STRIPE_PUBLISHABLE_KEY);
+const STRIPE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
+const stripePromise = STRIPE_PUBLISHABLE_KEY ? loadStripe(STRIPE_PUBLISHABLE_KEY) : null;
 
 /**
  * Payment Form Component (inside Stripe Elements)
@@ -28,20 +28,31 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
   const [error, setError] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
+  const [stripeReady, setStripeReady] = useState(!!stripePromise);
+
+  useEffect(() => {
+    setStripeReady(!!stripePromise);
+  }, []);
 
   // Create payment intent when component mounts
   useEffect(() => {
     if (!amount || amount <= 0 || clientSecret) return; // Don't recreate if already created
+    if (!stripePromise) {
+      setError('Stripe is not configured. Missing publishable key.');
+      return;
+    }
 
     const createPaymentIntent = async () => {
       try {
+        const nonce = await getWpNonceSafe().catch(() => '');
         const response = await fetch('/api/stripe/create-payment-intent', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
           credentials: 'include',
           body: JSON.stringify({
             amount,
             currency: 'aud',
+            estimateId, // SECURITY: Required for server-side amount validation
             metadata: {
               estimateId,
               locationId,
@@ -113,6 +124,7 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
         credentials: 'include',
         body: JSON.stringify({
           paymentIntentId: paymentIntent.id,
+          estimateId, // SECURITY: Required for server-side validation
         }),
       });
 
@@ -122,10 +134,24 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
         throw new Error(verifyData.error || verifyData.err || 'Payment verification failed');
       }
 
+      // Get nonce for CSRF protection (payment confirmation)
+      const nonce = await getWpNonceSafe({ inviteToken, estimateId }).catch((err) => {
+        const msg = err?.code === 'AUTH_REQUIRED'
+          ? 'Session expired. Please log in again.'
+          : (err?.message || 'Failed to confirm payment.');
+        setError(msg);
+        toast.error('Payment failed', { description: msg });
+        return null;
+      });
+      if (!nonce) {
+        setIsProcessing(false);
+        return;
+      }
+
       // Confirm payment in our system
       const confirmResponse = await fetch('/api/portal/confirm-payment', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
         body: JSON.stringify({
           estimateId,
@@ -153,6 +179,10 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
     } catch (err) {
       const errorMessage = err.message || 'Failed to process payment. Please try again.';
       setError(errorMessage);
+      if (errorMessage.toLowerCase().includes('expired')) {
+        setClientSecret(null);
+        setPaymentIntentId(null);
+      }
       toast.error('Payment failed', {
         description: errorMessage,
         duration: 4000,
@@ -239,6 +269,7 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
 export function PaymentCard({ estimateId, locationId, inviteToken, payment, workflow, invoice }) {
   const router = useRouter();
   const [shouldReload, setShouldReload] = useState(false);
+  const paymentsList = Array.isArray(payment?.payments) ? payment.payments : [];
 
   // If already paid, show confirmation
   if (payment && payment.status === 'paid') {
@@ -295,8 +326,19 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
     return null; // Only show when booked
   }
 
-  // Calculate payment amount (from invoice or fallback)
-  const getPaymentAmount = () => {
+  if (!stripePromise) {
+    return (
+      <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
+        <h3 className="text-xl font-semibold text-foreground">Payments unavailable</h3>
+        <p className="text-sm text-muted-foreground mt-2">
+          Stripe is not configured. Please contact support or try again later.
+        </p>
+      </div>
+    );
+  }
+
+  // Calculate invoice total (from invoice or fallback)
+  const getInvoiceTotal = () => {
     if (invoice) {
       // Check for new nested structure first
       if (invoice.ghl && invoice.ghl.total) {
@@ -314,7 +356,17 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
     return null;
   };
 
-  const amount = getPaymentAmount();
+  const invoiceTotal = getInvoiceTotal();
+  const remainingBalance =
+    payment && typeof payment.remainingBalance === 'number'
+      ? payment.remainingBalance
+      : invoiceTotal !== null && payment?.amount
+        ? Math.max(0, invoiceTotal - Number(payment.amount))
+        : null;
+
+  // If partial, charge only the remaining balance
+  const payableAmount =
+    payment?.status === 'partial' && remainingBalance !== null ? remainingBalance : invoiceTotal;
 
   const formatAmount = (amt) => {
     if (amt === null || amt === undefined) return '—';
@@ -343,19 +395,74 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Payment</p>
-            <h3 className="mt-2 text-2xl font-semibold text-foreground">Complete Payment</h3>
-            <p className="text-sm text-muted-foreground">Finalize your estimate payment</p>
+            <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              {payment?.status === 'partial' ? 'Complete Remaining Balance' : 'Complete Payment'}
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              {payment?.status === 'partial'
+                ? 'You have a partial payment recorded. Please pay the remaining balance.'
+                : 'Finalize your estimate payment'}
+            </p>
           </div>
           <div className="rounded-full bg-secondary/15 p-4">
             <CreditCard className="h-6 w-6 text-secondary" />
           </div>
         </div>
 
+        {payment?.status === 'partial' && (
+          <div className="mt-4 rounded-xl border border-warning/40 bg-warning/5 p-4 text-sm text-foreground">
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Total invoice</span>
+                <span className="font-semibold">{formatAmount(invoiceTotal)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Paid so far</span>
+                <span className="font-semibold text-success">{formatAmount(payment.amount)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Remaining balance</span>
+                <span className="font-semibold text-warning">{formatAmount(remainingBalance)}</span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {paymentsList.length > 0 && (
+          <div className="mt-4 rounded-xl border border-border/60 bg-muted p-4">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-2">Payment history</p>
+            <div className="space-y-2 text-sm">
+              {paymentsList.map((pmt, idx) => (
+                <div key={`${pmt.transactionId || 'payment'}-${idx}`} className="flex justify-between">
+                  <div className="flex flex-col">
+                    <span className="font-medium">{formatAmount(pmt.amount)}</span>
+                    {pmt.paidAt && (
+                      <span className="text-muted-foreground text-xs">
+                        {new Date(pmt.paidAt).toLocaleString('en-AU', {
+                          year: 'numeric',
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-right text-muted-foreground text-xs">
+                    <div>{pmt.provider ? pmt.provider : 'Payment'}</div>
+                    {pmt.transactionId && <div className="truncate max-w-[140px]">{pmt.transactionId}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-border bg-muted p-4">
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Total Amount</p>
             <p className="mt-2 text-3xl font-semibold text-foreground">
-              {formatAmount(amount)}
+              {formatAmount(payableAmount)}
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-muted p-4">
@@ -369,7 +476,7 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
           estimateId={estimateId}
           locationId={locationId}
           inviteToken={inviteToken}
-          amount={amount}
+          amount={payableAmount}
           onSuccess={handlePaymentSuccess}
         />
       </div>

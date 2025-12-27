@@ -22,12 +22,16 @@ export function createWpHeaders(req) {
   const token = cookies.ca_jwt || null;
   const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
   const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
+  const nonceHeader = req.headers["x-wp-nonce"]
+    ? { "X-WP-Nonce": req.headers["x-wp-nonce"] }
+    : {};
 
   return {
     "Content-Type": "application/json",
     Cookie: req.headers.cookie ?? "",
     ...authHeader,
     ...devHeader,
+    ...nonceHeader,
   };
 }
 

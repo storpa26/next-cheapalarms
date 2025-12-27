@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Spinner } from "@/components/ui/spinner";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
+import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
 
 /**
  * BookingCard Component
@@ -97,9 +98,22 @@ export function BookingCard({ estimateId, locationId, inviteToken, booking, work
     setIsSubmitting(true);
 
     try {
+      const nonce = await getWpNonceSafe({ inviteToken, estimateId }).catch((err) => {
+        const msg = err?.code === 'AUTH_REQUIRED'
+          ? 'Session expired. Please log in again.'
+          : (err?.message || 'Failed to fetch security token.');
+        setError(msg);
+        toast.error('Booking failed', { description: msg });
+        return null;
+      });
+      if (!nonce) {
+        setIsSubmitting(false);
+        return;
+      }
+
       const response = await fetch('/api/portal/book-job', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         body: JSON.stringify({
           estimateId,
           locationId,

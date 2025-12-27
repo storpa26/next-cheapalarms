@@ -3,7 +3,7 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useState, useCallback } from "react";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 
 export default function AdminLogs() {
   const [tail, setTail] = useState(mockLogs());
@@ -63,17 +63,11 @@ function mockLogs() {
 [11:12:44] ERROR Failed to fetch /uploads: network timeout`;
 }
 
-export async function getServerSideProps({ req }) {
-  // Check authentication first
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/admin/logs"),
-        permanent: false,
-      },
-    };
+export async function getServerSideProps(ctx) {
+  const authCheck = await requireAdmin(ctx, { notFound: true });
+  if (authCheck.notFound || authCheck.redirect) {
+    return authCheck;
   }
-
-  return { props: {} };
+  return { props: { ...(authCheck.props || {}) } };
 }
 

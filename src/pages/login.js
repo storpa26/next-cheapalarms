@@ -1,9 +1,7 @@
 import Head from "next/head";
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { parse as parseCookie } from "cookie";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { TOKEN_COOKIE } from "@/lib/wp";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,33 +20,41 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const response = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(form),
-      });
+      // Add timeout to prevent hanging
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
+      let response;
+      try {
+        response = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(form),
+          signal: controller.signal,
+        });
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          throw new Error("Login request timed out. Please check your connection and try again.");
+        }
+        throw new Error("Unable to connect to server. Please check your connection.");
+      }
+      clearTimeout(timeoutId);
 
       const result = await response.json();
       if (!response.ok) {
         throw new Error(result.err ?? "Login failed");
       }
 
-      // Store token in localStorage for cross-origin API requests
-      if (result.token) {
-        localStorage.setItem('auth_token', result.token);
-      }
-
-      // Check user role and redirect accordingly
-      const userRoles = result.user?.roles || [];
-      const isCustomer = userRoles.includes('ca_customer');
-      
-      // Redirect customers to portal, others to admin (or return URL)
-      const returnUrl = router.query.from || (isCustomer ? "/portal" : "/admin");
-      router.push(returnUrl);
+      // Token is stored in httpOnly cookie by the API
+      // Force a full page reload to ensure cookie is available
+      const returnUrl = router.query.from || "/dashboard";
+      // Use window.location.replace to avoid adding to history
+      window.location.replace(returnUrl);
     } catch (err) {
-      setError(err.message);
+      setError(err.message || "An unexpected error occurred. Please try again.");
       setLoading(false);
     }
   }
@@ -119,13 +125,16 @@ export default function LoginPage() {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  const cookieHeader = req?.headers?.cookie ?? "";
-  const cookies = parseCookie(cookieHeader);
-  if (cookies[TOKEN_COOKIE]) {
+export async function getServerSideProps(ctx) {
+  const { getAuthContext } = await import("@/lib/auth/getAuthContext");
+  const authContext = await getAuthContext(ctx.req);
+  
+  // If already authenticated, redirect to dashboard (or return URL)
+  if (authContext) {
+    const returnUrl = ctx.query.from || "/dashboard";
     return {
       redirect: {
-        destination: "/admin",
+        destination: returnUrl,
         permanent: false,
       },
     };

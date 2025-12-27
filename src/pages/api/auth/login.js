@@ -16,7 +16,15 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await authenticate({ username, password });
+    // Add timeout to prevent hanging (15 seconds)
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => reject(new Error("Login request timed out. Please check your connection and try again.")), 15000);
+    });
+
+    const result = await Promise.race([
+      authenticate({ username, password }),
+      timeoutPromise,
+    ]);
 
     const cookie = serialize(TOKEN_COOKIE, result.token, {
       httpOnly: true,
@@ -30,7 +38,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      token: result.token, // Include token for localStorage storage
+      token: result.token,
       user: result.user,
       expiresAt: result.expires_at,
     });

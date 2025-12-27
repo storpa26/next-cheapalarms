@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -545,17 +545,11 @@ function filterMatch(p, q) {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  // Check authentication first
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/admin/products"),
-        permanent: false,
-      },
-    };
+export async function getServerSideProps(ctx) {
+  const authCheck = await requireAdmin(ctx, { notFound: true });
+  if (authCheck.notFound || authCheck.redirect) {
+    return authCheck;
   }
-
-  return { props: {} };
+  return { props: { ...(authCheck.props || {}) } };
 }
 

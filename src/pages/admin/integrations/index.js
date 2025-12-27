@@ -4,7 +4,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useCallback } from "react";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { useXeroStatus, useXeroAuthorize, useXeroDisconnect } from "@/lib/react-query/hooks/admin";
 import { Spinner } from "@/components/ui/spinner";
 import { CheckCircle2, XCircle, ExternalLink } from "lucide-react";
@@ -190,17 +190,11 @@ export default function AdminIntegrations() {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  // Check authentication first
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/admin/integrations"),
-        permanent: false,
-      },
-    };
+export async function getServerSideProps(ctx) {
+  const authCheck = await requireAdmin(ctx, { notFound: true });
+  if (authCheck.notFound || authCheck.redirect) {
+    return authCheck;
   }
-
-  return { props: {} };
+  return { props: { ...(authCheck.props || {}) } };
 }
 

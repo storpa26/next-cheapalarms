@@ -18,11 +18,7 @@ export function SignOutButton({ className = "" }) {
     try {
       setLoading(true);
       
-      // Clear localStorage token
-      if (typeof window !== "undefined") {
-        localStorage.removeItem('auth_token');
-      }
-      
+      // Token is in httpOnly cookie, cleared by logout API
       const response = await fetch("/api/auth/logout", {
         method: "POST",
         headers: {

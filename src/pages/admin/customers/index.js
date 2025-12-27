@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useState, useCallback } from "react";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { getWordPressUsers, getGHLContacts, matchContactsToUsers, getStatusBadge } from "@/lib/admin/services/customers-data";
 import { toast } from "@/components/ui/use-toast";
 import { isAuthError, isPermissionError } from "@/lib/admin/utils/error-handler";
@@ -295,53 +295,44 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
   );
 }
 
-export async function getServerSideProps({ req }) {
-  // Check authentication first
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/admin/customers"),
-        permanent: false,
-      },
-    };
+export async function getServerSideProps(ctx) {
+  const authCheck = await requireAdmin(ctx, { notFound: true });
+  if (authCheck.notFound || authCheck.redirect) {
+    return authCheck;
   }
 
   try {
     const [wpUsers, ghlContacts] = await Promise.all([
-      getWordPressUsers(req).catch((err) => {
-        return [];
-      }),
-      getGHLContacts(req).catch((err) => {
-        return [];
-      }),
+      getWordPressUsers(ctx.req).catch(() => []),
+      getGHLContacts(ctx.req).catch(() => []),
     ]);
 
     return {
       props: {
         initialWpUsers: wpUsers,
         initialGhlContacts: ghlContacts,
+        ...(authCheck.props || {}),
       },
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
 
-    // Handle authentication errors - redirect to login
     if (isAuthError(message)) {
       return {
         redirect: {
-          destination: getLoginRedirect("/admin/customers"),
+          destination: "/login?from=/admin/customers",
           permanent: false,
         },
       };
     }
 
-    // Handle permission errors (403) - show user-friendly message
     if (isPermissionError(message)) {
       return {
         props: {
           initialWpUsers: [],
           initialGhlContacts: [],
           error: "You don't have permission to view customers. Please contact an administrator.",
+          ...(authCheck.props || {}),
         },
       };
     }
@@ -352,6 +343,7 @@ export async function getServerSideProps({ req }) {
         initialGhlContacts: [],
         error: message,
         debugInfo: process.env.NODE_ENV === 'development' ? { error: message } : null,
+        ...(authCheck.props || {}),
       },
     };
   }

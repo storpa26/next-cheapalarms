@@ -6,6 +6,7 @@ import { ProductListCard, UploadModal, ProgressBar, calculateProgress, groupPhot
 import { Spinner } from "@/components/ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
 
 /**
  * Photo Mission Card - Shows product list with upload status
@@ -99,9 +100,21 @@ export function PhotoMissionCard({
     setIsSubmitting(true);
     
     try {
+      const nonce = await getWpNonceSafe({ inviteToken: view?.account?.inviteToken, estimateId }).catch((err) => {
+        const msg = err?.code === 'AUTH_REQUIRED'
+          ? 'Session expired. Please log in again.'
+          : (err?.message || 'Failed to submit photos.');
+        toast.error('Submission failed', { description: msg });
+        return null;
+      });
+      if (!nonce) {
+        setIsSubmitting(false);
+        return;
+      }
+
       const response = await fetch('/api/portal/submit-photos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
         body: JSON.stringify({ estimateId, locationId }),
       });

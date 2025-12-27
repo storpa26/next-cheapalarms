@@ -6,7 +6,7 @@ import { Settings, Plus, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { useAdminInvoices } from "@/lib/react-query/hooks/admin";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { Spinner } from "@/components/ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
 import { InvoiceDetailModal } from "@/components/admin/InvoiceDetailModal";
@@ -506,15 +506,10 @@ export default function InvoicesListPage() {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/admin/invoices"),
-        permanent: false,
-      },
-    };
+export async function getServerSideProps(ctx) {
+  const authCheck = await requireAdmin(ctx, { notFound: true });
+  if (authCheck.notFound || authCheck.redirect) {
+    return authCheck;
   }
-
-  return { props: {} };
+  return { props: { ...(authCheck.props || {}) } };
 }

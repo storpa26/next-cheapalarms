@@ -3,7 +3,7 @@ import { useRouter } from "next/router";
 import Link from "next/link";
 import { useState } from "react";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { EstimateDetailContent } from "@/components/admin/EstimateDetailContent";
 
 export default function EstimateDetailPage() {
@@ -34,16 +34,11 @@ export default function EstimateDetailPage() {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/admin/estimates"),
-        permanent: false,
-      },
-    };
+export async function getServerSideProps(ctx) {
+  const authCheck = await requireAdmin(ctx, { notFound: true });
+  if (authCheck.notFound || authCheck.redirect) {
+    return authCheck;
   }
-
-  return { props: {} };
+  return { props: { ...(authCheck.props || {}) } };
 }
 

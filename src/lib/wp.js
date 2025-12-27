@@ -27,21 +27,17 @@ async function wpFetch(path, options = {}) {
     extractTokenFromHeaders(headers);
 
   if (!token && typeof window !== "undefined") {
-    // Check localStorage first (for cross-origin requests)
-    token = localStorage.getItem('auth_token');
-    
-    // Fallback to cookie parsing (for same-origin)
-    if (!token) {
-      const cookieString = document.cookie || "";
-      const cookies = {};
-      cookieString.split(';').forEach(cookie => {
-        const [name, ...rest] = cookie.trim().split('=');
-        if (name) {
-          cookies[name] = decodeURIComponent(rest.join('='));
-        }
-      });
-      token = cookies[TOKEN_COOKIE] ?? null;
-    }
+    // Token is stored in httpOnly cookie (ca_jwt)
+    // Parse from cookies for client-side requests
+    const cookieString = document.cookie || "";
+    const cookies = {};
+    cookieString.split(';').forEach(cookie => {
+      const [name, ...rest] = cookie.trim().split('=');
+      if (name) {
+        cookies[name] = decodeURIComponent(rest.join('='));
+      }
+    });
+    token = cookies[TOKEN_COOKIE] ?? null;
   }
 
   if (token && !headers.Authorization) {

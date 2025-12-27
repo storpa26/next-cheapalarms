@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getWpNonceSafe } from '@/lib/api/get-wp-nonce';
 
 /**
  * React Query mutation for accepting an estimate
@@ -10,9 +11,18 @@ export function useAcceptEstimate() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId }) => {
+      const nonce = await getWpNonceSafe({ estimateId }).catch((err) => {
+        const msg = err?.code === 'AUTH_REQUIRED'
+          ? 'Session expired. Please log in again.'
+          : (err?.message || 'Failed to accept estimate.');
+        throw new Error(msg);
+      });
+      if (!nonce) {
+        throw new Error('Session required.');
+      }
       const res = await fetch('/api/portal/accept', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
         body: JSON.stringify({ estimateId, locationId }),
       });
@@ -140,9 +150,18 @@ export function useRejectEstimate() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, reason = '' }) => {
+      const nonce = await getWpNonceSafe({ estimateId }).catch((err) => {
+        const msg = err?.code === 'AUTH_REQUIRED'
+          ? 'Session expired. Please log in again.'
+          : (err?.message || 'Failed to reject estimate.');
+        throw new Error(msg);
+      });
+      if (!nonce) {
+        throw new Error('Session required.');
+      }
       const res = await fetch('/api/portal/reject', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
         body: JSON.stringify({ estimateId, locationId, reason }),
       });

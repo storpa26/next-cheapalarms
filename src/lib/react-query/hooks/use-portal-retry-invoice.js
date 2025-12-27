@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { getWpNonceSafe } from '@/lib/api/get-wp-nonce';
 
 /**
  * React Query mutation for retrying invoice creation after a failure.
@@ -10,9 +11,18 @@ export function useRetryInvoice() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, inviteToken }) => {
+      const nonce = await getWpNonceSafe({ estimateId, inviteToken }).catch((err) => {
+        const msg = err?.code === 'AUTH_REQUIRED'
+          ? 'Session expired. Please log in again.'
+          : (err?.message || 'Failed to retry invoice.');
+        throw new Error(msg);
+      });
+      if (!nonce) {
+        throw new Error('Session required.');
+      }
       const res = await fetch('/api/portal/retry-invoice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
         body: JSON.stringify({ estimateId, locationId, inviteToken }),
       });

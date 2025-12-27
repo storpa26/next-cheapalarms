@@ -3,7 +3,7 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { AlertsStrip } from "@/components/admin/ui/AlertsStrip";
 import { CardStat } from "@/components/admin/ui/CardStat";
 import { ActivityList } from "@/components/admin/ui/ActivityList";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { getDashboardData, getDashboardErrorState } from "@/lib/admin/services/dashboard-data";
 import { isAuthError, isPermissionError, getPermissionErrorMessage } from "@/lib/admin/utils/error-handler";
 
@@ -58,35 +58,32 @@ function ActionLink({ label, href }) {
   );
 }
 
-export async function getServerSideProps({ req }) {
-  if (!isAuthenticated(req)) {
-    return {
-      redirect: {
-        destination: getLoginRedirect("/admin"),
-        permanent: false,
-      },
-    };
+export async function getServerSideProps(ctx) {
+  const authCheck = await requireAdmin(ctx, { notFound: true });
+  if (authCheck.notFound || authCheck.redirect) {
+    return authCheck;
   }
 
   try {
-    const dashboardData = await getDashboardData(req);
+    const dashboardData = await getDashboardData(ctx.req);
     return {
-      props: dashboardData,
+      props: {
+        ...dashboardData,
+        ...(authCheck.props || {}),
+      },
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error";
 
-    // Handle authentication errors - redirect to login
     if (isAuthError(message)) {
       return {
         redirect: {
-          destination: getLoginRedirect("/admin"),
+          destination: "/login?from=/admin",
           permanent: false,
         },
       };
     }
 
-    // Handle permission errors (403) - show user-friendly message
     if (isPermissionError(message)) {
       return {
         props: getDashboardErrorState(

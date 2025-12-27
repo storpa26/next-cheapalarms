@@ -168,11 +168,35 @@ export default function DashboardPage({ estimates, error }) {
   );
 }
 
-// Redirect /dashboard to /admin for backward compatibility
-export async function getServerSideProps() {
+export async function getServerSideProps(ctx) {
+  const { getAuthContext } = await import("@/lib/auth/getAuthContext");
+  const { getLoginRedirect } = await import("@/lib/auth");
+  const authContext = await getAuthContext(ctx.req);
+
+  // Not authenticated -> redirect to login
+  if (!authContext) {
+    return {
+      redirect: {
+        destination: getLoginRedirect(ctx.resolvedUrl || "/dashboard"),
+        permanent: false,
+      },
+    };
+  }
+
+  // Admin -> redirect to admin dashboard
+  if (authContext.isAdmin) {
+    return {
+      redirect: {
+        destination: "/admin",
+        permanent: false,
+      },
+    };
+  }
+
+  // Customer or other -> redirect to portal
   return {
     redirect: {
-      destination: "/admin",
+      destination: "/portal",
       permanent: false,
     },
   };
@@ -236,15 +260,27 @@ function StatusBadge({ status }) {
   return <Badge variant={variant}>{label || "Unknown"}</Badge>;
 }
 
+import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
+
 async function handleResendInvite(estimate, setResending) {
   const key = estimate.id ?? "";
 
   try {
     setResending((prev) => ({ ...prev, [key]: true }));
+    const nonce = await getWpNonceSafe({ estimateId: estimate.id }).catch((err) => {
+      const msg = err?.code === "AUTH_REQUIRED"
+        ? "Session expired. Please log in again."
+        : (err?.message || "Failed to fetch security token.");
+      throw new Error(msg);
+    });
+    if (!nonce) {
+      throw new Error("Session required.");
+    }
     const response = await fetch("/api/portal/resend", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "X-WP-Nonce": nonce || "",
       },
       body: JSON.stringify({
         estimateId: estimate.id,
