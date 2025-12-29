@@ -1,13 +1,20 @@
 import Head from "next/head";
+import { useMemo } from "react";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { AlertsStrip } from "@/components/admin/ui/AlertsStrip";
 import { CardStat } from "@/components/admin/ui/CardStat";
 import { ActivityList } from "@/components/admin/ui/ActivityList";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { getDashboardData, getDashboardErrorState } from "@/lib/admin/services/dashboard-data";
-import { isAuthError, isPermissionError, getPermissionErrorMessage } from "@/lib/admin/utils/error-handler";
+import { Spinner } from "@/components/ui/spinner";
+import { useAdminDashboard } from "@/lib/react-query/hooks/admin";
 
-export default function AdminOverview({ stats, alerts, activity, error }) {
+export default function AdminOverview() {
+  const { data, isLoading, error } = useAdminDashboard();
+
+  const stats = useMemo(() => data?.stats ?? [], [data?.stats]);
+  const alerts = useMemo(() => data?.alerts ?? [], [data?.alerts]);
+  const activity = useMemo(() => data?.activity ?? [], [data?.activity]);
+
   return (
     <>
       <Head>
@@ -17,10 +24,19 @@ export default function AdminOverview({ stats, alerts, activity, error }) {
         {error && (
           <div className="mb-4 rounded-md border border-error/30 bg-error-bg p-4 text-sm text-error">
             <p className="font-semibold">Error loading dashboard data</p>
-            <p className="mt-1">{error}</p>
+            <p className="mt-1">{error?.message || "Failed to load admin dashboard"}</p>
           </div>
         )}
-        {alerts && alerts.length > 0 && <AlertsStrip items={alerts} />}
+        {isLoading ? (
+          <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <Spinner size="sm" />
+              Loading dashboard…
+            </div>
+          </div>
+        ) : (
+          <>
+            {alerts && alerts.length > 0 && <AlertsStrip items={alerts} />}
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {stats?.map((s) => (
             <CardStat key={s.title} title={s.title} value={s.value} hint={s.hint} />
@@ -45,6 +61,8 @@ export default function AdminOverview({ stats, alerts, activity, error }) {
             </div>
           )}
         </section>
+          </>
+        )}
       </AdminLayout>
     </>
   );
@@ -64,36 +82,6 @@ export async function getServerSideProps(ctx) {
     return authCheck;
   }
 
-  try {
-    const dashboardData = await getDashboardData(ctx.req);
-    return {
-      props: {
-        ...dashboardData,
-        ...(authCheck.props || {}),
-      },
-    };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Unknown error";
-
-    if (isAuthError(message)) {
-      return {
-        redirect: {
-          destination: "/login?from=/admin",
-          permanent: false,
-        },
-      };
-    }
-
-    if (isPermissionError(message)) {
-      return {
-        props: getDashboardErrorState(
-          getPermissionErrorMessage("the admin dashboard", "ca_view_estimates capability")
-        ),
-      };
-    }
-
-    return {
-      props: getDashboardErrorState(message),
-    };
-  }
+  // SSR should be auth-only to avoid blocking TTFB on WordPress/GHL calls.
+  return { props: { ...(authCheck.props || {}) } };
 }

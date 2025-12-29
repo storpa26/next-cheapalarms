@@ -1,6 +1,7 @@
 import { ArrowRight, Shield, Sparkles, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAcceptEstimate, useRejectEstimate, useRetryInvoice } from "@/lib/react-query/hooks";
+import { useAcceptEstimate, useRejectEstimate, useRetryInvoice, useRequestReview } from "@/lib/react-query/hooks";
+import { computeUIState } from "@/lib/portal/status-computer";
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -13,11 +14,17 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const scheduledFor = view?.installation?.scheduledFor;
   const invoice = view?.invoice;
   const invoiceError = view?.invoiceError; // Invoice creation error from API
-  const isPending = quoteStatus === "sent"; // Portal uses: sent, accepted, rejected
   const isAccepted = quoteStatus === "accepted";
   const isRejected = quoteStatus === "rejected";
   const acceptedAt = view?.quote?.acceptedAt;
   const isGuestMode = view?.isGuestMode ?? false;
+  
+  // Use status computer to get UI state
+  const uiState = computeUIState(view);
+  const canRequestReview = uiState.canRequestReview;
+  const canAccept = uiState.canAccept;
+  const displayStatus = uiState.displayStatus;
+  const statusMessage = uiState.statusMessage;
 
   const [showPhotoWarning, setShowPhotoWarning] = useState(false);
   const [showRejectConfirm, setShowRejectConfirm] = useState(false);
@@ -31,8 +38,9 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const acceptMutation = useAcceptEstimate();
   const rejectMutation = useRejectEstimate();
   const retryInvoiceMutation = useRetryInvoice();
+  const requestReviewMutation = useRequestReview();
 
-  const isProcessing = acceptMutation.isPending || rejectMutation.isPending || retryInvoiceMutation.isPending;
+  const isProcessing = acceptMutation.isPending || rejectMutation.isPending || retryInvoiceMutation.isPending || requestReviewMutation.isPending;
 
   const handleAccept = async () => {
     if (!hasPhotos) {
@@ -88,6 +96,23 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
     }
   };
 
+  const handleRequestReview = async () => {
+    if (!estimateId) {
+      toast.error("Missing estimate ID");
+      return;
+    }
+    try {
+      await requestReviewMutation.mutateAsync({ 
+        estimateId, 
+        locationId: locationId || undefined 
+      });
+      // Success - the mutation will automatically refetch and update the UI
+    } catch (error) {
+      // Error is handled by React Query's onError callback
+      toast.error(error.message || "Failed to request review. Please try again.");
+    }
+  };
+
   return (
     <>
       <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
@@ -96,11 +121,11 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Approval & payment</p>
             <h3 className="mt-2 text-2xl font-semibold text-foreground">Finalize estimate</h3>
             <p className="text-sm text-muted-foreground">
-              {isPending
-                ? "Review and accept or reject your estimate"
-                : isAccepted
-                  ? "Your estimate has been accepted"
-                  : "This estimate has been rejected"}
+              {statusMessage || (isAccepted
+                ? "Your estimate has been accepted"
+                : isRejected
+                  ? "This estimate has been rejected"
+                  : "Review and accept or reject your estimate")}
             </p>
           </div>
           <div className="rounded-full bg-secondary/15 p-4">
@@ -217,8 +242,8 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           </div>
         )}
 
-        {/* Action Buttons - Only show when pending and not rejected */}
-        {isPending && !isRejected && (
+        {/* Action Buttons */}
+        {!isAccepted && !isRejected && (
           <div className="mt-5 space-y-3">
             {isGuestMode ? (
               <div className="rounded-2xl border-2 border-border bg-muted px-4 py-4 text-center">
@@ -228,56 +253,120 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
               </div>
             ) : (
               <>
-                <Button
-                  type="button"
-                  onClick={handleAccept}
-                  disabled={isProcessing}
-                  variant="default"
-                  className="w-full h-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Spinner size="sm" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <span>Accept</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  onClick={handleReject}
-                  disabled={isProcessing}
-                  variant="destructive"
-                  className="w-full h-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
-                >
-                  {isProcessing ? (
-                    <>
-                      <Spinner size="sm" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <span>Reject</span>
-                      <XCircle className="h-4 w-4" />
-                    </>
-                  )}
-                </Button>
+                {/* Request Review Button - Show when estimate is sent and review not yet requested */}
+                {canRequestReview && (
+                  <Button
+                    type="button"
+                    onClick={handleRequestReview}
+                    disabled={isProcessing}
+                    variant="default"
+                    className="w-full h-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5 bg-primary"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Spinner size="sm" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <span>Request Review</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+                
+                {/* Accept Button - Only show when acceptance is enabled */}
+                {canAccept && (
+                  <Button
+                    type="button"
+                    onClick={handleAccept}
+                    disabled={isProcessing}
+                    variant="default"
+                    className="w-full h-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5 bg-green-600 hover:bg-green-700"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Spinner size="sm" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <span>Accept</span>
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
+                
+                {/* Reject Button - Show when estimate is sent (not just pending) */}
+                {quoteStatus === "sent" && (
+                  <Button
+                    type="button"
+                    onClick={handleReject}
+                    disabled={isProcessing}
+                    variant="destructive"
+                    className="w-full h-auto flex items-center justify-center gap-2 rounded-2xl px-4 py-4 text-sm font-semibold uppercase tracking-[0.3em] shadow-lg transition hover:-translate-y-0.5"
+                  >
+                    {isProcessing ? (
+                      <>
+                        <Spinner size="sm" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <span>Reject</span>
+                        <XCircle className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                )}
               </>
             )}
           </div>
         )}
 
-        {/* Info message when pending */}
-        {isPending && !hasPhotos && (
+        {/* Status Messages */}
+        {displayStatus === 'UNDER_REVIEW' && (
+          <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/10 p-3">
+            <div className="flex items-start gap-2">
+              <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <p className="text-xs text-primary">
+                Your review request is being processed. Admin will review and notify you when acceptance is enabled.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {displayStatus === 'PHOTOS_UNDER_REVIEW' && (
+          <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/10 p-3">
+            <div className="flex items-start gap-2">
+              <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <p className="text-xs text-primary">
+                Your photos have been submitted. We're reviewing them and will notify you when ready.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {displayStatus === 'CHANGES_REQUESTED' && (
           <div className="mt-4 rounded-2xl border border-warning/30 bg-warning-bg p-3">
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
               <p className="text-xs text-warning">
-                Consider uploading photos before accepting. Your estimate cost may reduce once we review your property photos.
+                We've reviewed your photos and need some changes or additional photos. Please resubmit.
+              </p>
+            </div>
+          </div>
+        )}
+        
+        {/* Info message when estimate sent but no photos uploaded */}
+        {displayStatus === 'ESTIMATE_SENT' && !hasPhotos && (
+          <div className="mt-4 rounded-2xl border border-warning/30 bg-warning-bg p-3">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
+              <p className="text-xs text-warning">
+                Consider uploading photos before requesting review. Your estimate cost may reduce once we review your property photos.
               </p>
             </div>
           </div>

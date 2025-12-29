@@ -76,7 +76,8 @@ export function useSendEstimate() {
 
 /**
  * React Query mutation for completing review
- * Transitions workflow from "reviewing" to "reviewed"
+ * Transitions workflow from "under_review" to "ready_to_accept"
+ * Enables acceptance for customer
  */
 export function useCompleteReview() {
   const queryClient = useQueryClient();
@@ -93,6 +94,49 @@ export function useCompleteReview() {
       // Invalidate estimate queries to refresh
       queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
+      // Also invalidate portal status in case admin is viewing customer portal
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
+      toast.success('Review completed. Acceptance has been enabled for the customer.');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to complete review');
+    },
+  });
+}
+
+/**
+ * React Query mutation for requesting changes to photos
+ * Resets photos submission status and allows customer to resubmit
+ */
+export function useRequestChanges() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ estimateId, locationId, reason = '' }) => {
+      return wpFetch(`/ca/v1/admin/estimates/${estimateId}/request-changes`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ locationId, reason }),
+      });
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate estimate queries to refresh
+      queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
+      queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
+      // Also invalidate portal status in case admin is viewing customer portal
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId
+      });
+      toast.success('Changes requested. Customer can now resubmit photos.');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to request changes');
     },
   });
 }

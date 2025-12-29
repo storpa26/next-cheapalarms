@@ -3,7 +3,7 @@
  * Handles fetching and processing dashboard statistics
  */
 
-import { getEstimates, WP_API_BASE } from "@/lib/wp";
+import { wpFetch, WP_API_BASE } from "@/lib/wp";
 import { cookieHeader, buildAuthHeaders } from "@/lib/admin/utils/request-utils";
 import { formatTimeAgo } from "@/lib/admin/utils/time-utils";
 
@@ -160,11 +160,10 @@ function generateActivity(estimates) {
  */
 export async function getDashboardData(req) {
   try {
-    // Fetch estimates
-    const estimatesData = await getEstimates(
-      { limit: 100 },
-      { headers: cookieHeader(req) }
-    );
+    // Fetch estimates via admin endpoint (benefits from server-side caching)
+    const estimatesData = await wpFetch(`/ca/v1/admin/estimates?page=1&pageSize=100`, {
+      headers: cookieHeader(req),
+    });
 
     const estimates = estimatesData?.items ?? [];
 

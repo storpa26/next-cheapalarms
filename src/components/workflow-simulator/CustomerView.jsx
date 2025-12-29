@@ -3,6 +3,7 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle2, XCircle, Clock, Upload, CreditCard, AlertCircle } from 'lucide-react';
 import { getDisplayStatus, getStatusMessage, computeUIState } from '@/lib/workflow-simulator/status-computer';
+import { NextStepCard } from './NextStepCard';
 
 export function CustomerView({ portalMeta, onAction, uiState }) {
   const displayStatus = uiState?.displayStatus || getDisplayStatus(portalMeta);
@@ -20,6 +21,11 @@ export function CustomerView({ portalMeta, onAction, uiState }) {
   return (
     <Card className="p-6 h-full">
       <h2 className="text-xl font-semibold mb-4">Customer View</h2>
+      
+      {/* Next Step Card */}
+      <div className="mb-6">
+        <NextStepCard portalMeta={portalMeta} onAction={onAction} uiState={uiState} />
+      </div>
       
       {/* Current Step Banner */}
       <div className="mb-6 p-4 rounded-lg bg-muted border">
@@ -50,9 +56,23 @@ export function CustomerView({ portalMeta, onAction, uiState }) {
           )}
           {displayStatus === 'ESTIMATE_SENT' && (
             <>
-              <li>• Admin sent estimate</li>
-              <li>• Acceptance is DISABLED (admin hasn't enabled it)</li>
-              <li>• Accept button is HIDDEN</li>
+              <li>• Estimate has been sent</li>
+              <li>• Upload photos (if required) then click "Request Review"</li>
+              <li>• Acceptance will be enabled after admin review</li>
+            </>
+          )}
+          {displayStatus === 'PHOTOS_UPLOADED' && (
+            <>
+              <li>• Photos have been uploaded</li>
+              <li>• Click "Request Review" to submit for admin review</li>
+              <li>• Admin will review and enable acceptance</li>
+            </>
+          )}
+          {displayStatus === 'UNDER_REVIEW' && (
+            <>
+              <li>• Review request submitted</li>
+              <li>• Admin is reviewing your photos/request</li>
+              <li>• You'll be notified when acceptance is enabled</li>
             </>
           )}
           {displayStatus === 'AWAITING_PHOTOS' && (
@@ -130,6 +150,17 @@ export function CustomerView({ portalMeta, onAction, uiState }) {
             className="w-full"
           >
             Request Quote
+          </Button>
+        )}
+        
+        {/* Request Review */}
+        {computed.canRequestReview && (
+          <Button
+            onClick={() => onAction('request-review')}
+            variant="default"
+            className="w-full"
+          >
+            Request Review
           </Button>
         )}
         

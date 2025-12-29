@@ -341,12 +341,12 @@ export default function WorkflowSimulator() {
       const sendBody = { locationId: portalMeta.locationId, method: 'email' };
       const sendResponse = mockResponse(sendEndpoint, method, sendBody, { ...portalMeta, ...tempUpdates });
       
-      // Update with sent status
+      // Update with sent status (NEW: workflow.status = 'sent', NOT 'reviewing')
       updates = {
         ...tempUpdates,
         workflow: {
           ...tempUpdates.workflow,
-          status: 'reviewing',
+          status: 'sent', // NEW: Changed from 'reviewing' to 'sent'
           currentStep: 2,
         },
         quote: {
@@ -356,6 +356,7 @@ export default function WorkflowSimulator() {
           sentAt: new Date().toISOString(),
           sendCount: 1,
           acceptance_enabled: false,
+          approval_requested: false, // NEW: Customer hasn't requested approval yet
           photos_required: tempUpdates.quote.photos_required, // Preserve photos_required value
         },
       };
@@ -461,13 +462,13 @@ export default function WorkflowSimulator() {
         },
         workflow: {
           ...portalMeta.workflow,
-          // On resubmission, change from 'reviewed' back to 'reviewing'
-          // Otherwise, preserve existing status or set to 'reviewing'
+          // On resubmission, change from 'ready_to_accept' or 'under_review' back to 'under_review'
+          // Otherwise, preserve existing status or set to 'under_review'
           status: isResubmission 
-            ? 'reviewing' 
-            : (portalMeta.workflow?.status === 'reviewing' || portalMeta.workflow?.status === 'reviewed')
+            ? 'under_review' 
+            : (portalMeta.workflow?.status === 'under_review' || portalMeta.workflow?.status === 'ready_to_accept')
               ? portalMeta.workflow.status
-              : 'reviewing',
+              : 'under_review',
           currentStep: 2,
         },
       };
@@ -484,6 +485,73 @@ export default function WorkflowSimulator() {
         description: isResubmission 
           ? 'Your photos have been resubmitted for review. Admin will review and notify you.'
           : 'Your photos have been submitted for review. Admin will review and notify you when ready.',
+        duration: 5000,
+      });
+    } else if (action === 'request-review') {
+      // NEW: Customer requests review after uploading photos
+      // This also submits photos if they haven't been submitted yet
+      // Validate state
+      if (portalMeta.workflow?.status !== 'sent') {
+        return; // Can only request review when estimate is sent
+      }
+      if (portalMeta.quote?.approval_requested) {
+        return; // Already requested review
+      }
+      if (portalMeta.workflow?.status === 'accepted' || portalMeta.quote?.status === 'accepted') {
+        return; // Already accepted
+      }
+      if (portalMeta.quote?.status === 'rejected') {
+        return; // Cannot request review for rejected estimate
+      }
+      
+      // If photos required, must have uploaded at least one
+      if (portalMeta.quote?.photos_required && (portalMeta.photos?.uploaded || 0) === 0) {
+        return; // No photos uploaded yet
+      }
+      
+      endpoint = '/ca/v1/portal/request-review';
+      body = { estimateId, locationId: portalMeta.locationId };
+      const response = mockResponse(endpoint, method, body, portalMeta);
+      
+      // If photos required and not yet submitted, submit them now
+      const shouldSubmitPhotos = portalMeta.quote?.photos_required && 
+        portalMeta.photos?.submission_status !== 'submitted' && 
+        (portalMeta.photos?.uploaded || 0) > 0;
+      
+      updates = {
+        quote: {
+          ...portalMeta.quote,
+          approval_requested: true, // Request review
+        },
+        workflow: {
+          ...portalMeta.workflow,
+          status: 'under_review', // Transition to 'under_review'
+          currentStep: 2,
+        },
+        // If photos need to be submitted, do it now
+        ...(shouldSubmitPhotos ? {
+          photos: {
+            ...portalMeta.photos,
+            submission_status: 'submitted',
+            submitted_at: new Date().toISOString(),
+          },
+        } : {}),
+      };
+      actionName = shouldSubmitPhotos 
+        ? 'Customer requested review (photos submitted automatically)'
+        : 'Customer requested review';
+      
+      const apiCall = getApiCallDetails(endpoint, method, body, response);
+      setApiCalls(prev => {
+        const updated = [...prev, apiCall];
+        return updated.slice(-MAX_ARRAY_SIZE);
+      });
+      
+      // Toast notification
+      toast.success('Review Requested', {
+        description: shouldSubmitPhotos
+          ? 'Your photos have been submitted and review request sent. Admin will review and notify you when acceptance is enabled.'
+          : 'Your review request has been submitted. Admin will review and notify you when acceptance is enabled.',
         duration: 5000,
       });
     } else if (action === 'request-changes') {
@@ -525,7 +593,7 @@ export default function WorkflowSimulator() {
         },
         workflow: {
           ...portalMeta.workflow,
-          status: 'reviewed',
+          status: 'under_review', // NEW: Keep in 'under_review' when changes requested
           reviewedAt: new Date().toISOString(),
           currentStep: 2,
         },
@@ -764,7 +832,7 @@ export default function WorkflowSimulator() {
       updates = {
         workflow: {
           ...portalMeta.workflow,
-          status: 'reviewing',
+          status: 'sent', // NEW: Changed from 'reviewing' to 'sent'
           currentStep: 2,
           requestedAt: portalMeta.workflow?.requestedAt || new Date().toISOString(),
         },
@@ -775,6 +843,7 @@ export default function WorkflowSimulator() {
           sentAt: new Date().toISOString(), // Overwrite previous sentAt
           sendCount: (portalMeta.quote?.sendCount || 0) + 1,
           acceptance_enabled: false, // Explicitly ensure acceptance is disabled when sending
+          approval_requested: false, // Reset approval request when resending
           photos_required: portalMeta.quote?.photos_required, // Preserve photos_required value
         },
       };
@@ -805,7 +874,7 @@ export default function WorkflowSimulator() {
       if (!portalMeta.quote?.sentAt) {
         return; // Estimate not sent yet
       }
-      if (portalMeta.workflow?.status !== 'reviewing' && portalMeta.workflow?.status !== 'reviewed') {
+      if (portalMeta.workflow?.status !== 'sent' && portalMeta.workflow?.status !== 'under_review' && portalMeta.workflow?.status !== 'ready_to_accept') {
         return; // Invalid workflow state
       }
       if (portalMeta.workflow?.status === 'accepted' || portalMeta.quote?.status === 'accepted') {
@@ -828,7 +897,7 @@ export default function WorkflowSimulator() {
         },
         workflow: {
           ...portalMeta.workflow,
-          status: 'reviewed',
+          status: 'ready_to_accept', // NEW: Changed from 'reviewed' to 'ready_to_accept'
           reviewedAt: new Date().toISOString(),
           currentStep: 2,
         },
@@ -890,7 +959,7 @@ export default function WorkflowSimulator() {
         },
         workflow: {
           ...portalMeta.workflow,
-          status: 'reviewed',
+          status: 'ready_to_accept', // NEW: Changed from 'reviewed' to 'ready_to_accept'
           reviewedAt: new Date().toISOString(),
           currentStep: 2,
         },

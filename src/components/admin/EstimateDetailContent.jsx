@@ -20,8 +20,10 @@ import {
   useSendEstimate,
   useUpdateEstimate,
   useCompleteReview,
+  useRequestChanges,
   useSendRevisionNotification
 } from "@/lib/react-query/hooks/admin";
+import { computeUIState } from "@/lib/portal/status-computer";
 import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
 import { AddCustomItemModal } from "./AddCustomItemModal";
@@ -41,6 +43,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const sendEstimateMutation = useSendEstimate();
   const updateEstimateMutation = useUpdateEstimate();
   const completeReviewMutation = useCompleteReview();
+  const requestChangesMutation = useRequestChanges();
   const sendRevisionMutation = useSendRevisionNotification(); // Separate hook for revision notifications
 
   const estimate = data?.ok ? data : null;
@@ -337,10 +340,20 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const handleCompleteReview = async () => {
     try {
       await completeReviewMutation.mutateAsync({ estimateId, locationId });
-      toast.success("Review completed! Customer has been notified.");
+      toast.success("Review completed! Acceptance has been enabled for the customer.");
       refetch();
     } catch (err) {
       toast.error(err.message || "Failed to complete review");
+    }
+  };
+
+  const handleRequestChanges = async (reason = '') => {
+    try {
+      await requestChangesMutation.mutateAsync({ estimateId, locationId, reason });
+      toast.success("Changes requested. Customer can now resubmit photos.");
+      refetch();
+    } catch (err) {
+      toast.error(err.message || "Failed to request changes");
     }
   };
 
@@ -755,29 +768,62 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   View in GHL
                 </a>
               )}
-              {/* Complete Review button - show when workflow is "reviewing" and photos are submitted */}
-              {portalMeta.workflow?.status === 'reviewing' && portalMeta.photos?.submission_status === 'submitted' && (
-                <Button
-                  onClick={handleCompleteReview}
-                  disabled={completeReviewMutation.isPending}
-                  variant="default"
-                  className="w-full"
-                >
-                  {completeReviewMutation.isPending ? (
-                    <>
-                      <Spinner size="sm" />
-                      Completing...
-                    </>
-                  ) : (
-                    <>
-                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      Complete Review
-                    </>
-                  )}
-                </Button>
-              )}
+              {/* Workflow Action Buttons - Use status computer to determine visibility */}
+              {portalMeta && (() => {
+                const uiState = computeUIState(portalMeta);
+                
+                return (
+                  <>
+                    {/* Approve & Enable Acceptance - Primary action */}
+                    {(uiState.adminCanApproveAndEnable || uiState.adminCanEnableAcceptance) && (
+                      <Button
+                        onClick={handleCompleteReview}
+                        disabled={completeReviewMutation.isPending}
+                        variant="default"
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        {completeReviewMutation.isPending ? (
+                          <>
+                            <Spinner size="sm" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Approve & Enable Acceptance
+                          </>
+                        )}
+                      </Button>
+                    )}
+                    
+                    {/* Request Changes - Secondary action (only when photos required) */}
+                    {uiState.adminCanRequestChanges && (
+                      <Button
+                        onClick={() => handleRequestChanges()}
+                        disabled={requestChangesMutation.isPending}
+                        variant="outline"
+                        className="w-full border-amber-500 text-amber-700 hover:bg-amber-50"
+                      >
+                        {requestChangesMutation.isPending ? (
+                          <>
+                            <Spinner size="sm" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Request Changes / More Photos
+                          </>
+                        )}
+                      </Button>
+                    )}
+                  </>
+                );
+              })()}
               <Button
                 onClick={handleSendEstimate}
                 disabled={sendEstimateMutation.isPending}

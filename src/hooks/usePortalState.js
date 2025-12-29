@@ -72,7 +72,9 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   } = useEstimate({
     estimateId: estimateId || null,
     inviteToken: inviteToken || null,
-    enabled: !!estimateId && router.isReady,
+    // Only fetch full estimate (items/pricing) when user is on the estimate detail view.
+    // This avoids heavy GHL-backed calls during initial portal load and on non-detail sections.
+    enabled: !!estimateId && router.isReady && activeNav === "estimates",
     initialData: null,
   });
 
@@ -111,26 +113,15 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   // Optimized: Only fetch current estimate + prefetch next/prev (not all at once)
   const shouldFetchEstimates = activeNav === 'overview' && !estimateId && estimates.length > 0;
   
-  // Determine which estimates to fetch: current + adjacent ones for smooth navigation
+  // Determine which estimates to fetch on Overview:
+  // Fetch ONLY the current estimate. Next/prev will fetch on-demand when the user switches.
   const estimatesToFetch = useMemo(() => {
     if (!shouldFetchEstimates || estimates.length === 0) return [];
     
     const current = estimates[overviewIndex];
     if (!current) return [];
     
-    const toFetch = [current]; // Always fetch current
-    
-    // Prefetch next estimate for smooth navigation
-    if (overviewIndex < estimates.length - 1) {
-      toFetch.push(estimates[overviewIndex + 1]);
-    }
-    
-    // Prefetch previous estimate for smooth navigation
-    if (overviewIndex > 0) {
-      toFetch.push(estimates[overviewIndex - 1]);
-    }
-    
-    return toFetch;
+    return [current];
   }, [shouldFetchEstimates, estimates, overviewIndex]);
   
   const estimateDetailsQueries = useQueries({
@@ -239,6 +230,19 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
 
   const handleNavigateToSection = useCallback(
     (section) => {
+      // "overview" is the default dashboard view - should have clean URL (no estimateId, no section param)
+      if (section === "overview") {
+        const params = new URLSearchParams();
+        // Only preserve inviteToken for guest access
+        if (inviteToken) {
+          params.set("inviteToken", inviteToken);
+        }
+        const queryString = params.toString();
+        router.push(`/portal${queryString ? `?${queryString}` : ""}`, undefined, { shallow: true });
+        return;
+      }
+      
+      // For other sections, preserve estimateId if it exists
       const params = new URLSearchParams();
       if (estimateId) {
         params.set("estimateId", estimateId);

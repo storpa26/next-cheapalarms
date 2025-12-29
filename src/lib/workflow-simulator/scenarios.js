@@ -27,6 +27,7 @@ export const scenarios = {
         enabled_at: null,
         enabled_by: null,
         photos_required: true,
+        approval_requested: false, // NEW
       },
       photos: {
         submission_status: null,
@@ -59,7 +60,7 @@ export const scenarios = {
     description: 'Customer has submitted photos, waiting for admin review and approval',
     state: {
       workflow: {
-        status: 'reviewing',
+        status: 'under_review', // NEW: Changed from 'reviewing' to 'under_review'
         currentStep: 2,
         requestedAt: '2025-01-15 10:00:00',
         reviewedAt: null,
@@ -78,6 +79,7 @@ export const scenarios = {
         enabled_at: null,
         enabled_by: null,
         photos_required: true,
+        approval_requested: true, // NEW: Customer requested approval
       },
       photos: {
         submission_status: 'submitted',
@@ -110,7 +112,7 @@ export const scenarios = {
     description: 'Customer submitted photos, admin reviewed and requested changes/more photos. Customer can resubmit.',
     state: {
       workflow: {
-        status: 'reviewed',
+        status: 'under_review', // NEW: Changed from 'reviewed' to 'under_review'
         currentStep: 2,
         requestedAt: '2025-01-15 10:00:00',
         reviewedAt: '2025-01-15 11:00:00',
@@ -162,7 +164,7 @@ export const scenarios = {
     description: 'Admin can enable acceptance immediately after sending estimate',
     state: {
       workflow: {
-        status: 'reviewing',
+        status: 'sent', // NEW: Changed from 'reviewing' to 'sent'
         currentStep: 2,
         requestedAt: '2025-01-15 10:00:00',
         reviewedAt: null,
@@ -181,6 +183,7 @@ export const scenarios = {
         enabled_at: null,
         enabled_by: null,
         photos_required: false,
+        approval_requested: false, // NEW
       },
       photos: {
         submission_status: null,
@@ -264,7 +267,7 @@ export const scenarios = {
     description: 'Customer rejects the estimate',
     state: {
       workflow: {
-        status: 'reviewing',
+        status: 'sent', // NEW: Changed from 'reviewing' to 'sent'
         currentStep: 2,
         requestedAt: '2025-01-15 10:00:00',
         reviewedAt: null,
@@ -283,6 +286,7 @@ export const scenarios = {
         enabled_at: null,
         enabled_by: null,
         photos_required: true,
+        approval_requested: false, // NEW
       },
       photos: {
         submission_status: null,
@@ -334,6 +338,7 @@ export const scenarios = {
         enabled_at: null,
         enabled_by: null,
         photos_required: null,
+        approval_requested: false, // NEW
       },
       photos: {
         submission_status: null,

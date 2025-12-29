@@ -77,31 +77,21 @@ export function AdminView({ portalMeta, onAction, uiState }) {
         <div className="space-y-3">
           <h3 className="font-semibold text-sm">Admin Actions:</h3>
           
-          {/* Enable Acceptance (no photos) */}
-          {computed.adminCanEnableAcceptance && (
+          {/* Approve & Enable Acceptance (primary action) */}
+          {(computed.adminCanEnableAcceptance || computed.adminCanApproveAndEnable) && (
             <Button
-              onClick={() => onAction('enable-acceptance')}
+              onClick={() => onAction(computed.adminCanApproveAndEnable ? 'approve-and-enable' : 'enable-acceptance')}
               variant="gradient"
               className="w-full"
             >
               <CheckCircle2 className="h-4 w-4 mr-2" />
-              Enable Acceptance (No Photos Required)
+              {computed.adminCanApproveAndEnable 
+                ? 'Approve & Enable Acceptance'
+                : 'Approve & Enable Acceptance'}
             </Button>
           )}
           
-          {/* Approve & Enable (with photos) */}
-          {computed.adminCanApproveAndEnable && (
-            <Button
-              onClick={() => onAction('approve-and-enable')}
-              variant="gradient"
-              className="w-full"
-            >
-              <CheckCircle2 className="h-4 w-4 mr-2" />
-              Approve Photos & Enable Acceptance
-            </Button>
-          )}
-          
-          {/* Request Changes (with photos) */}
+          {/* Request Changes (secondary action) */}
           {computed.adminCanRequestChanges && (
             <Button
               onClick={() => onAction('request-changes')}
@@ -109,7 +99,7 @@ export function AdminView({ portalMeta, onAction, uiState }) {
               className="w-full border-amber-500 text-amber-700 hover:bg-amber-50"
             >
               <AlertCircle className="h-4 w-4 mr-2" />
-              Request Changes / More Photos
+              Request Changes
             </Button>
           )}
           
@@ -119,6 +109,8 @@ export function AdminView({ portalMeta, onAction, uiState }) {
               <p className="text-xs text-muted-foreground">
                 {!quote.sentAt
                   ? 'Estimate will be automatically sent when customer requests quote.'
+                  : !quote.approval_requested
+                  ? 'Waiting for customer to upload photos and request review.'
                   : quote.photos_required === null
                   ? 'Set "Photos Required" toggle above, then wait for customer to upload/submit photos.'
                   : quote.photos_required && photos.submission_status !== 'submitted'
@@ -175,13 +167,22 @@ export function AdminView({ portalMeta, onAction, uiState }) {
           <h4 className="font-semibold mb-2 text-sm">Available Actions:</h4>
           <ul className="text-xs space-y-1 text-muted-foreground">
             {computed.adminCanEnableAcceptance && (
-              <li>✅ You can "Enable Acceptance" (photos not required)</li>
+              <li>✅ You can "Approve & Enable Acceptance" (no photos required)</li>
             )}
             {computed.adminCanApproveAndEnable && (
-              <li>✅ You can "Approve Photos & Enable Acceptance"</li>
+              <li>✅ You can "Approve & Enable Acceptance" (photos submitted and ready)</li>
             )}
-            {quote.photos_required && photos.submission_status !== 'submitted' && (
-              <li>⏳ Waiting for customer to submit photos...</li>
+            {computed.adminCanRequestChanges && (
+              <li>⚠️ You can "Request Changes" if photos need improvement</li>
+            )}
+            {!quote.approval_requested && quote.sentAt && quote.photos_required && (
+              <li>⏳ Waiting for customer to upload photos and request review...</li>
+            )}
+            {!quote.approval_requested && quote.sentAt && !quote.photos_required && (
+              <li>⏳ Waiting for customer to request review...</li>
+            )}
+            {quote.approval_requested && quote.photos_required && photos.submission_status !== 'submitted' && (
+              <li>⏳ Customer requested review. Waiting for photos to be submitted...</li>
             )}
             {quote.acceptance_enabled && !isAccepted && (
               <li>✅ Acceptance enabled. Customer can now accept.</li>
