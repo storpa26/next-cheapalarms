@@ -352,6 +352,21 @@ export default function SampleProductPage() {
           }, 3000);
           return;
         }
+
+        // Friendly conflict handling (fast, user-friendly)
+        // - phone_conflict: same phone used with a different email (unsafe to auto-merge)
+        // - contact_conflict: ambiguous duplicate, we fail closed for safety
+        if (quoteRes.status === 409 && (quoteJson.code === 'phone_conflict' || quoteJson.code === 'contact_conflict')) {
+          const errorMsg =
+            quoteJson.error ||
+            (quoteJson.code === 'phone_conflict'
+              ? "This phone number is already linked to another account. Please use the email you used previously, or contact support."
+              : "We found an account conflict. Please use the email you used previously, or contact support.");
+          setSubmitError(errorMsg);
+          // Allow user to immediately correct input and retry
+          isSubmittingRef.current = false;
+          return;
+        }
         
         const raw = quoteJson && (quoteJson.err || quoteJson.error);
         const msg =
