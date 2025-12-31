@@ -82,6 +82,20 @@ export default function SampleProductPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
+  // Ref to prevent duplicate submissions (immediate check before async operations)
+  const isSubmittingRef = useRef(false);
+  // Ref to store redirect timeout ID for cleanup
+  const redirectTimeoutRef = useRef(null);
+  
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const activeProfile = useMemo(
     () => propertyProfiles.find((profile) => profile.id === profileId),
     [propertyProfiles, profileId],
@@ -198,6 +212,11 @@ export default function SampleProductPage() {
   const handleSubmitQuote = useCallback(async (e) => {
     e.preventDefault();
 
+    // IMMEDIATE check (before any async operations) - prevents race conditions
+    if (isSubmittingRef.current) {
+      return; // Already submitting, ignore duplicate clicks
+    }
+
     // Validate required fields
     if (!email) {
       setSubmitError("Email is required");
@@ -209,6 +228,8 @@ export default function SampleProductPage() {
       return;
     }
 
+    // Set ref IMMEDIATELY (prevents race conditions)
+    isSubmittingRef.current = true;
     setSubmitError("");
     setSubmitSuccess(false);
     setIsSubmitting(true);
@@ -321,6 +342,17 @@ export default function SampleProductPage() {
       }
 
       if (!quoteRes.ok || !quoteJson.ok) {
+        // Check for duplicate request error
+        if (quoteJson.code === 'duplicate_request' || quoteRes.status === 429) {
+          const errorMsg = quoteJson.error || "A quote request is already being processed. Please wait a moment and check your email.";
+          setSubmitError(errorMsg);
+          // Don't reset ref immediately - wait a bit to prevent rapid retries
+          setTimeout(() => {
+            isSubmittingRef.current = false;
+          }, 3000);
+          return;
+        }
+        
         const raw = quoteJson && (quoteJson.err || quoteJson.error);
         const msg =
           typeof raw === "string" ? raw : raw && raw.message ? raw.message : JSON.stringify(raw || {});
@@ -337,10 +369,29 @@ export default function SampleProductPage() {
       // Success! Portal invitation was already sent
       setShowEmailSentModal(true);
       setSubmitSuccess(true);
+      
+      // Optional: Auto-redirect to success page after 5 seconds (user can close modal to go immediately)
+      // Clear any existing timeout before setting a new one
+      if (redirectTimeoutRef.current) {
+        clearTimeout(redirectTimeoutRef.current);
+      }
+      redirectTimeoutRef.current = setTimeout(() => {
+        if (createdEstimateId) {
+          router.push(`/quote-request/success?estimateId=${createdEstimateId}${createdLocationId ? `&locationId=${createdLocationId}` : ''}`);
+        }
+        redirectTimeoutRef.current = null;
+      }, 5000);
+      
     } catch (err) {
       setSubmitError(err.message || "Failed to submit quote request");
+      // Reset ref on error so user can retry
+      isSubmittingRef.current = false;
     } finally {
       setIsSubmitting(false);
+      // Reset ref after delay to prevent immediate resubmission
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 2000);
     }
   }, [email, inCart, firstName, lastName, phone, activeProfile, baseKit, selectedAddons, services, router]);
 
@@ -615,12 +666,19 @@ export default function SampleProductPage() {
                   {/* Enhanced Submit Button */}
                   <button
                     type="submit"
-                    disabled={!inCart || !email || isSubmitting}
+                    disabled={!inCart || !email || isSubmitting || isSubmittingRef.current}
                     className={`w-full rounded-xl px-6 py-4 text-sm font-semibold transition-all duration-fast ease-standard flex items-center justify-center gap-2 ${
-                      !inCart || !email || isSubmitting
+                      !inCart || !email || isSubmitting || isSubmittingRef.current
                         ? "cursor-not-allowed bg-muted text-muted-foreground opacity-50"
                         : "bg-gradient-to-r from-primary via-secondary to-primary text-white shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
                     }`}
+                    onClick={(e) => {
+                      // Additional safeguard: prevent if already submitting
+                      if (isSubmittingRef.current) {
+                        e.preventDefault();
+                        return;
+                      }
+                    }}
                   >
                     {isSubmitting ? (
                       <>

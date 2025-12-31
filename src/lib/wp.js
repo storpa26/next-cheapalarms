@@ -44,15 +44,26 @@ async function wpFetch(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
+  // Create AbortController for timeout (15 seconds)
+  const controller = new AbortController();
+  let timeoutId = null;
+
   try {
+    timeoutId = setTimeout(() => controller.abort(), 15000);
+    
     const response = await fetch(url, {
       credentials: "include",
       ...options,
       headers,
+      signal: controller.signal,
       next: {
         revalidate: options.next?.revalidate ?? 30,
       },
     });
+    
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -63,6 +74,16 @@ async function wpFetch(path, options = {}) {
 
     return response.json();
   } catch (error) {
+    // Clear timeout if it was set
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    
+    // Handle timeout errors
+    if (error.name === 'AbortError') {
+      throw new Error("Request timed out. The server may be slow or unavailable. Please try again.");
+    }
+    
     // Handle network errors (Failed to fetch, CORS, connection refused, etc.)
     if (error instanceof TypeError && error.message === "Failed to fetch") {
       throw new Error("Unable to connect to WordPress API. Please check your connection and API configuration.");
