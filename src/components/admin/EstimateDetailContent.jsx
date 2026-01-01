@@ -21,7 +21,8 @@ import {
   useUpdateEstimate,
   useCompleteReview,
   useRequestChanges,
-  useSendRevisionNotification
+  useSendRevisionNotification,
+  useDeleteEstimate
 } from "@/lib/react-query/hooks/admin";
 import { computeUIState } from "@/lib/portal/status-computer";
 import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
@@ -31,7 +32,9 @@ import { DiscountModal } from "./DiscountModal";
 import { ChangeSummary } from "./ChangeSummary";
 import { SaveEstimateModal } from "./SaveEstimateModal";
 import { WorkflowStatusCard } from "./WorkflowStatusCard";
+import { DeleteDialog } from "./DeleteDialog";
 import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
 
 export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated }) {
   const { data, isLoading, error, refetch } = useAdminEstimate({
@@ -45,6 +48,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const completeReviewMutation = useCompleteReview();
   const requestChangesMutation = useRequestChanges();
   const sendRevisionMutation = useSendRevisionNotification(); // Separate hook for revision notifications
+  const deleteEstimateMutation = useDeleteEstimate();
 
   const estimate = data?.ok ? data : null;
   const hasInvoice = !!(estimate?.linkedInvoice || estimate?.portalMeta?.invoice?.id);
@@ -62,6 +66,8 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [deleteItemDialogOpen, setDeleteItemDialogOpen] = useState(false);
   const [itemToDeleteIndex, setItemToDeleteIndex] = useState(null);
+  const [deleteEstimateDialogOpen, setDeleteEstimateDialogOpen] = useState(false);
+  const [deleteScope, setDeleteScope] = useState('both');
   
   // Fetch photos to determine which items have photos
   const { data: photosData } = useEstimatePhotos({
@@ -842,6 +848,16 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
                 </Button>
               )}
+              <div className="pt-2 border-t border-border/60">
+                <Button
+                  onClick={() => setDeleteEstimateDialogOpen(true)}
+                  variant="destructive"
+                  className="w-full"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Delete Estimate
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -903,6 +919,30 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Delete Estimate Dialog */}
+      <DeleteDialog
+        open={deleteEstimateDialogOpen}
+        onOpenChange={setDeleteEstimateDialogOpen}
+        onConfirm={async () => {
+          try {
+            await deleteEstimateMutation.mutateAsync({
+              estimateId,
+              locationId: locationId || estimate?.locationId,
+              scope: deleteScope,
+            });
+          } catch (err) {
+            // Error already handled in mutation
+          }
+        }}
+        title="Delete Estimate"
+        description={`Are you sure you want to delete estimate #${estimate?.estimateNumber || estimateId}? This action cannot be undone.`}
+        itemName={`estimate #${estimate?.estimateNumber || estimateId}`}
+        isLoading={deleteEstimateMutation.isPending}
+        showScopeSelection={true}
+        scope={deleteScope}
+        onScopeChange={setDeleteScope}
+      />
     </div>
   );
 }

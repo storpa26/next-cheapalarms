@@ -11,29 +11,54 @@ import { getWordPressUsers, getGHLContacts, matchContactsToUsers, getStatusBadge
 import { toast } from "@/components/ui/use-toast";
 import { isAuthError, isPermissionError } from "@/lib/admin/utils/error-handler";
 import { useWordPressUsers, useGHLContacts } from "@/lib/react-query/hooks";
+import { useDeleteUser, useDeleteGhlContact } from "@/lib/react-query/hooks/admin";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
+import { DeleteDialog } from "@/components/admin/DeleteDialog";
+import { Trash2 } from "lucide-react";
 
 export default function AdminCustomers({ initialWpUsers, initialGhlContacts, error, debugInfo }) {
   const [activeTab, setActiveTab] = useState("ghl"); // 'wp' | 'ghl'
   const [q, setQ] = useState("");
   const [inviting, setInviting] = useState({});
   const [refreshing, setRefreshing] = useState(false);
+  const [deleteUserDialogOpen, setDeleteUserDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [deleteScope, setDeleteScope] = useState('both');
+  const [deleteGhlContactDialogOpen, setDeleteGhlContactDialogOpen] = useState(false);
+  const [ghlContactToDelete, setGhlContactToDelete] = useState(null);
+  const [locationId, setLocationId] = useState("");
   const queryClient = useQueryClient();
+  const deleteUserMutation = useDeleteUser();
+  const deleteGhlContactMutation = useDeleteGhlContact();
 
   // Use React Query hooks for data fetching (with caching)
-  const { data: wpUsers = [], isLoading: loadingUsers, refetch: refetchUsers } = useWordPressUsers({
+  const {
+    data: wpUsers = [],
+    isLoading: loadingUsers,
+    isError: wpUsersIsError,
+    error: wpUsersError,
+    refetch: refetchUsers,
+  } = useWordPressUsers({
     enabled: true,
     initialData: initialWpUsers,
   });
 
-  const { data: ghlContacts = [], isLoading: loadingContacts, refetch: refetchContacts } = useGHLContacts({
+  const {
+    data: ghlContacts = [],
+    isLoading: loadingContacts,
+    isError: ghlContactsIsError,
+    error: ghlContactsError,
+    refetch: refetchContacts,
+  } = useGHLContacts({
     limit: 50,
     enabled: true,
     initialData: initialGhlContacts,
   });
 
   const loading = loadingUsers || loadingContacts || refreshing;
+  const wpErrMsg = wpUsersIsError ? (wpUsersError?.message || "Failed to load WordPress users.") : null;
+  const ghlErrMsg = ghlContactsIsError ? (ghlContactsError?.message || "Failed to load GHL contacts.") : null;
 
   // Match contacts to users
   const matchedContacts = matchContactsToUsers(ghlContacts, wpUsers);
@@ -169,127 +194,274 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                   WordPress Users ({filteredWpUsers.length})
                 </TabsTrigger>
               </TabsList>
-            </Tabs>
 
-            {/* GHL Contacts Tab */}
-            <TabsContent value="ghl" className="mt-4">
-              <div className="overflow-x-auto rounded-md border border-border/60">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2">Name</th>
-                      <th className="px-3 py-2">Email</th>
-                      <th className="px-3 py-2">Phone</th>
-                      <th className="px-3 py-2">Status</th>
-                      <th className="px-3 py-2">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredGhlContacts.map((contact) => {
-                      const badge = getStatusBadge(contact.status);
-                      const name = `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || "No name";
-                      const canInvite = contact.status === "no_account" || contact.status === "needs_invite";
-
-                      return (
-                        <tr key={contact.id} className="border-t border-border/60">
-                          <td className="px-3 py-2">{name}</td>
-                          <td className="px-3 py-2">{contact.email || "—"}</td>
-                          <td className="px-3 py-2">{contact.phone || "—"}</td>
-                          <td className="px-3 py-2">
-                            <Badge variant={badge.variant}>{badge.label}</Badge>
-                          </td>
-                          <td className="px-3 py-2">
-                            {canInvite ? (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleInviteGhlContact(contact.id)}
-                                disabled={inviting[contact.id]}
-                              >
-                                {inviting[contact.id] ? (
-                                  <span className="flex items-center gap-2">
-                                    <Spinner size="sm" />
-                                    Sending…
-                                  </span>
-                                ) : (
-                                  "Send Portal Invite"
-                                )}
-                              </Button>
-                            ) : contact.matchedUser?.hasPortal ? (
-                              <Button variant="ghost" size="sm" disabled>
-                                Has Portal Access
-                              </Button>
-                            ) : (
-                              <span className="text-xs text-muted-foreground">Linked</span>
-                            )}
+              {/* GHL Contacts Tab */}
+              <TabsContent value="ghl" className="mt-4">
+                <div className="overflow-x-auto rounded-md border border-border/60">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
+                      <tr>
+                        <th className="px-3 py-2">Name</th>
+                        <th className="px-3 py-2">Email</th>
+                        <th className="px-3 py-2">Phone</th>
+                        <th className="px-3 py-2">Status</th>
+                        <th className="px-3 py-2">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {ghlContactsIsError ? (
+                        <tr>
+                          <td className="px-3 py-6 text-center text-xs text-error" colSpan={5}>
+                            Failed to load GHL contacts. {ghlErrMsg}{" "}
+                            <button
+                              type="button"
+                              className="underline"
+                              onClick={() => refetchContacts()}
+                            >
+                              Retry
+                            </button>
                           </td>
                         </tr>
-                      );
-                    })}
-                    {filteredGhlContacts.length === 0 && (
-                      <tr>
-                        <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={5}>
-                          {q ? "No contacts match your search." : "No GHL contacts found."}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
+                      ) : loadingContacts ? (
+                        <tr>
+                          <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={5}>
+                            <span className="inline-flex items-center gap-2">
+                              <Spinner size="sm" />
+                              Loading contacts…
+                            </span>
+                          </td>
+                        </tr>
+                      ) : (
+                        <>
+                          {filteredGhlContacts.map((contact) => {
+                            const badge = getStatusBadge(contact.status);
+                            const name =
+                              `${contact.firstName || ""} ${contact.lastName || ""}`.trim() || "No name";
+                            const canInvite =
+                              contact.status === "no_account" || contact.status === "needs_invite";
 
-            {/* WordPress Users Tab */}
-            <TabsContent value="wp" className="mt-4">
-              <div className="overflow-x-auto rounded-md border border-border/60">
-                <table className="w-full text-left text-sm">
-                  <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                    <tr>
-                      <th className="px-3 py-2">Name</th>
-                      <th className="px-3 py-2">Email</th>
-                      <th className="px-3 py-2">Portal</th>
-                      <th className="px-3 py-2">GHL Linked</th>
-                      <th className="px-3 py-2">Roles</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredWpUsers.map((user) => (
-                      <tr key={user.id} className="border-t border-border/60">
-                        <td className="px-3 py-2">{user.name}</td>
-                        <td className="px-3 py-2">{user.email}</td>
-                        <td className="px-3 py-2">
-                          {user.hasPortal ? (
-                            <Badge variant="default">Active</Badge>
-                          ) : (
-                            <Badge variant="outline">No Access</Badge>
+                            return (
+                              <tr key={contact.id} className="border-t border-border/60">
+                                <td className="px-3 py-2">{name}</td>
+                                <td className="px-3 py-2">{contact.email || "—"}</td>
+                                <td className="px-3 py-2">{contact.phone || "—"}</td>
+                                <td className="px-3 py-2">
+                                  <Badge variant={badge.variant}>{badge.label}</Badge>
+                                </td>
+                                <td className="px-3 py-2">
+                                  <div className="flex items-center gap-2">
+                                    {canInvite ? (
+                                      <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => handleInviteGhlContact(contact.id)}
+                                        disabled={inviting[contact.id]}
+                                      >
+                                        {inviting[contact.id] ? (
+                                          <span className="flex items-center gap-2">
+                                            <Spinner size="sm" />
+                                            Sending…
+                                          </span>
+                                        ) : (
+                                          "Send Portal Invite"
+                                        )}
+                                      </Button>
+                                    ) : contact.matchedUser?.hasPortal ? (
+                                      <Button variant="ghost" size="sm" disabled>
+                                        Has Portal Access
+                                      </Button>
+                                    ) : (
+                                      <span className="text-xs text-muted-foreground">Linked</span>
+                                    )}
+
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      title="Delete contact from GoHighLevel"
+                                      onClick={() => {
+                                        setGhlContactToDelete(contact);
+                                        setDeleteGhlContactDialogOpen(true);
+                                      }}
+                                      disabled={
+                                        deleteGhlContactMutation.isPending &&
+                                        ghlContactToDelete?.id === contact.id
+                                      }
+                                      className="text-error hover:text-error/80 hover:bg-error/10"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                          {filteredGhlContacts.length === 0 && (
+                            <tr>
+                              <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={5}>
+                                {q ? "No contacts match your search." : "No GHL contacts found."}
+                              </td>
+                            </tr>
                           )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {user.ghlContactId ? (
-                            <Badge variant="secondary">Linked</Badge>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">Not linked</span>
-                          )}
-                        </td>
-                        <td className="px-3 py-2">
-                          {Array.isArray(user.roles) && user.roles.length > 0
-                            ? user.roles.join(", ")
-                            : "—"}
-                        </td>
-                      </tr>
-                    ))}
-                    {filteredWpUsers.length === 0 && (
+                        </>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </TabsContent>
+
+              {/* WordPress Users Tab */}
+              <TabsContent value="wp" className="mt-4">
+                <div className="overflow-x-auto rounded-md border border-border/60">
+                  <table className="w-full text-left text-sm">
+                    <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                       <tr>
-                        <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={5}>
-                          {q ? "No users match your search." : "No WordPress users found."}
-                        </td>
+                        <th className="px-3 py-2">Name</th>
+                        <th className="px-3 py-2">Email</th>
+                        <th className="px-3 py-2">Portal</th>
+                        <th className="px-3 py-2">GHL Linked</th>
+                        <th className="px-3 py-2">Roles</th>
+                        <th className="px-3 py-2">Actions</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </TabsContent>
+                    </thead>
+                    <tbody>
+                      {wpUsersIsError ? (
+                        <tr>
+                          <td className="px-3 py-6 text-center text-xs text-error" colSpan={6}>
+                            Failed to load WordPress users. {wpErrMsg}{" "}
+                            <button
+                              type="button"
+                              className="underline"
+                              onClick={() => refetchUsers()}
+                            >
+                              Retry
+                            </button>
+                          </td>
+                        </tr>
+                      ) : loadingUsers ? (
+                        <tr>
+                          <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={6}>
+                            <span className="inline-flex items-center gap-2">
+                              <Spinner size="sm" />
+                              Loading users…
+                            </span>
+                          </td>
+                        </tr>
+                      ) : (
+                        <>
+                          {filteredWpUsers.map((user) => (
+                            <tr key={user.id} className="border-t border-border/60">
+                              <td className="px-3 py-2">{user.name}</td>
+                              <td className="px-3 py-2">{user.email}</td>
+                              <td className="px-3 py-2">
+                                {user.hasPortal ? (
+                                  <Badge variant="default">Active</Badge>
+                                ) : (
+                                  <Badge variant="outline">No Access</Badge>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                {user.ghlContactId ? (
+                                  <Badge variant="secondary">Linked</Badge>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Not linked</span>
+                                )}
+                              </td>
+                              <td className="px-3 py-2">
+                                {Array.isArray(user.roles) && user.roles.length > 0
+                                  ? user.roles.join(", ")
+                                  : "—"}
+                              </td>
+                              <td className="px-3 py-2">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => {
+                                    setUserToDelete(user);
+                                    setDeleteUserDialogOpen(true);
+                                  }}
+                                  className="text-error hover:text-error/80 hover:bg-error/10"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </td>
+                            </tr>
+                          ))}
+                          {filteredWpUsers.length === 0 && (
+                            <tr>
+                              <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={6}>
+                                {q ? "No users match your search." : "No WordPress users found."}
+                              </td>
+                            </tr>
+                          )}
+                        </>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </TabsContent>
+            </Tabs>
           </CardContent>
         </Card>
+
+        {/* Delete User Dialog */}
+        <DeleteDialog
+          open={deleteUserDialogOpen}
+          onOpenChange={setDeleteUserDialogOpen}
+          onConfirm={async () => {
+            if (!userToDelete) return;
+            try {
+              await deleteUserMutation.mutateAsync({
+                userId: userToDelete.id,
+                locationId: locationId || undefined,
+                scope: deleteScope,
+              });
+              setDeleteUserDialogOpen(false);
+              setUserToDelete(null);
+            } catch (err) {
+              // Error already handled in mutation
+            }
+          }}
+          title="Delete User/Contact"
+          description={userToDelete ? `Are you sure you want to delete ${userToDelete.name || userToDelete.email}? This action cannot be undone.` : ""}
+          itemName={userToDelete ? (userToDelete.name || userToDelete.email) : ""}
+          isLoading={deleteUserMutation.isPending}
+          showScopeSelection={true}
+          scope={deleteScope}
+          onScopeChange={setDeleteScope}
+        />
+
+        {/* Delete GHL Contact Dialog */}
+        <DeleteDialog
+          open={deleteGhlContactDialogOpen}
+          onOpenChange={setDeleteGhlContactDialogOpen}
+          onConfirm={async () => {
+            if (!ghlContactToDelete) return;
+            try {
+              await deleteGhlContactMutation.mutateAsync({
+                contactId: ghlContactToDelete.id,
+                locationId: ghlContactToDelete.locationId,
+              });
+              setDeleteGhlContactDialogOpen(false);
+              setGhlContactToDelete(null);
+              await handleRefresh();
+            } catch (err) {
+              // Error already handled in mutation
+            }
+          }}
+          title="Delete GHL Contact"
+          description={
+            ghlContactToDelete
+              ? `Are you sure you want to delete ${ghlContactToDelete.email || ghlContactToDelete.contactName || 'this contact'} from GoHighLevel? This cannot be undone.`
+              : ""
+          }
+          itemName={
+            ghlContactToDelete
+              ? (ghlContactToDelete.email || ghlContactToDelete.contactName || ghlContactToDelete.id)
+              : ""
+          }
+          isLoading={deleteGhlContactMutation.isPending}
+          showScopeSelection={false}
+        />
       </AdminLayout>
     </>
   );
@@ -302,15 +474,38 @@ export async function getServerSideProps(ctx) {
   }
 
   try {
-    const [wpUsers, ghlContacts] = await Promise.all([
-      getWordPressUsers(ctx.req).catch(() => []),
-      getGHLContacts(ctx.req).catch(() => []),
-    ]);
+    let wpUsers = [];
+    let ghlContacts = [];
+    const initialLoadErrors = {};
+
+    try {
+      wpUsers = await getWordPressUsers(ctx.req);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to fetch WordPress users";
+      initialLoadErrors.wpUsers = msg;
+    }
+
+    try {
+      ghlContacts = await getGHLContacts(ctx.req);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Failed to fetch GHL contacts";
+      initialLoadErrors.ghlContacts = msg;
+    }
+
+    const hasInitialErrors = Object.keys(initialLoadErrors).length > 0;
 
     return {
       props: {
         initialWpUsers: wpUsers,
         initialGhlContacts: ghlContacts,
+        ...(hasInitialErrors
+          ? {
+              error:
+                "Some customer data failed to load (usually GHL connectivity). Please try Refresh.",
+              debugInfo:
+                process.env.NODE_ENV === "development" ? initialLoadErrors : null,
+            }
+          : {}),
         ...(authCheck.props || {}),
       },
     };

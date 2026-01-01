@@ -15,11 +15,20 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   
   // Extract estimateId from URL
   const estimateId = useMemo(() => {
-    if (router.isReady && router.query.estimateId) {
+    // Only use initialEstimateId before the router is ready (SSR hydration).
+    // After router is ready, the URL is the source of truth. This prevents
+    // "sticky" estimateId when navigating back to /portal (overview).
+    if (!router.isReady) {
+      return initialEstimateId || null;
+    }
+
+    if (router.query.estimateId) {
       const val = router.query.estimateId;
       return Array.isArray(val) ? val[0] : val;
     }
-    return initialEstimateId || null;
+
+    // If URL has no estimateId, we are not in estimate detail view.
+    return null;
   }, [router.isReady, router.query.estimateId, initialEstimateId]);
 
   // Extract section from URL
@@ -222,6 +231,8 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
 
   const handleBackToList = useCallback(() => {
     const params = new URLSearchParams();
+    // Explicitly go to estimates list view (no estimateId in URL)
+    params.set("section", "estimates");
     if (inviteToken) {
       params.set("inviteToken", inviteToken);
     }

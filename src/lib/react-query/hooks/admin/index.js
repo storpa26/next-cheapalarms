@@ -7,5 +7,9 @@ export { useCreateInvoiceFromEstimate, useSendEstimate, useCompleteReview, useRe
 export { useSendInvoice } from './use-admin-invoice-actions';
 export { useUpdateEstimate } from './use-update-estimate';
 export { useXeroStatus, useXeroAuthorize, useXeroDisconnect, useSyncInvoiceToXero } from './use-xero';
+export { useDeleteEstimate } from './use-delete-estimate';
+export { useDeleteInvoice } from './use-delete-invoice';
+export { useDeleteUser } from './use-delete-user';
+export { useDeleteGhlContact } from './use-delete-ghl-contact';
 // Note: useSyncEstimate and useSyncInvoice are kept in files but not exported (for potential future use)
 

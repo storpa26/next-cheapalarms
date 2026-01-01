@@ -2,12 +2,13 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
-import { useAdminInvoice, useSendInvoice, useSyncInvoiceToXero, useXeroStatus } from "@/lib/react-query/hooks/admin";
+import { useAdminInvoice, useSendInvoice, useSyncInvoiceToXero, useXeroStatus, useDeleteInvoice } from "@/lib/react-query/hooks/admin";
 import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
+import { DeleteDialog } from "./DeleteDialog";
 import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
 import { toast } from "sonner";
-import { CheckCircle2, XCircle } from "lucide-react";
+import { CheckCircle2, XCircle, Trash2 } from "lucide-react";
 
 export function InvoiceDetailContent({ invoiceId, locationId }) {
   const { data, isLoading, error, refetch } = useAdminInvoice({
@@ -17,6 +18,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
 
   const sendInvoiceMutation = useSendInvoice();
   const syncToXeroMutation = useSyncInvoiceToXero();
+  const deleteInvoiceMutation = useDeleteInvoice();
   const { data: xeroStatus } = useXeroStatus();
   const isXeroConnected = xeroStatus?.ok && xeroStatus?.connected;
 
@@ -25,6 +27,8 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
   
   // Row selection state
   const [selectedItem, setSelectedItem] = useState(null);
+  const [deleteInvoiceDialogOpen, setDeleteInvoiceDialogOpen] = useState(false);
+  const [deleteScope, setDeleteScope] = useState('both');
   
   // Fetch photos from linked estimate (photos are stored against estimates, not invoices)
   // Always try to fetch - even if linkedEstimate is not yet available (it might load later)
@@ -356,6 +360,15 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                   </p>
                 )}
               </div>
+              <div className="pt-2 border-t border-border/60">
+                <button
+                  onClick={() => setDeleteInvoiceDialogOpen(true)}
+                  className="w-full rounded-md bg-destructive px-3 py-2 text-sm font-medium text-destructive-foreground transition hover:bg-destructive/90 disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Invoice
+                </button>
+              </div>
             </div>
           </div>
 
@@ -367,6 +380,30 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
           />
         </div>
       </div>
+
+      {/* Delete Invoice Dialog */}
+      <DeleteDialog
+        open={deleteInvoiceDialogOpen}
+        onOpenChange={setDeleteInvoiceDialogOpen}
+        onConfirm={async () => {
+          try {
+            await deleteInvoiceMutation.mutateAsync({
+              invoiceId,
+              locationId: locationId || invoice?.locationId,
+              scope: deleteScope,
+            });
+          } catch (err) {
+            // Error already handled in mutation
+          }
+        }}
+        title="Delete Invoice"
+        description={`Are you sure you want to delete invoice #${invoice?.invoiceNumber || invoiceId}? This action cannot be undone.`}
+        itemName={`invoice #${invoice?.invoiceNumber || invoiceId}`}
+        isLoading={deleteInvoiceMutation.isPending}
+        showScopeSelection={true}
+        scope={deleteScope}
+        onScopeChange={setDeleteScope}
+      />
     </div>
   );
 }
