@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export function StatusTabs({ tabs, activeTab, onTabChange }) {
   return (
@@ -21,7 +22,14 @@ export function StatusTabs({ tabs, activeTab, onTabChange }) {
                 }
               `}
             >
-              {tab.label}
+              <span className="flex items-center gap-2">
+                {tab.label}
+                {tab.badge !== undefined && tab.badge > 0 && (
+                  <Badge variant="secondary" className="text-xs">
+                    {tab.badge}
+                  </Badge>
+                )}
+              </span>
             </Button>
           );
         })}

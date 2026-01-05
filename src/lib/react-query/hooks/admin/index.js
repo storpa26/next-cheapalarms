@@ -11,5 +11,8 @@ export { useDeleteEstimate } from './use-delete-estimate';
 export { useDeleteInvoice } from './use-delete-invoice';
 export { useDeleteUser } from './use-delete-user';
 export { useDeleteGhlContact } from './use-delete-ghl-contact';
+export { useAdminEstimatesTrash } from './use-admin-estimates-trash';
+export { useRestoreEstimate } from './use-restore-estimate';
+export { useBulkRestoreEstimates } from './use-bulk-restore-estimates';
 // Note: useSyncEstimate and useSyncInvoice are kept in files but not exported (for potential future use)
 

@@ -1,10 +1,15 @@
 import Head from "next/head";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Settings, Plus, MoreVertical } from "lucide-react";
+import { Settings, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { useAdminEstimates } from "@/lib/react-query/hooks/admin";
+import { 
+  useAdminEstimates, 
+  useAdminEstimatesTrash,
+  useDeleteEstimate 
+} from "@/lib/react-query/hooks/admin";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { Spinner } from "@/components/ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,6 +18,10 @@ import { SummaryCard } from "@/components/admin/SummaryCard";
 import { StatusTabs } from "@/components/admin/StatusTabs";
 import { Avatar } from "@/components/admin/Avatar";
 import { SearchBar } from "@/components/admin/SearchBar";
+import { DeleteDialog } from "@/components/admin/DeleteDialog";
+import { EstimateActionsMenu } from "@/components/admin/EstimateActionsMenu";
+import { TrashView } from "@/components/admin/TrashView";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
 
 export default function EstimatesListPage() {
@@ -25,27 +34,46 @@ export default function EstimatesListPage() {
   const [workflowStatusFilter, setWorkflowStatusFilter] = useState(""); // NEW: Workflow status filter
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [estimateToDelete, setEstimateToDelete] = useState(null);
+  const [deleteScope, setDeleteScope] = useState('local');
   const pageSize = DEFAULT_PAGE_SIZE;
+
+  const deleteEstimateMutation = useDeleteEstimate();
 
   // Get estimateId from URL query for deep linking
   const estimateIdFromQuery = router.query.estimateId;
   const selectedEstimateId = estimateIdFromQuery || null;
 
   // Map tab to portal status filter
-  const portalStatusFilter = activeTab === "all" ? "" : activeTab;
+  const portalStatusFilter = activeTab === "all" || activeTab === "trash" ? "" : activeTab;
 
+  // Fetch active estimates (only when not in trash tab)
   const { data, isLoading, error, refetch } = useAdminEstimates({
     search: search || undefined,
     portalStatus: portalStatusFilter || undefined,
-    workflowStatus: workflowStatusFilter || undefined, // NEW: Add workflow status filter
+    workflowStatus: workflowStatusFilter || undefined,
     page,
     pageSize,
+    enabled: activeTab !== "trash",
   });
 
-  const handleRefresh = () => {
+  // Fetch trash (only when in trash tab)
+  const { 
+    data: trashData, 
+    isLoading: trashLoading, 
+    error: trashError, 
+    refetch: refetchTrash 
+  } = useAdminEstimatesTrash({
+    locationId: locationId || undefined,
+    limit: 100,
+    enabled: activeTab === "trash",
+  });
+
+  const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
     refetch();
-  };
+  }, [queryClient, refetch]);
 
   const estimates = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
@@ -101,7 +129,7 @@ export default function EstimatesListPage() {
     };
   }, [data?.summary, estimates]);
 
-  const handleRowClick = (estimateId) => {
+  const handleRowClick = useCallback((estimateId) => {
     router.replace(
       {
         pathname: router.pathname,
@@ -110,9 +138,9 @@ export default function EstimatesListPage() {
       undefined,
       { shallow: true }
     );
-  };
+  }, [router]);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     const { estimateId, ...restQuery } = router.query;
     router.replace(
       {
@@ -122,18 +150,65 @@ export default function EstimatesListPage() {
       undefined,
       { shallow: true }
     );
-  };
+  }, [router]);
 
-  const handleInvoiceCreated = () => {
+  const handleInvoiceCreated = useCallback(() => {
     handleRefresh();
-  };
+  }, [handleRefresh]);
 
-  const statusTabs = [
+  // Get trash count for badge
+  const trashCount = trashData?.count || 0;
+
+  const statusTabs = useMemo(() => [
     { value: "all", label: "All" },
     { value: "sent", label: "Sent" },
     { value: "accepted", label: "Accepted" },
     { value: "rejected", label: "Rejected" },
-  ];
+    { 
+      value: "trash", 
+      label: "Trash",
+      badge: trashCount > 0 ? trashCount : undefined,
+    },
+  ], [trashCount]);
+
+  // Handle delete
+  const handleDeleteClick = useCallback((estimateId, locId) => {
+    setEstimateToDelete({ id: estimateId, locationId: locId || locationId });
+    setDeleteDialogOpen(true);
+  }, [locationId]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!estimateToDelete) return;
+    
+    try {
+      await deleteEstimateMutation.mutateAsync({
+        estimateId: estimateToDelete.id,
+        locationId: estimateToDelete.locationId || locationId,
+        scope: deleteScope,
+      });
+      setDeleteDialogOpen(false);
+      setEstimateToDelete(null);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  }, [estimateToDelete, locationId, deleteScope, deleteEstimateMutation]);
+
+  // Handle view details
+  const handleViewDetails = useCallback((estimateId) => {
+    handleRowClick(estimateId);
+  }, [handleRowClick]);
+
+  // Keyboard shortcuts
+  const shortcuts = useMemo(() => ({
+    Escape: (e) => {
+      e.preventDefault();
+      if (deleteDialogOpen) {
+        setDeleteDialogOpen(false);
+      }
+    },
+  }), [deleteDialogOpen]);
+
+  useKeyboardShortcuts(shortcuts, true, [deleteDialogOpen]);
 
   const getStatusBadgeClass = (status) => {
     const classes = {
@@ -225,32 +300,44 @@ export default function EstimatesListPage() {
           {/* Status Tabs */}
           <StatusTabs tabs={statusTabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
-          {/* Search Bar */}
-          <SearchBar
-            search={search}
-            onSearchChange={(value) => {
-              setSearch(value);
-              setPage(1);
-            }}
-            startDate={startDate}
-            onStartDateChange={(value) => {
-              setStartDate(value);
-              setPage(1);
-            }}
-            endDate={endDate}
-            onEndDateChange={(value) => {
-              setEndDate(value);
-              setPage(1);
-            }}
-            workflowStatus={workflowStatusFilter}
-            onWorkflowStatusChange={(value) => {
-              setWorkflowStatusFilter(value);
-              setPage(1);
-            }}
-            placeholder="Search by number, email..."
-          />
+          {/* Trash View */}
+          {activeTab === "trash" ? (
+            <TrashView
+              items={trashData?.items || []}
+              isLoading={trashLoading}
+              error={trashError}
+              onRetry={refetchTrash}
+              onViewDetails={handleViewDetails}
+              locationId={locationId}
+            />
+          ) : (
+            <>
+              {/* Search Bar */}
+              <SearchBar
+                search={search}
+                onSearchChange={(value) => {
+                  setSearch(value);
+                  setPage(1);
+                }}
+                startDate={startDate}
+                onStartDateChange={(value) => {
+                  setStartDate(value);
+                  setPage(1);
+                }}
+                endDate={endDate}
+                onEndDateChange={(value) => {
+                  setEndDate(value);
+                  setPage(1);
+                }}
+                workflowStatus={workflowStatusFilter}
+                onWorkflowStatusChange={(value) => {
+                  setWorkflowStatusFilter(value);
+                  setPage(1);
+                }}
+                placeholder="Search by number, email..."
+              />
 
-          {/* Table */}
+              {/* Table */}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Spinner />
@@ -465,16 +552,13 @@ export default function EstimatesListPage() {
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <Button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // TODO: Add dropdown menu
-                              }}
-                              variant="ghost"
-                              size="icon-sm"
-                            >
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
+                            <EstimateActionsMenu
+                              estimateId={estimate.id}
+                              isInTrash={false}
+                              onViewDetails={handleViewDetails}
+                              onMoveToTrash={handleDeleteClick}
+                              locationId={locationId || estimate.locationId}
+                            />
                           </td>
                         </tr>
                       ))}
@@ -511,7 +595,27 @@ export default function EstimatesListPage() {
               )}
             </>
           )}
+            </>
+          )}
         </div>
+
+        {/* Delete Dialog */}
+        <DeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          title="Move to Trash"
+          description={estimateToDelete 
+            ? `This estimate will be moved to trash and can be restored within 30 days.`
+            : undefined
+          }
+          itemName={estimateToDelete?.id}
+          isLoading={deleteEstimateMutation.isPending}
+          showScopeSelection={true}
+          scope={deleteScope}
+          onScopeChange={setDeleteScope}
+          trashMode={true}
+        />
 
         {/* Estimate Detail Modal */}
         <EstimateDetailModal

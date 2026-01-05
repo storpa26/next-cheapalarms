@@ -40,19 +40,62 @@ export function useDeleteEstimate() {
 
       return data;
     },
+    onMutate: async ({ estimateId }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['admin-estimates'] });
+      await queryClient.cancelQueries({ queryKey: ['admin-estimates-trash'] });
+
+      // Snapshot previous values
+      const previousEstimates = queryClient.getQueryData(['admin-estimates']);
+
+      // Optimistically remove from list (only for local scope)
+      queryClient.setQueryData(['admin-estimates'], (old) => {
+        if (!old) return old;
+        return {
+          ...old,
+          items: old.items?.filter((item) => item.id !== estimateId) || [],
+          total: Math.max(0, (old.total || 0) - 1),
+        };
+      });
+
+      return { previousEstimates };
+    },
     onSuccess: (data, variables) => {
-      // Invalidate all estimate queries
+      // Invalidate queries to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-estimates-trash'] });
       queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
       
-      // Navigate back to estimates list
-      router.push('/admin/estimates');
+      // Only navigate if we're on a detail page
+      if (router.pathname.includes('/[estimateId]')) {
+        router.push('/admin/estimates');
+      }
       
-      toast.success('Estimate deleted successfully');
+      const scope = variables.scope || 'both';
+      const isLocalDelete = scope === 'local' || scope === 'both';
+      
+      if (isLocalDelete) {
+        toast.success('Estimate moved to trash', {
+          description: 'You can restore it from the Trash tab within 30 days.',
+          duration: 5000,
+        });
+      } else {
+        toast.success('Estimate deleted from GHL', {
+          description: 'The estimate has been removed from GoHighLevel.',
+          duration: 5000,
+        });
+      }
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // Rollback optimistic update
+      if (context?.previousEstimates) {
+        queryClient.setQueryData(['admin-estimates'], context.previousEstimates);
+      }
+
       const message = error.message || 'Failed to delete estimate';
-      toast.error(message);
+      toast.error('Delete failed', {
+        description: message,
+      });
     },
   });
 }
