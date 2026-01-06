@@ -3,6 +3,8 @@ export { useAdminEstimate } from './use-admin-estimate';
 export { useAdminInvoices } from './use-admin-invoices';
 export { useAdminInvoice } from './use-admin-invoice';
 export { useAdminDashboard } from './use-admin-dashboard';
+export { useHealthCheck } from './use-health-check';
+export { useAdminLogs } from './use-admin-logs';
 export { useCreateInvoiceFromEstimate, useSendEstimate, useCompleteReview, useRequestChanges, useSendRevisionNotification } from './use-admin-estimate-actions';
 export { useSendInvoice } from './use-admin-invoice-actions';
 export { useUpdateEstimate } from './use-update-estimate';

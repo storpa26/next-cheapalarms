@@ -55,13 +55,33 @@ export function getErrorMessage(statusOrType, fallback = ERROR_MESSAGES.unknown)
 /**
  * Parse error from fetch response or Error object
  * @param {Response|Error|any} error - Error to parse
- * @returns {Promise<{status: number|string, message: string, details: any}>}
+ * @returns {Promise<{status: number|string, message: string, details: any, requestId: string|null}>}
  */
 export async function parseError(error) {
   // Handle Response objects (from fetch)
   if (error instanceof Response) {
     const status = error.status;
     let details = null;
+    
+    // Extract request ID from response headers (with validation)
+    let requestId = null;
+    if (error.headers?.get) {
+      const rawId = error.headers.get('X-Request-ID') || 
+                   error.headers.get('x-request-id') ||
+                   error.headers.get('X-Correlation-ID') ||
+                   error.headers.get('x-correlation-id');
+      
+      // Validate request ID format (UUID v4 or alphanumeric 8-128 chars)
+      if (rawId && typeof rawId === 'string') {
+        const trimmed = rawId.trim();
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+        const alphanumericRegex = /^[a-zA-Z0-9_-]{8,128}$/;
+        
+        if (uuidRegex.test(trimmed) || alphanumericRegex.test(trimmed)) {
+          requestId = trimmed;
+        }
+      }
+    }
     
     try {
       const json = await error.json();
@@ -75,12 +95,23 @@ export async function parseError(error) {
       status,
       message: getErrorMessage(status),
       details,
+      requestId,
     };
   }
   
   // Handle Error objects
   if (error instanceof Error) {
     const message = error.message || '';
+    // Validate request ID if present
+    let requestId = null;
+    if (error.requestId && typeof error.requestId === 'string') {
+      const trimmed = error.requestId.trim();
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const alphanumericRegex = /^[a-zA-Z0-9_-]{8,128}$/;
+      if (uuidRegex.test(trimmed) || alphanumericRegex.test(trimmed)) {
+        requestId = trimmed;
+      }
+    }
     
     // Check for network errors
     if (message.toLowerCase().includes('network') || 
@@ -89,6 +120,7 @@ export async function parseError(error) {
         status: 'network',
         message: ERROR_MESSAGES.network,
         details: message,
+        requestId,
       };
     }
     
@@ -98,6 +130,7 @@ export async function parseError(error) {
         status: 'timeout',
         message: ERROR_MESSAGES.timeout,
         details: message,
+        requestId,
       };
     }
     
@@ -105,15 +138,28 @@ export async function parseError(error) {
       status: 'unknown',
       message: ERROR_MESSAGES.unknown,
       details: message,
+      requestId,
     };
   }
   
   // Handle plain objects with status
   if (error && typeof error === 'object' && error.status) {
+    // Validate request ID if present
+    let requestId = null;
+    if (error.requestId && typeof error.requestId === 'string') {
+      const trimmed = error.requestId.trim();
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+      const alphanumericRegex = /^[a-zA-Z0-9_-]{8,128}$/;
+      if (uuidRegex.test(trimmed) || alphanumericRegex.test(trimmed)) {
+        requestId = trimmed;
+      }
+    }
+    
     return {
       status: error.status,
       message: getErrorMessage(error.status),
       details: error.error || error.message,
+      requestId,
     };
   }
   
@@ -122,6 +168,7 @@ export async function parseError(error) {
     status: 'unknown',
     message: ERROR_MESSAGES.unknown,
     details: error,
+    requestId: null,
   };
 }
 

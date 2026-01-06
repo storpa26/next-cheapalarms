@@ -3,7 +3,8 @@ import { Topbar } from "./Topbar";
 
 export default function AdminLayout({ title = "Admin", children }) {
   return (
-    <main className="bg-muted text-foreground min-h-screen">
+    <main className="light bg-muted text-foreground min-h-screen">
+      {/* Force light theme - portals don't support theme switching */}
       <div className="flex min-h-screen">
         <Sidebar />
         <div className="flex-1 flex flex-col">

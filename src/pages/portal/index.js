@@ -55,7 +55,8 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
       <Head>
         <title>Customer Portal • CheapAlarms</title>
       </Head>
-      <main className="h-screen w-full bg-background text-foreground overflow-hidden">
+      <main className="light h-screen w-full bg-background text-foreground overflow-hidden">
+        {/* Force light theme - portals don't support theme switching */}
         <div className="absolute inset-0 -z-10">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(201,83,117,0.15),transparent_45%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom,rgba(47,182,201,0.18),transparent_50%)]" />

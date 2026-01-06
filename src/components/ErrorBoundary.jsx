@@ -1,5 +1,7 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { captureException } from '../lib/sentry';
+import { getRequestIdFromError } from '../lib/api/request-id';
 
 /**
  * Error Boundary component to catch React errors and display friendly fallback UI
@@ -28,8 +30,12 @@ export class ErrorBoundary extends React.Component {
       errorInfo,
     });
 
-    // In production, you could send errors to an error reporting service here
-    // Example: Sentry.captureException(error);
+    // Send to Sentry for production error tracking
+    captureException(error, {
+      errorInfo: {
+        componentStack: errorInfo.componentStack,
+      },
+    });
   }
 
   handleReload = () => {
@@ -64,6 +70,18 @@ export class ErrorBoundary extends React.Component {
             <p className="mt-3 text-center text-sm text-muted-foreground">
               We encountered an unexpected error. Please try reloading the page.
             </p>
+
+            {/* Show request ID if available (for debugging) */}
+            {isDevelopment && (() => {
+              const requestId = getRequestIdFromError(this.state.error);
+              return requestId ? (
+                <div className="mt-3 rounded-md bg-muted p-2 text-center">
+                  <p className="text-xs font-mono text-muted-foreground">
+                    Request ID: {requestId}
+                  </p>
+                </div>
+              ) : null;
+            })()}
 
             {isDevelopment && this.state.error && (
               <details className="mt-4 rounded-lg bg-error-bg p-4">

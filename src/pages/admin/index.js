@@ -4,6 +4,7 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { AlertsStrip } from "@/components/admin/ui/AlertsStrip";
 import { CardStat } from "@/components/admin/ui/CardStat";
 import { ActivityList } from "@/components/admin/ui/ActivityList";
+import { HealthStatusCard } from "@/components/admin/HealthStatusCard";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { Spinner } from "@/components/ui/spinner";
 import { useAdminDashboard } from "@/lib/react-query/hooks/admin";
@@ -60,6 +61,9 @@ export default function AdminOverview() {
               <p className="mt-2 text-sm text-muted-foreground">No recent activity</p>
             </div>
           )}
+        </section>
+        <section className="mt-6">
+          <HealthStatusCard showRefreshButton={true} autoRefresh={true} />
         </section>
           </>
         )}
