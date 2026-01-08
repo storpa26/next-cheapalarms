@@ -44,6 +44,7 @@ const SidebarContext = React.createContext({
   variant: "minimal",
   activeItem: null,
   onNavChange: () => {},
+  navigatingTo: null,
   searchQuery: "",
   onSearch: () => {},
   pinnedItems: [],
@@ -60,6 +61,7 @@ export function Sidebar({
   variant = "minimal",
   navItems = [],
   activeItem,
+  navigatingTo = null,
   title = "Admin Portal",
   subtitle,
   user = { name: "John Doe", email: "john@example.com", avatar: null, status: "online" },
@@ -223,12 +225,12 @@ export function Sidebar({
   }, [isMobile, mobileOpen, setMobileOpen, enableSearch, enableCommandPalette, searchQuery])
 
   // Close mobile menu on navigation
-  const handleNavClick = (href) => {
+  const handleNavClick = React.useCallback((href) => {
     onNavChange?.(href)
     if (isMobile) {
       setMobileOpen(false)
     }
-  }
+  }, [onNavChange, isMobile])
 
   // Touch gesture for swipe to close (mobile)
   const [touchStart, setTouchStart] = React.useState(null)
@@ -259,6 +261,7 @@ export function Sidebar({
       variant,
       activeItem,
       onNavChange: handleNavClick,
+      navigatingTo,
       searchQuery,
       onSearch: handleSearch,
       pinnedItems,
@@ -279,6 +282,7 @@ export function Sidebar({
     [
       variant,
       activeItem,
+      navigatingTo,
       searchQuery,
       pinnedItems,
       recentItems,
@@ -378,9 +382,21 @@ export function Sidebar({
         onTouchMove={isMobile ? onTouchMove : undefined}
         onTouchEnd={isMobile ? onTouchEnd : undefined}
         onClick={(e) => {
-          // Prevent clicks inside sidebar from bubbling to overlay
-          e.stopPropagation()
+          // Best Practice: Only prevent propagation for non-interactive elements
+          // Allow buttons and links to handle their own events
+          const target = e.target;
+          const isInteractive = target.tagName === 'BUTTON' || 
+                                target.tagName === 'A' || 
+                                target.closest('button') || 
+                                target.closest('a') ||
+                                target.closest('[role="button"]');
+          
+          if (!isInteractive) {
+            e.stopPropagation();
+          }
         }}
+        role="navigation"
+        aria-label="Main navigation"
       >
         {children || (
           <>
@@ -576,6 +592,7 @@ function SidebarNavItem({ item, enableNestedNav }) {
   const {
     activeItem,
     onNavChange,
+    navigatingTo,
     pinnedItems,
     onPinItem,
     variant,
@@ -584,9 +601,16 @@ function SidebarNavItem({ item, enableNestedNav }) {
   } = React.useContext(SidebarContext)
 
   const Icon = item.icon
-  const isActive = activeItem === item.href
+  // CRITICAL FIX: Active state logic ensures immediate feedback
+  // 1. If navigatingTo is set, only the target button is active (old button loses active immediately)
+  // 2. If navigatingTo is null, use normal activeItem check
+  // This ensures the old button loses active color instantly when a new button is clicked
+  const isActive = navigatingTo 
+    ? navigatingTo === item.href  // During navigation: only target is active
+    : activeItem === item.href;   // Normal state: use router pathname
   const hasSubmenu = enableNestedNav && item.submenu && item.submenu.length > 0
   const isExpanded = expandedItems.has(item.href)
+  const isNavigating = navigatingTo === item.href
 
   const itemClasses = {
     minimal: cn(
@@ -627,8 +651,10 @@ function SidebarNavItem({ item, enableNestedNav }) {
     ),
   }
 
-  const handleClick = () => {
+  // IMMEDIATE click handler - no delays
+  const handleClick = React.useCallback((e) => {
     if (hasSubmenu) {
+      // For submenus, toggle expansion
       setExpandedItems((prev) => {
         const next = new Set(prev)
         if (next.has(item.href)) {
@@ -639,24 +665,64 @@ function SidebarNavItem({ item, enableNestedNav }) {
         return next
       })
     } else {
-      onNavChange(item.href)
+      // Only prevent if already active or currently navigating
+      if (isActive || isNavigating) {
+        return;
+      }
+      
+      // Call navigation IMMEDIATELY - triggers immediate UI update
+      onNavChange?.(item.href);
     }
-  }
+  }, [hasSubmenu, item.href, isActive, isNavigating, onNavChange, setExpandedItems]);
+
+  // Best Practice: Keyboard accessibility
+  const handleKeyDown = React.useCallback((e) => {
+    // Enter or Space triggers click
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      handleClick(e);
+    }
+    // Escape closes submenu if expanded
+    if (e.key === 'Escape' && hasSubmenu && isExpanded) {
+      e.preventDefault();
+      setExpandedItems((prev) => {
+        const next = new Set(prev);
+        next.delete(item.href);
+        return next;
+      });
+    }
+  }, [handleClick, hasSubmenu, isExpanded, item.href, setExpandedItems]);
 
   return (
     <div>
       <button
         type="button"
         onClick={handleClick}
+        onKeyDown={handleKeyDown}
         className={itemClasses[variant]}
+        disabled={isNavigating}
+        aria-label={item.label}
+        aria-current={isActive ? 'page' : undefined}
+        aria-expanded={hasSubmenu ? isExpanded : undefined}
+        style={{
+          cursor: isNavigating ? 'wait' : 'pointer',
+          opacity: isNavigating ? 0.7 : 1,
+        }}
         onMouseDown={(e) => {
-          // Ripple effect
-          const button = e.currentTarget
-          const ripple = document.createElement("span")
-          const rect = button.getBoundingClientRect()
-          const size = Math.max(rect.width, rect.height)
-          const x = e.clientX - rect.left - size / 2
-          const y = e.clientY - rect.top - size / 2
+          // Only create ripple if not navigating
+          if (isNavigating) {
+            e.preventDefault();
+            return;
+          }
+
+          // Ripple effect with improved performance
+          const button = e.currentTarget;
+          const ripple = document.createElement("span");
+          const rect = button.getBoundingClientRect();
+          const size = Math.max(rect.width, rect.height);
+          const x = e.clientX - rect.left - size / 2;
+          const y = e.clientY - rect.top - size / 2;
+          
           ripple.style.cssText = `
             position: absolute;
             width: ${size}px;
@@ -667,19 +733,28 @@ function SidebarNavItem({ item, enableNestedNav }) {
             top: ${y}px;
             pointer-events: none;
             animation: ripple 0.6s ease-out;
-          `
-          button.style.position = "relative"
-          button.style.overflow = "hidden"
-          button.appendChild(ripple)
-          setTimeout(() => ripple.remove(), 600)
+            z-index: 1;
+          `;
+          
+          button.style.position = "relative";
+          button.style.overflow = "hidden";
+          button.appendChild(ripple);
+          
+          // Cleanup with requestAnimationFrame for better performance
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              if (ripple.parentNode) {
+                ripple.remove();
+              }
+            }, 600);
+          });
         }}
       >
         <Icon
           className={cn(
             "h-4 w-4 shrink-0 transition-transform duration-fast ease-standard",
             isActive && variant === "gradient" && "text-primary-foreground",
-            isActive && variant !== "gradient" && "text-primary",
-            isActive && "animate-pulse"
+            isActive && variant !== "gradient" && "text-primary"
           )}
         />
         <span className="flex-1 text-left">{item.label}</span>
@@ -733,17 +808,23 @@ function SidebarNavItem({ item, enableNestedNav }) {
         <div className="ml-4 mt-1 space-y-1 border-l border-border pl-2">
           {item.submenu.map((subItem) => {
             const SubIcon = subItem.icon
-            const isSubActive = activeItem === subItem.href
+            // Same logic as main items: old button loses active immediately when navigating
+            const isSubActive = navigatingTo 
+              ? navigatingTo === subItem.href
+              : activeItem === subItem.href
+            const isSubNavigating = navigatingTo === subItem.href
             return (
               <button
                 key={subItem.href}
                 type="button"
-                onClick={() => onNavChange(subItem.href)}
+                onClick={() => onNavChange?.(subItem.href)}
+                disabled={isSubNavigating}
                 className={cn(
                   "flex w-full items-center gap-2 rounded-md px-3 py-1.5 text-sm transition-all duration-fast ease-standard",
                   isSubActive
                     ? "bg-primary/10 text-primary font-medium"
-                    : "text-muted-foreground hover:bg-state-hover-bg hover:text-foreground"
+                    : "text-muted-foreground hover:bg-state-hover-bg hover:text-foreground",
+                  isSubNavigating && "opacity-70 cursor-wait"
                 )}
               >
                 {SubIcon && <SubIcon className="h-3.5 w-3.5" />}

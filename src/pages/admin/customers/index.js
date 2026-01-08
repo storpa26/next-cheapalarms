@@ -5,16 +5,19 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { getWordPressUsers, getGHLContacts, matchContactsToUsers, getStatusBadge } from "@/lib/admin/services/customers-data";
 import { toast } from "@/components/ui/use-toast";
 import { isAuthError, isPermissionError } from "@/lib/admin/utils/error-handler";
 import { useWordPressUsers, useGHLContacts } from "@/lib/react-query/hooks";
-import { useDeleteUser, useDeleteGhlContact } from "@/lib/react-query/hooks/admin";
+import { useDeleteUser, useDeleteGhlContact, useBulkDeleteUsers } from "@/lib/react-query/hooks/admin";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { DeleteDialog } from "@/components/admin/DeleteDialog";
+import { BulkDeleteDialog } from "@/components/admin/BulkDeleteDialog";
+import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 
 export default function AdminCustomers({ initialWpUsers, initialGhlContacts, error, debugInfo }) {
@@ -28,9 +31,13 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
   const [deleteGhlContactDialogOpen, setDeleteGhlContactDialogOpen] = useState(false);
   const [ghlContactToDelete, setGhlContactToDelete] = useState(null);
   const [locationId, setLocationId] = useState("");
+  const [selectedUserIds, setSelectedUserIds] = useState(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
   const queryClient = useQueryClient();
   const deleteUserMutation = useDeleteUser();
   const deleteGhlContactMutation = useDeleteGhlContact();
+  const bulkDeleteUsersMutation = useBulkDeleteUsers();
 
   // Use React Query hooks for data fetching (with caching)
   const {
@@ -85,6 +92,51 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
       (contact.phone || "").includes(s)
     );
   });
+
+  // Clear selection when tab or search changes
+  useEffect(() => {
+    setSelectedUserIds(new Set());
+  }, [activeTab, q]);
+
+  // Handle select all (WordPress users)
+  const handleSelectAllUsers = useCallback((checked) => {
+    if (checked) {
+      setSelectedUserIds(new Set(filteredWpUsers.map((user) => String(user.id))));
+    } else {
+      setSelectedUserIds(new Set());
+    }
+  }, [filteredWpUsers]);
+
+  // Handle individual selection (WordPress users)
+  const handleSelectUser = useCallback((userId, checked) => {
+    setSelectedUserIds((prev) => {
+      const newSelected = new Set(prev);
+      if (checked) {
+        newSelected.add(String(userId));
+      } else {
+        newSelected.delete(String(userId));
+      }
+      return newSelected;
+    });
+  }, []);
+
+  // Handle bulk delete (WordPress users)
+  const handleBulkDeleteUsers = useCallback(async () => {
+    const userIds = Array.from(selectedUserIds).map(Number);
+    if (userIds.length === 0) return;
+
+    try {
+      await bulkDeleteUsersMutation.mutateAsync({ 
+        userIds, 
+        locationId: locationId || undefined,
+        scope: bulkDeleteScope 
+      });
+      setSelectedUserIds(new Set());
+      setBulkDeleteDialogOpen(false);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  }, [selectedUserIds, bulkDeleteUsersMutation, locationId, bulkDeleteScope]);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -315,6 +367,13 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                   <table className="w-full text-left text-sm">
                     <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                       <tr>
+                        <th className="px-3 py-2">
+                          <Checkbox
+                            checked={filteredWpUsers.length > 0 && selectedUserIds.size === filteredWpUsers.length}
+                            onChange={(e) => handleSelectAllUsers(e.target.checked)}
+                            aria-label="Select all"
+                          />
+                        </th>
                         <th className="px-3 py-2">Name</th>
                         <th className="px-3 py-2">Email</th>
                         <th className="px-3 py-2">Portal</th>
@@ -326,7 +385,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                     <tbody>
                       {wpUsersIsError ? (
                         <tr>
-                          <td className="px-3 py-6 text-center text-xs text-error" colSpan={6}>
+                          <td className="px-3 py-6 text-center text-xs text-error" colSpan={7}>
                             Failed to load WordPress users. {wpErrMsg}{" "}
                             <button
                               type="button"
@@ -339,7 +398,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                         </tr>
                       ) : loadingUsers ? (
                         <tr>
-                          <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={6}>
+                          <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={7}>
                             <span className="inline-flex items-center gap-2">
                               <Spinner size="sm" />
                               Loading users…
@@ -348,8 +407,17 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                         </tr>
                       ) : (
                         <>
-                          {filteredWpUsers.map((user) => (
-                            <tr key={user.id} className="border-t border-border/60">
+                          {filteredWpUsers.map((user) => {
+                            const isSelected = selectedUserIds.has(String(user.id));
+                            return (
+                            <tr key={user.id} className={`border-t border-border/60 ${isSelected ? 'bg-primary/10' : ''}`}>
+                              <td className="px-3 py-2">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onChange={(e) => handleSelectUser(user.id, e.target.checked)}
+                                  aria-label={`Select user ${user.id}`}
+                                />
+                              </td>
                               <td className="px-3 py-2">{user.name}</td>
                               <td className="px-3 py-2">{user.email}</td>
                               <td className="px-3 py-2">
@@ -385,10 +453,11 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                                 </Button>
                               </td>
                             </tr>
-                          ))}
+                          );
+                          })}
                           {filteredWpUsers.length === 0 && (
                             <tr>
-                              <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={6}>
+                              <td className="px-3 py-6 text-center text-xs text-muted-foreground" colSpan={7}>
                                 {q ? "No users match your search." : "No WordPress users found."}
                               </td>
                             </tr>
@@ -402,6 +471,30 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
             </Tabs>
           </CardContent>
         </Card>
+
+        {/* Floating Action Bar (for WordPress users tab) */}
+        {activeTab === "wp" && (
+          <FloatingActionBar
+            selectedCount={selectedUserIds.size}
+            onClearSelection={() => setSelectedUserIds(new Set())}
+            onDeleteSelected={() => setBulkDeleteDialogOpen(true)}
+            isLoading={bulkDeleteUsersMutation.isPending}
+          />
+        )}
+
+        {/* Bulk Delete Dialog (for WordPress users) */}
+        <BulkDeleteDialog
+          open={bulkDeleteDialogOpen}
+          onOpenChange={setBulkDeleteDialogOpen}
+          onConfirm={handleBulkDeleteUsers}
+          itemCount={selectedUserIds.size}
+          isLoading={bulkDeleteUsersMutation.isPending}
+          showScopeSelection={true}
+          scope={bulkDeleteScope}
+          onScopeChange={setBulkDeleteScope}
+          itemType="User"
+          trashMode={false}
+        />
 
         {/* Delete User Dialog */}
         <DeleteDialog

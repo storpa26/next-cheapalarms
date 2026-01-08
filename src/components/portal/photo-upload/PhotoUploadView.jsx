@@ -197,7 +197,11 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
       }
 
       // Invalidate portal status to refresh submission status
-      await queryClient.invalidateQueries(['portal-status', estimateId]);
+      // refetchType: 'active' forces refetch even with staleTime: Infinity
+      await queryClient.invalidateQueries({
+        queryKey: ['portal-status', estimateId],
+        refetchType: 'active', // Force refetch for active queries
+      });
       
       toast.success('Photos submitted successfully', {
         description: 'Your photos have been sent to the installation team.',

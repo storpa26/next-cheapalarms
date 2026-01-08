@@ -9,7 +9,8 @@ import { Avatar } from "@/components/admin/Avatar";
 import { EstimateActionsMenu } from "@/components/admin/EstimateActionsMenu";
 import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import { RestoreDialog } from "@/components/admin/RestoreDialog";
-import { useRestoreEstimate, useBulkRestoreEstimates } from "@/lib/react-query/hooks/admin";
+import { EmptyTrashDialog } from "@/components/admin/EmptyTrashDialog";
+import { useRestoreEstimate, useBulkRestoreEstimates, useEmptyTrash } from "@/lib/react-query/hooks/admin";
 import { formatTimeAgo } from "@/lib/admin/utils/time-utils";
 import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
 
@@ -27,10 +28,12 @@ export function TrashView({
 }) {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [emptyTrashDialogOpen, setEmptyTrashDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
   const restoreMutation = useRestoreEstimate();
   const bulkRestoreMutation = useBulkRestoreEstimates();
+  const emptyTrashMutation = useEmptyTrash();
 
   // Filter items by search query
   const filteredItems = useMemo(() => {
@@ -98,6 +101,17 @@ export function TrashView({
       // Error handled by mutation
     }
   }, [selectedIds, bulkRestoreMutation, locationId]);
+
+  // Handle empty trash
+  const handleEmptyTrash = useCallback(async () => {
+    try {
+      await emptyTrashMutation.mutateAsync({ locationId });
+      setEmptyTrashDialogOpen(false);
+      setSelectedIds(new Set()); // Clear selection after emptying
+    } catch (error) {
+      // Error handled by mutation
+    }
+  }, [emptyTrashMutation, locationId]);
 
   // Loading skeleton
   if (isLoading) {
@@ -184,6 +198,16 @@ export function TrashView({
               Estimates deleted in the last 30 days. After 30 days, they will be permanently deleted.
             </p>
           </div>
+          {items.length > 0 && (
+            <Button
+              variant="destructive"
+              onClick={() => setEmptyTrashDialogOpen(true)}
+              disabled={emptyTrashMutation.isPending}
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Empty Trash
+            </Button>
+          )}
         </div>
 
         {/* Search */}
@@ -427,6 +451,15 @@ export function TrashView({
         onConfirm={handleBulkRestore}
         count={selectedIds.size}
         isLoading={bulkRestoreMutation.isPending}
+      />
+
+      {/* Empty Trash Dialog */}
+      <EmptyTrashDialog
+        open={emptyTrashDialogOpen}
+        onOpenChange={setEmptyTrashDialogOpen}
+        onConfirm={handleEmptyTrash}
+        itemCount={items.length}
+        isLoading={emptyTrashMutation.isPending}
       />
     </>
   );

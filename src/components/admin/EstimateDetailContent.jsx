@@ -14,6 +14,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { parseWpFetchError } from "@/lib/admin/utils/error-handler";
 import { 
   useAdminEstimate, 
   useCreateInvoiceFromEstimate, 
@@ -205,9 +206,13 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
           });
           toast.success("Customer notified of estimate update");
         } catch (err) {
-          toast.error("Estimate saved but failed to notify customer");
+          const errorMessage = parseWpFetchError(err);
+          // Make it clear the estimate was saved but notification failed
+          toast.error(errorMessage || "Estimate saved but failed to notify customer", {
+            duration: 6000, // Longer duration for important error
+          });
         }
-      } else if (estimate.portalStatus === 'sent') {
+      } else if (displayStatus !== 'ACCEPTED' && displayStatus !== 'REJECTED' && displayStatus !== 'INVOICE_READY') {
         // Remind admin to send estimate if customer hasn't accepted yet
         toast.info("Don't forget to send the updated estimate to the customer!", {
           duration: 5000,
@@ -218,12 +223,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         });
       }
       
-      // 3. Refetch ONCE at the end (after everything is done) - optimized
-      refetch();
+      // Note: No refetch needed - mutations already invalidate queries and React Query will refetch automatically
     } catch (err) {
-      toast.error(err.message || "Failed to update estimate");
-      // Refetch on error to ensure UI shows current state
-      refetch();
+      const errorMessage = parseWpFetchError(err);
+      toast.error(errorMessage || "Failed to update estimate");
+      // Note: No refetch needed - React Query will refetch on next mount or when queries are refocused
     }
   };
 
@@ -324,22 +328,31 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     try {
       const result = await createInvoiceMutation.mutateAsync({ estimateId, locationId });
       toast.success("Invoice created successfully");
-      refetch();
+      // Note: No refetch needed - mutation already invalidates queries
       if (onInvoiceCreated) {
         onInvoiceCreated(result);
       }
     } catch (err) {
-      toast.error(err.message || "Failed to create invoice");
+      const errorMessage = parseWpFetchError(err);
+      toast.error(errorMessage || "Failed to create invoice");
     }
   };
 
   const handleSendEstimate = async () => {
+    // Prevent double-clicking or concurrent sends
+    if (sendEstimateMutation.isPending) {
+      return;
+    }
+    
     try {
       await sendEstimateMutation.mutateAsync({ estimateId, locationId });
-      toast.success("Estimate sent successfully");
-      refetch();
+      // Note: Toast is handled in the mutation hook's onSuccess handler
+      // No refetch needed - mutation already invalidates queries
     } catch (err) {
-      toast.error(err.message || "Failed to send estimate");
+      // Log error for debugging (toast is handled by hook's onError handler)
+      console.error('Send estimate error:', err);
+      // Prevent error from bubbling up to Next.js error boundary
+      return;
     }
   };
 
@@ -347,9 +360,10 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     try {
       await completeReviewMutation.mutateAsync({ estimateId, locationId });
       toast.success("Review completed! Acceptance has been enabled for the customer.");
-      refetch();
+      // Note: No refetch needed - mutation already invalidates queries
     } catch (err) {
-      toast.error(err.message || "Failed to complete review");
+      const errorMessage = parseWpFetchError(err);
+      toast.error(errorMessage || "Failed to complete review");
     }
   };
 
@@ -357,9 +371,10 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     try {
       await requestChangesMutation.mutateAsync({ estimateId, locationId, reason });
       toast.success("Changes requested. Customer can now resubmit photos.");
-      refetch();
+      // Note: No refetch needed - mutation already invalidates queries
     } catch (err) {
-      toast.error(err.message || "Failed to request changes");
+      const errorMessage = parseWpFetchError(err);
+      toast.error(errorMessage || "Failed to request changes");
     }
   };
 
@@ -386,6 +401,36 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const linkedInvoice = estimate.linkedInvoice;
   const currency = estimate.currency || DEFAULT_CURRENCY;
 
+  // Compute UI state from portal meta to get accurate status
+  const uiState = computeUIState(portalMeta);
+  const displayStatus = uiState.displayStatus;
+  const statusMessage = uiState.statusMessage;
+
+  // Helper function to get status badge variant and label
+  const getStatusDisplay = (displayStatus) => {
+    switch (displayStatus) {
+      case 'ACCEPTED':
+      case 'INVOICE_READY':
+        return { variant: 'success', label: 'Accepted' };
+      case 'REJECTED':
+        return { variant: 'destructive', label: 'Rejected' };
+      case 'PHOTOS_UNDER_REVIEW':
+        return { variant: 'info', label: 'Under Review' };
+      case 'READY_TO_ACCEPT':
+        return { variant: 'success', label: 'Ready to Accept' };
+      case 'CHANGES_REQUESTED':
+        return { variant: 'warning', label: 'Changes Requested' };
+      case 'AWAITING_PHOTOS':
+      case 'PHOTOS_UPLOADED':
+        return { variant: 'info', label: 'Awaiting Photos' };
+      case 'ESTIMATE_SENT':
+      default:
+        return { variant: 'warning', label: 'Sent' };
+    }
+  };
+
+  const statusDisplay = getStatusDisplay(displayStatus);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -398,15 +443,21 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
             </p>
           </div>
           <div className="flex items-center gap-3">
+            {portalMeta.quote?.revisionNumber != null && portalMeta.quote.revisionNumber > 0 && (
+              <Badge variant="outline" className="text-xs font-medium">
+                Revision {portalMeta.quote.revisionNumber}
+              </Badge>
+            )}
+            {portalMeta.workflow?.status === 'ready_to_accept' && portalMeta.quote?.acceptance_enabled && (
+              <Badge variant="info" className="text-xs font-medium">
+                Awaiting Acceptance
+              </Badge>
+            )}
             <Badge
-              variant={
-                estimate.portalStatus === "accepted" ? "success" :
-                estimate.portalStatus === "rejected" ? "destructive" :
-                "warning"
-              }
+              variant={statusDisplay.variant}
               className="text-xs font-medium"
             >
-              {estimate.portalStatus || "sent"}
+              {statusDisplay.label}
             </Badge>
           </div>
         </div>
@@ -434,7 +485,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         {/* Line Items (Left 70%) */}
         <div className="lg:col-span-2 space-y-4">
           {/* Edit Mode Controls */}
-          {!isEditMode && !hasInvoice && (estimate.portalStatus === 'sent' || portalMeta.photos?.submission_status === 'submitted') && (
+          {!isEditMode && !hasInvoice && (displayStatus !== 'ACCEPTED' && displayStatus !== 'REJECTED' && displayStatus !== 'INVOICE_READY' || portalMeta.photos?.submission_status === 'submitted') && (
             <div className="rounded-xl border border-info/30 bg-info-bg p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -444,7 +495,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   <div>
                     <p className="font-semibold text-info">Ready for Review</p>
                     <p className="text-sm text-info">
-                      {estimate.portalStatus === 'accepted' 
+                      {displayStatus === 'ACCEPTED' || displayStatus === 'INVOICE_READY'
                         ? 'Customer accepted and submitted photos. You can still adjust based on photos. Re-send estimate if you make changes.'
                         : portalMeta.photos?.submission_status === 'submitted'
                         ? 'Customer submitted photos. Review and adjust pricing, then send updated estimate to customer for acceptance.'
@@ -698,7 +749,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
             <div className="space-y-2 text-sm">
               <div>
                 <span className="text-muted-foreground">Status:</span>{" "}
-                <span className="font-medium text-foreground">{estimate.portalStatus || "sent"}</span>
+                <span className="font-medium text-foreground">{statusDisplay.label}</span>
               </div>
               {portalMeta.acceptedAt && (
                 <div>
@@ -838,7 +889,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               >
                 {sendEstimateMutation.isPending ? "Sending..." : "Send Estimate"}
               </Button>
-              {!hasInvoice && estimate.portalStatus === "accepted" && (
+              {!hasInvoice && (displayStatus === 'ACCEPTED' || displayStatus === 'INVOICE_READY') && (
                 <Button
                   onClick={handleCreateInvoice}
                   disabled={createInvoiceMutation.isPending}

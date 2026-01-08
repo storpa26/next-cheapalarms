@@ -5,9 +5,11 @@ import { CheckCircle2, Circle } from "lucide-react";
  * 
  * Displays a 4-step progress bar for the customer workflow:
  * 1. Request
- * 2. Review (includes reviewing + accepted states)
- * 3. Book
- * 4. Payment
+ * 2. Review (includes reviewing states, but NOT accepted)
+ * 3. Payment (after acceptance, before booking)
+ * 4. Book (after payment)
+ * 
+ * NEW WORKFLOW ORDER: Payment comes BEFORE booking
  */
 export function WorkflowProgress({ workflow }) {
   // If no workflow data, don't render
@@ -18,11 +20,20 @@ export function WorkflowProgress({ workflow }) {
   const { status } = workflow;
 
   // Map internal workflow status to external step (4 steps total)
+  // NEW: accepted maps to step 3 (Payment), not step 2
   const getExternalStep = (workflowStatus) => {
     switch (workflowStatus) {
       case 'requested': return 1;
-      case 'reviewing': case 'reviewed': case 'accepted': return 2;
-      case 'booked': return 3;
+      // Review states (before acceptance) map to step 2
+      case 'sent': case 'ready_to_accept': case 'under_review': case 'reviewing': case 'reviewed': return 2;
+      // Rejected estimates (rejected after being sent) should show step 2
+      // This prevents hydration mismatch: server might render 'sent' (step 2), client renders 'rejected' (should also be step 2)
+      case 'rejected': return 2;
+      // Accepted estimates move to step 3 (Payment) - payment comes before booking
+      case 'accepted': return 3;
+      // Booked (after payment) maps to step 4
+      case 'booked': return 4;
+      // Paid/completed maps to step 4 (final step)
       case 'paid': case 'completed': return 4;
       default: return 1;
     }
@@ -33,8 +44,8 @@ export function WorkflowProgress({ workflow }) {
   const steps = [
     { label: 'Request', step: 1 },
     { label: 'Review', step: 2 },
-    { label: 'Book', step: 3 },
-    { label: 'Payment', step: 4 },
+    { label: 'Payment', step: 3 }, // Payment comes before booking
+    { label: 'Book', step: 4 }, // Booking happens after payment
   ];
 
   // Calculate progress percentage (ensure it's between 5% and 100%)

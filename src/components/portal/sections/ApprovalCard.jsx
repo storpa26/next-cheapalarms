@@ -58,7 +58,8 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
     try {
       const result = await acceptMutation.mutateAsync({ 
         estimateId, 
-        locationId: locationId || undefined 
+        locationId: locationId || undefined,
+        inviteToken: view?.account?.inviteToken
       });
       setShowPhotoWarning(false);
       // Success - the mutation will automatically refetch and update the UI
@@ -75,7 +76,12 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const handleConfirmReject = async () => {
     if (!estimateId || !locationId) return;
     try {
-      await rejectMutation.mutateAsync({ estimateId, locationId, reason: rejectReason });
+      await rejectMutation.mutateAsync({ 
+        estimateId, 
+        locationId, 
+        reason: rejectReason,
+        inviteToken: view?.account?.inviteToken
+      });
       setShowRejectConfirm(false);
       setRejectReason("");
     } catch (error) {
@@ -104,7 +110,8 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
     try {
       await requestReviewMutation.mutateAsync({ 
         estimateId, 
-        locationId: locationId || undefined 
+        locationId: locationId || undefined,
+        inviteToken: view?.account?.inviteToken
       });
       // Success - the mutation will automatically refetch and update the UI
     } catch (error) {
@@ -140,7 +147,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
               {mounted && total > 0 ? `$${total.toLocaleString("en-AU")}` : total > 0 ? `$${total}` : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {hasPhotos ? "Final pricing" : "Preliminary pricing"}
+              {mounted ? (hasPhotos ? "Final pricing" : "Preliminary pricing") : "Preliminary pricing"}
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-muted p-4">
@@ -299,8 +306,8 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   </Button>
                 )}
                 
-                {/* Reject Button - Show when estimate is sent (not just pending) */}
-                {quoteStatus === "sent" && (
+                {/* Reject Button - Show when estimate can be rejected (use status computer logic) */}
+                {uiState.canReject && (
                   <Button
                     type="button"
                     onClick={handleReject}

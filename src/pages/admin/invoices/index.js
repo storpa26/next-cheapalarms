@@ -1,11 +1,11 @@
 import Head from "next/head";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { Settings, Plus, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { useAdminInvoices } from "@/lib/react-query/hooks/admin";
+import { useAdminInvoices, useBulkDeleteInvoices } from "@/lib/react-query/hooks/admin";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { Spinner } from "@/components/ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -14,6 +14,9 @@ import { SummaryCard } from "@/components/admin/SummaryCard";
 import { StatusTabs } from "@/components/admin/StatusTabs";
 import { Avatar } from "@/components/admin/Avatar";
 import { SearchBar } from "@/components/admin/SearchBar";
+import { BulkDeleteDialog } from "@/components/admin/BulkDeleteDialog";
+import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
 import { toast } from "sonner";
 
@@ -26,7 +29,12 @@ export default function InvoicesListPage() {
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
   const pageSize = DEFAULT_PAGE_SIZE;
+
+  const bulkDeleteMutation = useBulkDeleteInvoices();
 
   // Get invoiceId from URL query for deep linking
   const invoiceIdFromQuery = router.query.invoiceId;
@@ -70,6 +78,51 @@ export default function InvoicesListPage() {
   const invoices = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / pageSize);
+
+  // Clear selection when page, filters, or tab changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, search, activeTab]);
+
+  // Handle select all
+  const handleSelectAll = useCallback((checked) => {
+    if (checked) {
+      setSelectedIds(new Set(invoices.map((item) => item.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  }, [invoices]);
+
+  // Handle individual selection
+  const handleSelectItem = useCallback((invoiceId, checked) => {
+    setSelectedIds((prev) => {
+      const newSelected = new Set(prev);
+      if (checked) {
+        newSelected.add(invoiceId);
+      } else {
+        newSelected.delete(invoiceId);
+      }
+      return newSelected;
+    });
+  }, []);
+
+  // Handle bulk delete
+  const handleBulkDelete = useCallback(async () => {
+    const invoiceIds = Array.from(selectedIds);
+    if (invoiceIds.length === 0) return;
+
+    try {
+      await bulkDeleteMutation.mutateAsync({ 
+        invoiceIds, 
+        locationId: locationId || undefined,
+        scope: bulkDeleteScope 
+      });
+      setSelectedIds(new Set());
+      setBulkDeleteDialogOpen(false);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope]);
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
@@ -252,91 +305,104 @@ export default function InvoicesListPage() {
             <>
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
-                {invoices.map((invoice) => (
-                  <div
-                    key={invoice.id}
-                    onClick={() => handleRowClick(invoice.id)}
-                    className="bg-surface rounded-lg border border-border p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground text-sm mb-1">
-                          Invoice #{invoice.invoiceNumber || invoice.id}
-                        </h3>
-                        {invoice.linkedEstimateId && (
-                          <p className="text-xs text-primary">
-                            Estimate: {invoice.linkedEstimateId}
+                {invoices.map((invoice) => {
+                  const isSelected = selectedIds.has(invoice.id);
+                  return (
+                    <div
+                      key={invoice.id}
+                      onClick={() => handleRowClick(invoice.id)}
+                      className={`bg-surface rounded-lg border border-border p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99] ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleSelectItem(invoice.id, e.target.checked);
+                            }}
+                            aria-label={`Select invoice ${invoice.id}`}
+                          />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground text-sm mb-1">
+                              Invoice #{invoice.invoiceNumber || invoice.id}
+                            </h3>
+                            {invoice.linkedEstimateId && (
+                              <p className="text-xs text-primary">
+                                Estimate: {invoice.linkedEstimateId}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <span
+                          className={`
+                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                            ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
+                          `}
+                        >
+                          {invoice.portalStatus || invoice.ghlStatus || "sent"}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mb-3">
+                        <Avatar
+                          name={invoice.contactName}
+                          email={invoice.contactEmail}
+                          size="sm"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {invoice.contactName || "N/A"}
                           </p>
-                        )}
+                          <p className="text-xs text-muted-foreground truncate">
+                            {invoice.contactEmail || ""}
+                          </p>
+                        </div>
                       </div>
-                      <span
-                        className={`
-                          inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                          ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
-                        `}
-                      >
-                        {invoice.portalStatus || invoice.ghlStatus || "sent"}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 mb-3">
-                      <Avatar
-                        name={invoice.contactName}
-                        email={invoice.contactEmail}
-                        size="sm"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {invoice.contactName || "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {invoice.contactEmail || ""}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Total</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {invoice.total > 0
-                            ? `${invoice.currency || DEFAULT_CURRENCY} ${invoice.total.toFixed(2)}`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Amount Due</p>
-                        <p className="text-sm font-semibold text-success">
-                          {invoice.amountDue !== undefined
-                            ? `${invoice.currency || DEFAULT_CURRENCY} ${invoice.amountDue.toFixed(2)}`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Created</p>
-                        <p className="text-sm text-foreground">
-                          {invoice.createdAt
-                            ? new Date(invoice.createdAt).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Updated</p>
-                        <p className="text-sm text-foreground">
-                          {invoice.updatedAt
-                            ? new Date(invoice.updatedAt).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "—"}
-                        </p>
+                      
+                      <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Total</p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {invoice.total > 0
+                              ? `${invoice.currency || DEFAULT_CURRENCY} ${invoice.total.toFixed(2)}`
+                              : "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Amount Due</p>
+                          <p className="text-sm font-semibold text-success">
+                            {invoice.amountDue !== undefined
+                              ? `${invoice.currency || DEFAULT_CURRENCY} ${invoice.amountDue.toFixed(2)}`
+                              : "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Created</p>
+                          <p className="text-sm text-foreground">
+                            {invoice.createdAt
+                              ? new Date(invoice.createdAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Updated</p>
+                          <p className="text-sm text-foreground">
+                            {invoice.updatedAt
+                              ? new Date(invoice.updatedAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "—"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Desktop Table View */}
@@ -345,6 +411,13 @@ export default function InvoicesListPage() {
                   <table className="w-full">
                     <thead className="bg-muted border-b border-border">
                       <tr>
+                        <th className="px-6 py-4 text-left">
+                          <Checkbox
+                            checked={invoices.length > 0 && selectedIds.size === invoices.length}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            aria-label="Select all"
+                          />
+                        </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Invoice #
                         </th>
@@ -372,12 +445,21 @@ export default function InvoicesListPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-surface divide-y divide-border">
-                      {invoices.map((invoice) => (
+                      {invoices.map((invoice) => {
+                        const isSelected = selectedIds.has(invoice.id);
+                        return (
                         <tr
                           key={invoice.id}
-                          className="cursor-pointer transition-colors hover:bg-primary/5"
+                          className={`cursor-pointer transition-colors hover:bg-primary/5 ${isSelected ? 'bg-primary/10' : ''}`}
                           onClick={() => handleRowClick(invoice.id)}
                         >
+                          <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={(e) => handleSelectItem(invoice.id, e.target.checked)}
+                              aria-label={`Select invoice ${invoice.id}`}
+                            />
+                          </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Button
                               variant="link"
@@ -458,7 +540,8 @@ export default function InvoicesListPage() {
                             </Button>
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -492,7 +575,29 @@ export default function InvoicesListPage() {
               )}
             </>
           )}
+
+          {/* Floating Action Bar */}
+          <FloatingActionBar
+            selectedCount={selectedIds.size}
+            onClearSelection={() => setSelectedIds(new Set())}
+            onDeleteSelected={() => setBulkDeleteDialogOpen(true)}
+            isLoading={bulkDeleteMutation.isPending}
+          />
         </div>
+
+        {/* Bulk Delete Dialog */}
+        <BulkDeleteDialog
+          open={bulkDeleteDialogOpen}
+          onOpenChange={setBulkDeleteDialogOpen}
+          onConfirm={handleBulkDelete}
+          itemCount={selectedIds.size}
+          isLoading={bulkDeleteMutation.isPending}
+          showScopeSelection={true}
+          scope={bulkDeleteScope}
+          onScopeChange={setBulkDeleteScope}
+          itemType="Invoice"
+          trashMode={false}
+        />
 
         {/* Invoice Detail Modal */}
         <InvoiceDetailModal

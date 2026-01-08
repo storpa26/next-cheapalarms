@@ -57,17 +57,19 @@ export function getDisplayStatus(portalMeta) {
     return 'UNDER_REVIEW';
   }
 
-  // 8. Ready to accept (acceptance enabled)
-  if (workflow === 'ready_to_accept' && quote.acceptance_enabled) {
-    return 'READY_TO_ACCEPT';
-  }
-
-  // 9. Accepted
+  // 8. Accepted (check BEFORE ready_to_accept - accepted is final state)
+  // This prevents hydration mismatch: if quote.status === 'accepted', it should always show ACCEPTED,
+  // even if workflow.status is still 'ready_to_accept' (not yet updated)
   if (workflow === 'accepted' || quote.status === 'accepted') {
     if (invoice.id) {
       return 'INVOICE_READY';
     }
     return 'ACCEPTED';
+  }
+
+  // 9. Ready to accept (acceptance enabled) - only if not already accepted
+  if (workflow === 'ready_to_accept' && quote.acceptance_enabled) {
+    return 'READY_TO_ACCEPT';
   }
 
   // 10. Paid

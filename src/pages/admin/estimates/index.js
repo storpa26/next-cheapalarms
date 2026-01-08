@@ -1,5 +1,5 @@
 import Head from "next/head";
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Settings, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,8 @@ import AdminLayout from "@/components/admin/layout/AdminLayout";
 import { 
   useAdminEstimates, 
   useAdminEstimatesTrash,
-  useDeleteEstimate 
+  useDeleteEstimate,
+  useBulkDeleteEstimates
 } from "@/lib/react-query/hooks/admin";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { Spinner } from "@/components/ui/spinner";
@@ -19,8 +20,11 @@ import { StatusTabs } from "@/components/admin/StatusTabs";
 import { Avatar } from "@/components/admin/Avatar";
 import { SearchBar } from "@/components/admin/SearchBar";
 import { DeleteDialog } from "@/components/admin/DeleteDialog";
+import { BulkDeleteDialog } from "@/components/admin/BulkDeleteDialog";
 import { EstimateActionsMenu } from "@/components/admin/EstimateActionsMenu";
 import { TrashView } from "@/components/admin/TrashView";
+import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
 
@@ -37,9 +41,13 @@ export default function EstimatesListPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [estimateToDelete, setEstimateToDelete] = useState(null);
   const [deleteScope, setDeleteScope] = useState('local');
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
   const pageSize = DEFAULT_PAGE_SIZE;
 
   const deleteEstimateMutation = useDeleteEstimate();
+  const bulkDeleteMutation = useBulkDeleteEstimates();
 
   // Get estimateId from URL query for deep linking
   const estimateIdFromQuery = router.query.estimateId;
@@ -78,6 +86,51 @@ export default function EstimatesListPage() {
   const estimates = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
+
+  // Clear selection when page, filters, or tab changes
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, search, activeTab, workflowStatusFilter]);
+
+  // Handle select all
+  const handleSelectAll = useCallback((checked) => {
+    if (checked) {
+      setSelectedIds(new Set(estimates.map((item) => item.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  }, [estimates]);
+
+  // Handle individual selection
+  const handleSelectItem = useCallback((estimateId, checked) => {
+    setSelectedIds((prev) => {
+      const newSelected = new Set(prev);
+      if (checked) {
+        newSelected.add(estimateId);
+      } else {
+        newSelected.delete(estimateId);
+      }
+      return newSelected;
+    });
+  }, []);
+
+  // Handle bulk delete
+  const handleBulkDelete = useCallback(async () => {
+    const estimateIds = Array.from(selectedIds);
+    if (estimateIds.length === 0) return;
+
+    try {
+      await bulkDeleteMutation.mutateAsync({ 
+        estimateIds, 
+        locationId: locationId || undefined,
+        scope: bulkDeleteScope 
+      });
+      setSelectedIds(new Set());
+      setBulkDeleteDialogOpen(false);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope]);
 
   // Use backend summary totals (calculated across ALL estimates, not just current page)
   const summaryMetrics = useMemo(() => {
@@ -367,82 +420,95 @@ export default function EstimatesListPage() {
             <>
               {/* Mobile Card View */}
               <div className="lg:hidden space-y-4">
-                {estimates.map((estimate) => (
-                  <div
-                    key={estimate.id}
-                    onClick={() => handleRowClick(estimate.id)}
-                    className="bg-surface rounded-lg border border-border p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99]"
-                  >
-                    <div className="flex items-start justify-between mb-3">
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-foreground text-sm mb-1">
-                          {estimate.title || "ESTIMATE"}
-                        </h3>
-                        <p className="text-xs text-muted-foreground">
-                          #{estimate.estimateNumber || estimate.id}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`
-                            inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                            ${getStatusBadgeClass(estimate.portalStatus || "sent")}
-                          `}
-                        >
-                          {estimate.portalStatus || "sent"}
-                        </span>
-                        {estimate.workflowStatus && (
+                {estimates.map((estimate) => {
+                  const isSelected = selectedIds.has(estimate.id);
+                  return (
+                    <div
+                      key={estimate.id}
+                      onClick={() => handleRowClick(estimate.id)}
+                      className={`bg-surface rounded-lg border border-border p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99] ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-2">
+                          <Checkbox
+                            checked={isSelected}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              handleSelectItem(estimate.id, e.target.checked);
+                            }}
+                            aria-label={`Select estimate ${estimate.id}`}
+                          />
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-foreground text-sm mb-1">
+                              {estimate.title || "ESTIMATE"}
+                            </h3>
+                            <p className="text-xs text-muted-foreground">
+                              #{estimate.estimateNumber || estimate.id}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
                           <span
                             className={`
                               inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                              ${getWorkflowStatusBadgeClass(estimate.workflowStatus)}
+                              ${getStatusBadgeClass(estimate.portalStatus || "sent")}
                             `}
                           >
-                            {getWorkflowStatusLabel(estimate.workflowStatus)}
+                            {estimate.portalStatus || "sent"}
                           </span>
-                        )}
+                          {estimate.workflowStatus && (
+                            <span
+                              className={`
+                                inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                                ${getWorkflowStatusBadgeClass(estimate.workflowStatus)}
+                              `}
+                            >
+                              {getWorkflowStatusLabel(estimate.workflowStatus)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 mb-3">
+                        <Avatar
+                          name={estimate.contactName}
+                          email={estimate.contactEmail}
+                          size="sm"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {estimate.contactName || "N/A"}
+                          </p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {estimate.contactEmail || ""}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                        <div>
+                          <p className="text-xs text-muted-foreground">Value</p>
+                          <p className="text-sm font-semibold text-foreground">
+                            {estimate.total > 0
+                              ? `${estimate.currency || DEFAULT_CURRENCY} ${estimate.total.toFixed(2)}`
+                              : "—"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Created</p>
+                          <p className="text-sm text-foreground">
+                            {estimate.createdAt
+                              ? new Date(estimate.createdAt).toLocaleDateString("en-US", {
+                                  month: "short",
+                                  day: "numeric",
+                                })
+                              : "—"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center gap-2 mb-3">
-                      <Avatar
-                        name={estimate.contactName}
-                        email={estimate.contactEmail}
-                        size="sm"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">
-                          {estimate.contactName || "N/A"}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {estimate.contactEmail || ""}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between pt-3 border-t border-border">
-                      <div>
-                        <p className="text-xs text-muted-foreground">Value</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {estimate.total > 0
-                            ? `${estimate.currency || DEFAULT_CURRENCY} ${estimate.total.toFixed(2)}`
-                            : "—"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">Created</p>
-                        <p className="text-sm text-foreground">
-                          {estimate.createdAt
-                            ? new Date(estimate.createdAt).toLocaleDateString("en-US", {
-                                month: "short",
-                                day: "numeric",
-                              })
-                            : "—"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Desktop Table View */}
@@ -451,6 +517,13 @@ export default function EstimatesListPage() {
                   <table className="w-full">
                     <thead className="bg-muted border-b border-border">
                       <tr>
+                        <th className="px-6 py-4 text-left">
+                          <Checkbox
+                            checked={estimates.length > 0 && selectedIds.size === estimates.length}
+                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            aria-label="Select all"
+                          />
+                        </th>
                         <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                           Quote Name
                         </th>
@@ -478,12 +551,21 @@ export default function EstimatesListPage() {
                       </tr>
                     </thead>
                     <tbody className="bg-surface divide-y divide-border">
-                      {estimates.map((estimate) => (
+                      {estimates.map((estimate) => {
+                        const isSelected = selectedIds.has(estimate.id);
+                        return (
                         <tr
                           key={estimate.id}
-                          className="cursor-pointer transition-colors hover:bg-primary/5"
+                          className={`cursor-pointer transition-colors hover:bg-primary/5 ${isSelected ? 'bg-primary/10' : ''}`}
                           onClick={() => handleRowClick(estimate.id)}
                         >
+                          <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                            <Checkbox
+                              checked={isSelected}
+                              onChange={(e) => handleSelectItem(estimate.id, e.target.checked)}
+                              aria-label={`Select estimate ${estimate.id}`}
+                            />
+                          </td>
                           <td className="px-6 py-4">
                             <Button
                               variant="link"
@@ -561,7 +643,8 @@ export default function EstimatesListPage() {
                             />
                           </td>
                         </tr>
-                      ))}
+                      );
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -597,7 +680,31 @@ export default function EstimatesListPage() {
           )}
             </>
           )}
+
+          {/* Floating Action Bar */}
+          {activeTab !== "trash" && (
+            <FloatingActionBar
+              selectedCount={selectedIds.size}
+              onClearSelection={() => setSelectedIds(new Set())}
+              onDeleteSelected={() => setBulkDeleteDialogOpen(true)}
+              isLoading={bulkDeleteMutation.isPending}
+            />
+          )}
         </div>
+
+        {/* Bulk Delete Dialog */}
+        <BulkDeleteDialog
+          open={bulkDeleteDialogOpen}
+          onOpenChange={setBulkDeleteDialogOpen}
+          onConfirm={handleBulkDelete}
+          itemCount={selectedIds.size}
+          isLoading={bulkDeleteMutation.isPending}
+          showScopeSelection={true}
+          scope={bulkDeleteScope}
+          onScopeChange={setBulkDeleteScope}
+          itemType="Estimate"
+          trashMode={true}
+        />
 
         {/* Delete Dialog */}
         <DeleteDialog

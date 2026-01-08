@@ -1,11 +1,26 @@
 import { SignOutButton } from "@/components/ui/sign-out-button";
+import { cn } from "@/lib/utils";
 
-export function Topbar({ title }) {
+/**
+ * Topbar - Admin header with page title and icon
+ * Shows immediate feedback when navigating (GHL-style)
+ */
+export function Topbar({ title, icon: Icon, isNavigating = false }) {
   return (
     <div className="sticky top-0 z-10 border-b border-border bg-background shadow-sm">
       <div className="mx-auto flex items-center justify-between px-6 py-4">
-        <div className="flex items-center gap-2">
-          {/* Theme toggle removed - portals don't support theme switching */}
+        <div className="flex items-center gap-3">
+          {Icon && (
+            <Icon
+              className={cn(
+                "h-5 w-5 text-primary transition-all duration-fast ease-standard",
+                isNavigating && "animate-pulse"
+              )}
+            />
+          )}
+          <h1 className="text-lg font-semibold text-foreground transition-opacity duration-fast ease-standard">
+            {title || "Admin"}
+          </h1>
         </div>
         <div className="flex items-center gap-2">
           <SignOutButton />

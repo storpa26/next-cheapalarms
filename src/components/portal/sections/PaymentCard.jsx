@@ -263,8 +263,11 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
 /**
  * PaymentCard Component
  * 
- * Allows customers to complete payment after booking.
- * Shown when workflow.status === "booked" and not yet paid.
+ * Allows customers to complete payment after estimate acceptance.
+ * NEW WORKFLOW: Payment comes BEFORE booking.
+ * Shown when:
+ * - workflow.status === "accepted" AND invoice exists (not yet paid)
+ * - workflow.status === "booked" AND not yet fully paid (partial payment scenario)
  */
 export function PaymentCard({ estimateId, locationId, inviteToken, payment, workflow, invoice }) {
   const router = useRouter();
@@ -321,9 +324,24 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
     );
   }
 
-  // Show payment form if booked but not paid
-  if (workflow?.status !== 'booked') {
-    return null; // Only show when booked
+  // Show payment form if:
+  // 1. Accepted and invoice exists (new workflow: payment before booking)
+  // 2. Booked but not fully paid (partial payment scenario)
+  const isAccepted = workflow?.status === 'accepted';
+  const isBooked = workflow?.status === 'booked';
+  const hasInvoice = invoice && (invoice.id || invoice.number);
+  const isFullyPaid = payment && payment.status === 'paid';
+  
+  if (!isAccepted && !isBooked) {
+    return null; // Only show when accepted (with invoice) or booked (partial payment)
+  }
+  
+  if (isAccepted && !hasInvoice) {
+    return null; // Don't show payment form if no invoice yet
+  }
+  
+  if (isBooked && isFullyPaid) {
+    return null; // Don't show payment form if fully paid
   }
 
   if (!stripePromise) {

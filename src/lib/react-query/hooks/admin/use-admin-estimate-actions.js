@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
+import { parseWpFetchError } from '@/lib/admin/utils/error-handler';
 
 /**
  * React Query mutation for syncing an estimate from GHL
@@ -60,16 +61,131 @@ export function useSendEstimate() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, method = 'email' }) => {
-      return wpFetch(`/ca/v1/admin/estimates/${estimateId}/send`, {
+      const data = await wpFetch(`/ca/v1/admin/estimates/${estimateId}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId, method }),
       });
+
+      // Check if the response indicates an error (even if status is 200)
+      if (!data?.ok) {
+        throw new Error(data?.error || data?.err || 'Failed to send estimate');
+      }
+
+      return data;
+    },
+    onMutate: async (variables) => {
+      // Cancel outgoing refetches to avoid overwriting optimistic update
+      await queryClient.cancelQueries({ queryKey: ['admin-estimate', variables.estimateId] });
+      
+      // Snapshot previous value for rollback
+      const previousEstimate = queryClient.getQueryData(['admin-estimate', variables.estimateId]);
+      
+      // Optimistically update portal meta to show estimate was sent
+      // Only update if we have valid data structure
+      if (
+        previousEstimate && 
+        typeof previousEstimate === 'object' && 
+        previousEstimate.portalMeta &&
+        typeof previousEstimate.portalMeta === 'object'
+      ) {
+        const portalMeta = previousEstimate.portalMeta;
+        const quote = portalMeta.quote || {};
+        const workflow = portalMeta.workflow || {};
+        
+        // Check if photos are required (match backend logic)
+        const photosRequired = !!(quote.photos_required);
+        
+        // Increment revision number (match backend logic)
+        const currentRevision = quote.revisionNumber || 0;
+        const newRevision = currentRevision + 1;
+        
+        // Determine workflow status (match backend logic)
+        // If no photos required, set to 'ready_to_accept' so customer can accept immediately
+        // If photos required, set to 'sent' so customer must upload photos first
+        const workflowStatus = !photosRequired ? 'ready_to_accept' : 'sent';
+        
+        queryClient.setQueryData(['admin-estimate', variables.estimateId], {
+          ...previousEstimate,
+          portalMeta: {
+            ...portalMeta,
+            workflow: {
+              ...workflow,
+              status: workflowStatus, // CHANGED: ready_to_accept if no photos, sent if photos required
+              currentStep: 2,
+            },
+            quote: {
+              ...quote,
+              status: 'sent',
+              sentAt: new Date().toISOString(),
+              // AUTO-ENABLE ACCEPTANCE if no photos required (match backend logic)
+              acceptance_enabled: !photosRequired, // NEW: true if no photos, false if photos required
+              revisionNumber: newRevision, // NEW: Increment revision number
+              approval_requested: false, // Reset approval request when resending
+            },
+          },
+        });
+      }
+      
+      return { previousEstimate };
     },
     onSuccess: (data, variables) => {
-      // Invalidate estimate queries to refresh
+      // Show success toast
+      toast.success('Estimate sent successfully');
+      
+      // Invalidate admin estimate queries
       queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
+      
+      // CRITICAL: Invalidate portal-status queries so customer portal updates immediately
+      // Use predicate to match all portal-status queries for this estimateId (regardless of locationId/inviteToken)
+      // refetchType: 'active' forces refetch even with staleTime: Infinity
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
+      });
+      
+      // Also invalidate portal dashboard (for overview page)
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
+      
+      // Invalidate estimate queries (used by portal for full estimate data)
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'estimate' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch
+      });
+    },
+    onError: (err, variables, context) => {
+      // Rollback optimistic update on error
+      if (context?.previousEstimate) {
+        queryClient.setQueryData(['admin-estimate', variables.estimateId], context.previousEstimate);
+      }
+      
+      // Log error for debugging (sanitized in production)
+      const errorInfo = {
+        message: err?.message || 'Unknown error',
+        estimateId: variables.estimateId,
+        mutation: 'sendEstimate',
+      };
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Send estimate mutation error:', err, errorInfo);
+      } else {
+        // In production, log sanitized error info
+        // TODO: Integrate with error tracking service (e.g., Sentry)
+        // ErrorTracking.captureException(err, { extra: errorInfo });
+        console.error('Send estimate mutation error:', errorInfo);
+      }
+      
+      // Show error toast
+      const errorMessage = parseWpFetchError(err);
+      toast.error(errorMessage || 'Failed to send estimate');
     },
   });
 }
@@ -94,16 +210,29 @@ export function useCompleteReview() {
       // Invalidate estimate queries to refresh
       queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
-      // Also invalidate portal status in case admin is viewing customer portal
+      // Also invalidate portal queries so customer sees updated status
+      // refetchType: 'active' forces refetch even with staleTime: Infinity
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
-          query.queryKey[1] === variables.estimateId
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'estimate' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch
       });
       toast.success('Review completed. Acceptance has been enabled for the customer.');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to complete review');
+      const errorMessage = parseWpFetchError(error);
+      toast.error(errorMessage || 'Failed to complete review');
     },
   });
 }
@@ -127,16 +256,29 @@ export function useRequestChanges() {
       // Invalidate estimate queries to refresh
       queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
-      // Also invalidate portal status in case admin is viewing customer portal
+      // Also invalidate portal queries so customer sees updated status
+      // refetchType: 'active' forces refetch even with staleTime: Infinity
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
-          query.queryKey[1] === variables.estimateId
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'estimate' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch
       });
       toast.success('Changes requested. Customer can now resubmit photos.');
     },
     onError: (error) => {
-      toast.error(error.message || 'Failed to request changes');
+      const errorMessage = parseWpFetchError(error);
+      toast.error(errorMessage || 'Failed to request changes');
     },
   });
 }
@@ -151,7 +293,7 @@ export function useSendRevisionNotification() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, revisionNote, revisionData }) => {
-      return wpFetch(`/ca/v1/admin/estimates/${estimateId}/send`, {
+      const data = await wpFetch(`/ca/v1/admin/estimates/${estimateId}/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -160,11 +302,54 @@ export function useSendRevisionNotification() {
           revisionNote 
         }),
       });
+
+      // Check if the response indicates an error (even if status is 200)
+      if (!data?.ok) {
+        throw new Error(data?.error || data?.err || 'Failed to send revision notification');
+      }
+
+      return data;
     },
     onSuccess: (data, variables) => {
-      // Invalidate estimate queries to refresh
+      // Invalidate admin estimate queries
       queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
+      
+      // CRITICAL: Also invalidate portal queries so customer sees updated estimate
+      // refetchType: 'active' forces refetch even with staleTime: Infinity
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'estimate' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch
+      });
+    },
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      const errorInfo = {
+        message: error?.message || 'Unknown error',
+        estimateId: variables.estimateId,
+        mutation: 'sendRevisionNotification',
+      };
+      
+      if (process.env.NODE_ENV === 'development') {
+        console.error('Send revision notification mutation error:', error, errorInfo);
+      } else {
+        // In production, log sanitized error info
+        // TODO: Integrate with error tracking service (e.g., Sentry)
+        // ErrorTracking.captureException(error, { extra: errorInfo });
+        console.error('Send revision notification mutation error:', errorInfo);
+      }
     },
   });
 }

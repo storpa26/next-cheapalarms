@@ -1,4 +1,4 @@
-import { X, RotateCcw } from "lucide-react";
+import { X, RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -10,6 +10,7 @@ export function FloatingActionBar({
   selectedCount,
   onClearSelection,
   onRestoreSelected,
+  onDeleteSelected,
   isLoading = false,
   className,
 }) {
@@ -33,6 +34,17 @@ export function FloatingActionBar({
             >
               <RotateCcw className="mr-2 h-4 w-4" />
               {isLoading ? "Restoring..." : "Restore Selected"}
+            </Button>
+          )}
+          {onDeleteSelected && (
+            <Button
+              onClick={onDeleteSelected}
+              disabled={isLoading}
+              size="sm"
+              variant="destructive"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              {isLoading ? "Deleting..." : "Delete Selected"}
             </Button>
           )}
           {onClearSelection && (

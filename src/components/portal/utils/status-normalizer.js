@@ -20,6 +20,14 @@ export function normaliseStatus(status) {
       label: quote.statusLabel ?? "Sent", // Default label matches backend
       number: quote.number ?? status.estimateId ?? "—",
       acceptedAt: quote.acceptedAt ?? null,
+      // Preserve acceptance and revision fields for status computer
+      acceptance_enabled: quote.acceptance_enabled ?? false,
+      revisionNumber: quote.revisionNumber ?? null,
+      photos_required: quote.photos_required ?? false,
+      approval_requested: quote.approval_requested ?? false,
+      canAccept: quote.canAccept ?? false,
+      total: quote.total ?? null,
+      currency: quote.currency ?? null,
     },
     account: {
       status: account.status ?? "pending",

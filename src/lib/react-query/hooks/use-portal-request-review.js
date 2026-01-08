@@ -10,8 +10,9 @@ export function useRequestReview() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ estimateId, locationId }) => {
-      const nonce = await getWpNonceSafe({ estimateId }).catch((err) => {
+    mutationFn: async ({ estimateId, locationId, inviteToken }) => {
+      // Pass inviteToken if available, otherwise use logged-in auth
+      const nonce = await getWpNonceSafe({ estimateId, inviteToken }).catch((err) => {
         const msg = err?.code === 'AUTH_REQUIRED'
           ? 'Session expired. Please log in again.'
           : (err?.message || 'Failed to request review.');
@@ -101,14 +102,21 @@ export function useRequestReview() {
       toast.error(err.message || 'Failed to request review');
     },
     onSuccess: (data, variables) => {
-      // Invalidate queries (this automatically triggers refetch for active queries)
+      // Invalidate queries and force refetch (refetchType: 'active' overrides staleTime: Infinity)
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
-          query.queryKey[1] === variables.estimateId
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
       });
-      queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
-      queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['estimate', variables.estimateId],
+        refetchType: 'active', // Force refetch
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
       
       // Show success toast
       toast.success('Review requested successfully! Admin will review and notify you when acceptance is enabled.');

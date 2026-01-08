@@ -10,8 +10,9 @@ export function useAcceptEstimate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ estimateId, locationId }) => {
-      const nonce = await getWpNonceSafe({ estimateId }).catch((err) => {
+    mutationFn: async ({ estimateId, locationId, inviteToken }) => {
+      // Pass inviteToken if available, otherwise use logged-in auth
+      const nonce = await getWpNonceSafe({ estimateId, inviteToken }).catch((err) => {
         const msg = err?.code === 'AUTH_REQUIRED'
           ? 'Session expired. Please log in again.'
           : (err?.message || 'Failed to accept estimate.');
@@ -83,6 +84,12 @@ export function useAcceptEstimate() {
               statusLabel: 'Accepted',
               acceptedAt: acceptedAt,
               canAccept: false,
+            },
+            workflow: {
+              ...(currentData.workflow || {}),
+              status: 'accepted', // NEW: Update workflow status to match quote status
+              currentStep: 3,
+              acceptedAt: acceptedAt,
             }
           };
           
@@ -112,6 +119,16 @@ export function useAcceptEstimate() {
         if (currentData) {
           const updatedData = { ...currentData };
           
+          // Ensure workflow status is 'accepted' (backend should have updated it, but ensure consistency)
+          // Since we're in onSuccess, the request succeeded, so we can safely update
+          if (currentData.workflow) {
+            updatedData.workflow = {
+              ...currentData.workflow,
+              status: 'accepted',
+              currentStep: 3,
+            };
+          }
+          
           // If invoice exists, clear any previous error
           if (data.invoice) {
             updatedData.invoice = data.invoice;
@@ -120,23 +137,45 @@ export function useAcceptEstimate() {
           // If invoiceError exists, store it for retry functionality
           else if (data.invoiceError) {
             updatedData.invoiceError = data.invoiceError;
+            // Log invoice error for debugging
+            console.error('[Accept Estimate] Invoice creation failed:', data.invoiceError);
           }
           
           queryClient.setQueryData(query.queryKey, updatedData);
         }
       });
       
-      // Invalidate queries (this automatically triggers refetch for active queries)
+      // Invalidate queries and force refetch (refetchType: 'active' overrides staleTime: Infinity)
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
-          query.queryKey[1] === variables.estimateId
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
       });
-      queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
-      queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['estimate', variables.estimateId],
+        refetchType: 'active', // Force refetch
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
       
-      // Show success toast
-      toast.success('Estimate accepted successfully!');
+      // Show toast notifications
+      // Always show success toast since estimate was accepted
+      // If invoice creation failed, also show warning toast with details
+      if (data.invoiceError) {
+        toast.warning('Estimate accepted, but invoice creation failed', {
+          description: data.invoiceError,
+          duration: 5000,
+        });
+        // Also show success toast to confirm acceptance
+        toast.success('Estimate accepted successfully!', {
+          duration: 3000,
+        });
+      } else {
+        toast.success('Estimate accepted successfully!');
+      }
     },
   });
 }
@@ -149,8 +188,9 @@ export function useRejectEstimate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ estimateId, locationId, reason = '' }) => {
-      const nonce = await getWpNonceSafe({ estimateId }).catch((err) => {
+    mutationFn: async ({ estimateId, locationId, reason = '', inviteToken }) => {
+      // Pass inviteToken if available, otherwise use logged-in auth
+      const nonce = await getWpNonceSafe({ estimateId, inviteToken }).catch((err) => {
         const msg = err?.code === 'AUTH_REQUIRED'
           ? 'Session expired. Please log in again.'
           : (err?.message || 'Failed to reject estimate.');
@@ -238,14 +278,21 @@ export function useRejectEstimate() {
       }
     },
     onSuccess: (data, variables) => {
-      // Invalidate queries (this automatically triggers refetch for active queries)
+      // Invalidate queries and force refetch (refetchType: 'active' overrides staleTime: Infinity)
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
-          query.queryKey[1] === variables.estimateId
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
       });
-      queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
-      queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['estimate', variables.estimateId],
+        refetchType: 'active', // Force refetch
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
       
       // Show success toast
       toast.success('Estimate rejected successfully');

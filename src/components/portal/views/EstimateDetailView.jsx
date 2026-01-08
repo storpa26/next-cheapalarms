@@ -54,8 +54,25 @@ export function EstimateDetailView({
           onLaunchCamera={() => {}}
         />
         
-        {/* Show ApprovalCard only if not accepted, or show BookingCard/PaymentCard based on workflow */}
-        {view?.workflow?.status === 'accepted' && !view?.booking ? (
+        {/* NEW WORKFLOW ORDER: Payment → Booking
+            Show PaymentCard when accepted + invoice exists (payment before booking)
+            Show BookingCard when payment is made (partial or full)
+            Show ApprovalCard otherwise (not yet accepted)
+        */}
+        {view?.workflow?.status === 'accepted' && view?.invoice && view?.payment?.status !== 'paid' ? (
+          // Show payment form when accepted and invoice exists (not yet paid)
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+            <PaymentCard
+              estimateId={estimateId}
+              locationId={view?.locationId}
+              inviteToken={view?.account?.inviteToken}
+              payment={view?.payment}
+              workflow={view?.workflow}
+              invoice={view?.invoice}
+            />
+          </div>
+        ) : view?.workflow?.status === 'accepted' && view?.payment?.status === 'paid' && !view?.booking ? (
+          // Show booking card when payment is made (full payment) and not yet booked
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <BookingCard
               estimateId={estimateId}
@@ -65,7 +82,8 @@ export function EstimateDetailView({
               workflow={view?.workflow}
             />
           </div>
-        ) : view?.workflow?.status === 'booked' && view?.payment?.status !== 'paid' ? (
+        ) : view?.workflow?.status === 'booked' && view?.payment?.status === 'partial' ? (
+          // Show payment form for partial payments (booked but not fully paid)
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <PaymentCard
               estimateId={estimateId}
@@ -77,6 +95,7 @@ export function EstimateDetailView({
             />
           </div>
         ) : (
+          // Show approval card for all other states (not yet accepted)
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <ApprovalCard
               view={view}

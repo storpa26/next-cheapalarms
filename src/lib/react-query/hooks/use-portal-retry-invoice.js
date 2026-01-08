@@ -56,14 +56,21 @@ export function useRetryInvoice() {
         }
       });
       
-      // Invalidate queries (this automatically triggers refetch for active queries)
+      // Invalidate queries and force refetch (refetchType: 'active' overrides staleTime: Infinity)
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
-          query.queryKey[1] === variables.estimateId
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active', // Force refetch for active queries
       });
-      queryClient.invalidateQueries({ queryKey: ['estimate', variables.estimateId] });
-      queryClient.invalidateQueries({ queryKey: ['portal-dashboard'] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['estimate', variables.estimateId],
+        refetchType: 'active', // Force refetch
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active', // Force refetch
+      });
       
       toast.success('Invoice created successfully', {
         description: 'Your invoice has been generated and is ready for payment.',
