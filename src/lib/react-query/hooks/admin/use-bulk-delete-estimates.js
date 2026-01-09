@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 
 /**
  * React Query mutation for bulk deleting estimates
+ * Uses Next.js API route (/api/admin/estimates/bulk-delete) which runs server-side
+ * and can read httpOnly cookies for authentication.
  * Includes optimistic updates and progress tracking
  */
 export function useBulkDeleteEstimates() {
@@ -11,8 +12,11 @@ export function useBulkDeleteEstimates() {
 
   return useMutation({
     mutationFn: async ({ estimateIds, locationId, scope = 'both' }) => {
-      const data = await wpFetch(`/ca/v1/admin/estimates/bulk-delete`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch('/api/admin/estimates/bulk-delete', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           confirm: 'BULK_DELETE',
@@ -22,11 +26,12 @@ export function useBulkDeleteEstimates() {
         }),
       });
 
-      if (!data?.ok) {
-        throw new Error(data?.error || 'Failed to delete estimates');
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to delete estimates');
       }
 
-      return data;
+      return json;
     },
     onMutate: async ({ estimateIds }) => {
       // Cancel outgoing refetches
@@ -85,6 +90,11 @@ export function useBulkDeleteEstimates() {
       // Rollback optimistic update
       if (context?.previousEstimates) {
         queryClient.setQueryData(['admin-estimates'], context.previousEstimates);
+      }
+
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useBulkDeleteEstimates] Error:', error, { variables });
       }
 
       const message = error.message || 'Failed to delete estimates';

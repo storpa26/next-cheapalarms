@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 import { useRouter } from 'next/router';
 
@@ -13,8 +12,11 @@ export function useDeleteInvoice() {
 
   return useMutation({
     mutationFn: async ({ invoiceId, locationId, scope = 'both' }) => {
-      const data = await wpFetch(`/ca/v1/admin/invoices/${invoiceId}/delete`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/invoices/${invoiceId}/delete`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           confirm: 'DELETE',
@@ -22,6 +24,13 @@ export function useDeleteInvoice() {
           locationId,
         }),
       });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Delete failed');
+      }
+
+      const data = json;
 
       const localOk = data?.local?.ok === true;
       const ghlOk = data?.ghl?.ok === true;
@@ -50,7 +59,12 @@ export function useDeleteInvoice() {
       
       toast.success('Invoice deleted successfully');
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useDeleteInvoice] Error:', error, { variables });
+      }
+
       const message = error.message || 'Failed to delete invoice';
       toast.error(message);
     },

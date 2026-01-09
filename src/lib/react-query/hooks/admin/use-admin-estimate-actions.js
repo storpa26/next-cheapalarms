@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 import { parseWpFetchError } from '@/lib/admin/utils/error-handler';
 
 /**
  * React Query mutation for syncing an estimate from GHL
+ * Uses Next.js API route (/api/admin/estimates/[estimateId]/sync) which runs server-side
+ * and can read httpOnly cookies for authentication.
  */
 export function useSyncEstimate() {
   const queryClient = useQueryClient();
@@ -15,31 +16,76 @@ export function useSyncEstimate() {
       if (locationId) params.set('locationId', locationId);
 
       const search = params.toString();
-      return wpFetch(`/ca/v1/admin/estimates/${estimateId}/sync${search ? `?${search}` : ''}`, {
+      const url = `/api/admin/estimates/${estimateId}/sync${search ? `?${search}` : ''}`;
+
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(url, {
         method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
       });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to sync estimate');
+      }
+
+      return json;
     },
     onSuccess: (data, variables) => {
       // Invalidate estimate queries to refresh
       queryClient.invalidateQueries({ queryKey: ['admin-estimate', variables.estimateId] });
       queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
+      // Also invalidate portal queries so customer sees updated estimate
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active',
+      });
+    },
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useSyncEstimate] Error:', error, { variables });
+      }
+      
+      const message = error.message || 'Failed to sync estimate';
+      toast.error(message);
     },
   });
 }
 
 /**
  * React Query mutation for creating an invoice from an estimate
+ * Uses Next.js API route (/api/admin/estimates/[estimateId]/create-invoice) which runs server-side
+ * and can read httpOnly cookies for authentication.
  */
 export function useCreateInvoiceFromEstimate() {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId }) => {
-      return wpFetch(`/ca/v1/admin/estimates/${estimateId}/create-invoice`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates/${estimateId}/create-invoice`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId }),
       });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to create invoice');
+      }
+
+      return json;
     },
     onSuccess: (data, variables) => {
       // Invalidate estimate and invoice queries to refresh
@@ -49,6 +95,26 @@ export function useCreateInvoiceFromEstimate() {
       if (data?.invoice?.id) {
         queryClient.invalidateQueries({ queryKey: ['admin-invoice', data.invoice.id] });
       }
+      // Also invalidate portal queries so customer sees new invoice
+      queryClient.invalidateQueries({ 
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === variables.estimateId,
+        refetchType: 'active',
+      });
+      queryClient.invalidateQueries({ 
+        queryKey: ['portal-dashboard'],
+        refetchType: 'active',
+      });
+    },
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useCreateInvoiceFromEstimate] Error:', error, { variables });
+      }
+      
+      const message = error.message || 'Failed to create invoice';
+      toast.error(message);
     },
   });
 }
@@ -61,18 +127,21 @@ export function useSendEstimate() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, method = 'email' }) => {
-      const data = await wpFetch(`/ca/v1/admin/estimates/${estimateId}/send`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates/${estimateId}/send`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId, method }),
       });
 
-      // Check if the response indicates an error (even if status is 200)
-      if (!data?.ok) {
-        throw new Error(data?.error || data?.err || 'Failed to send estimate');
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to send estimate');
       }
 
-      return data;
+      return json;
     },
     onMutate: async (variables) => {
       // Cancel outgoing refetches to avoid overwriting optimistic update
@@ -200,11 +269,21 @@ export function useCompleteReview() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId }) => {
-      return wpFetch(`/ca/v1/admin/estimates/${estimateId}/complete-review`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates/${estimateId}/complete-review`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId }),
       });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to complete review');
+      }
+
+      return json;
     },
     onSuccess: (data, variables) => {
       // Invalidate estimate queries to refresh
@@ -230,7 +309,12 @@ export function useCompleteReview() {
       });
       toast.success('Review completed. Acceptance has been enabled for the customer.');
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useCompleteReview] Error:', error, { variables });
+      }
+      
       const errorMessage = parseWpFetchError(error);
       toast.error(errorMessage || 'Failed to complete review');
     },
@@ -246,11 +330,21 @@ export function useRequestChanges() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, reason = '' }) => {
-      return wpFetch(`/ca/v1/admin/estimates/${estimateId}/request-changes`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates/${estimateId}/request-changes`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ locationId, reason }),
       });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to request changes');
+      }
+
+      return json;
     },
     onSuccess: (data, variables) => {
       // Invalidate estimate queries to refresh
@@ -276,7 +370,12 @@ export function useRequestChanges() {
       });
       toast.success('Changes requested. Customer can now resubmit photos.');
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useRequestChanges] Error:', error, { variables });
+      }
+      
       const errorMessage = parseWpFetchError(error);
       toast.error(errorMessage || 'Failed to request changes');
     },
@@ -293,8 +392,11 @@ export function useSendRevisionNotification() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, revisionNote, revisionData }) => {
-      const data = await wpFetch(`/ca/v1/admin/estimates/${estimateId}/send`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates/${estimateId}/send`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           locationId, 
@@ -303,12 +405,12 @@ export function useSendRevisionNotification() {
         }),
       });
 
-      // Check if the response indicates an error (even if status is 200)
-      if (!data?.ok) {
-        throw new Error(data?.error || data?.err || 'Failed to send revision notification');
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to send revision notification');
       }
 
-      return data;
+      return json;
     },
     onSuccess: (data, variables) => {
       // Invalidate admin estimate queries
@@ -350,6 +452,10 @@ export function useSendRevisionNotification() {
         // ErrorTracking.captureException(error, { extra: errorInfo });
         console.error('Send revision notification mutation error:', errorInfo);
       }
+      
+      // Show error toast to user
+      const errorMessage = parseWpFetchError(error);
+      toast.error(errorMessage || 'Failed to send revision notification');
     },
   });
 }

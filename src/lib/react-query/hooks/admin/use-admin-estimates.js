@@ -1,29 +1,36 @@
 import { useQuery } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { DEFAULT_PAGE_SIZE } from '@/lib/admin/constants';
 
 /**
  * React Query hook for fetching admin estimates list
+ * Uses Next.js API route (/api/admin/estimates) which runs server-side
+ * and can read httpOnly cookies for authentication.
  */
 export function useAdminEstimates({ search, status, portalStatus, workflowStatus, page = 1, pageSize = DEFAULT_PAGE_SIZE, enabled = true } = {}) {
   return useQuery({
     queryKey: ['admin-estimates', search, status, portalStatus, workflowStatus, page, pageSize],
     queryFn: async () => {
-      try {
-        const params = new URLSearchParams();
-        if (search) params.set('search', search);
-        if (status) params.set('status', status);
-        if (portalStatus) params.set('portalStatus', portalStatus);
-        if (workflowStatus) params.set('workflowStatus', workflowStatus); // NEW: Add workflow status filter
-        params.set('page', page.toString());
-        params.set('pageSize', pageSize.toString());
+      const params = new URLSearchParams();
+      if (search) params.set('search', search);
+      if (status) params.set('status', status);
+      if (portalStatus) params.set('portalStatus', portalStatus);
+      if (workflowStatus) params.set('workflowStatus', workflowStatus);
+      params.set('page', page.toString());
+      params.set('pageSize', pageSize.toString());
 
-        return await wpFetch(`/ca/v1/admin/estimates?${params.toString()}`);
-      } catch (error) {
-        // Transform error to user-friendly format
-        const errorMessage = error?.message || error?.err || 'Failed to fetch estimates';
-        throw new Error(errorMessage);
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates?${params.toString()}`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to fetch estimates');
       }
+      return json;
     },
     enabled,
     staleTime: 30 * 1000, // 30 seconds

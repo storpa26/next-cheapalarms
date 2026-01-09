@@ -3,7 +3,7 @@ import { getDashboardData } from "@/lib/admin/services/dashboard-data";
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
+    return res.status(405).json({ ok: false, err: "Method not allowed" });
   }
 
   try {
@@ -15,14 +15,14 @@ export default async function handler(req, res) {
     // Map wpFetch error format: "WP error ${status} ${statusText}: ${body}"
     if (typeof message === "string") {
       if (message.startsWith("WP error 401")) {
-        return res.status(401).json({ ok: false, error: "Not authenticated" });
+        return res.status(401).json({ ok: false, err: "Not authenticated" });
       }
       if (message.startsWith("WP error 403")) {
-        return res.status(403).json({ ok: false, error: "Forbidden" });
+        return res.status(403).json({ ok: false, err: "Forbidden" });
       }
     }
 
-    return res.status(500).json({ ok: false, error: message });
+    return res.status(500).json({ ok: false, err: message });
   }
 }
 

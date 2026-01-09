@@ -16,11 +16,21 @@ export function useUpdateEstimate() {
       if (locationId) params.set('locationId', locationId);
       const search = params.toString();
       
-      const currentData = await wpFetch(`/ca/v1/admin/estimates/${estimateId}${search ? `?${search}` : ''}`);
-      
-      if (!currentData.ok) {
-        throw new Error('Invalid estimate data');
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const url = `/api/admin/estimates/${estimateId}${search ? `?${search}` : ''}`;
+      const res = await fetch(url, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Invalid estimate data');
       }
+
+      const currentData = json;
 
       const current = currentData;
 

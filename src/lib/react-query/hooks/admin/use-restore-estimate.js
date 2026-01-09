@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 
 /**
@@ -11,19 +10,23 @@ export function useRestoreEstimate() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId }) => {
-      const data = await wpFetch(`/ca/v1/admin/estimates/${estimateId}/restore`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates/${estimateId}/restore`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...(locationId && { locationId }),
         }),
       });
 
-      if (!data?.ok) {
-        throw new Error(data?.error || 'Failed to restore estimate');
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to restore estimate');
       }
 
-      return data;
+      return json;
     },
     onMutate: async ({ estimateId }) => {
       // Cancel outgoing refetches
@@ -64,6 +67,11 @@ export function useRestoreEstimate() {
       }
       if (context?.previousEstimates) {
         queryClient.setQueryData(['admin-estimates'], context.previousEstimates);
+      }
+
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useRestoreEstimate] Error:', error, { variables });
       }
 
       const message = error.message || 'Failed to restore estimate';

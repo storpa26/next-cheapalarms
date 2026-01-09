@@ -9,7 +9,7 @@ async function fetchAdminDashboard() {
 
   const json = await res.json().catch(() => null);
   if (!res.ok || !json?.ok) {
-    throw new Error(json?.error || "Failed to load admin dashboard");
+    throw new Error(json?.err || json?.error || "Failed to load admin dashboard");
   }
   return json;
 }

@@ -1,10 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 import { useRouter } from 'next/router';
 
 /**
  * React Query mutation for deleting an estimate
+ * Uses Next.js API route (/api/admin/estimates/[estimateId]/delete) which runs server-side
+ * and can read httpOnly cookies for authentication.
  * @param {string} scope - 'local' | 'ghl' | 'both'
  */
 export function useDeleteEstimate() {
@@ -13,8 +14,11 @@ export function useDeleteEstimate() {
 
   return useMutation({
     mutationFn: async ({ estimateId, locationId, scope = 'both' }) => {
-      const data = await wpFetch(`/ca/v1/admin/estimates/${estimateId}/delete`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/estimates/${estimateId}/delete`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           confirm: 'DELETE',
@@ -22,6 +26,13 @@ export function useDeleteEstimate() {
           locationId,
         }),
       });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Delete failed');
+      }
+
+      const data = json;
 
       const localOk = data?.local?.ok === true;
       const ghlOk = data?.ghl?.ok === true;
@@ -90,6 +101,11 @@ export function useDeleteEstimate() {
       // Rollback optimistic update
       if (context?.previousEstimates) {
         queryClient.setQueryData(['admin-estimates'], context.previousEstimates);
+      }
+
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useDeleteEstimate] Error:', error, { variables });
       }
 
       const message = error.message || 'Failed to delete estimate';

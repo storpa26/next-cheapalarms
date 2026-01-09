@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 
 /**
@@ -11,8 +10,11 @@ export function useBulkDeleteUsers() {
 
   return useMutation({
     mutationFn: async ({ userIds, locationId, scope = 'both' }) => {
-      const data = await wpFetch(`/ca/v1/admin/users/bulk-delete`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch('/api/admin/users/bulk-delete', {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           confirm: 'BULK_DELETE',
@@ -22,11 +24,12 @@ export function useBulkDeleteUsers() {
         }),
       });
 
-      if (!data?.ok) {
-        throw new Error(data?.error || 'Failed to delete users');
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to delete users');
       }
 
-      return data;
+      return json;
     },
     onMutate: async ({ userIds }) => {
       // Cancel outgoing refetches
@@ -82,6 +85,11 @@ export function useBulkDeleteUsers() {
       }
       if (context?.previousContacts) {
         queryClient.setQueryData(['ghl-contacts'], context.previousContacts);
+      }
+
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useBulkDeleteUsers] Error:', error, { variables });
       }
 
       const message = error.message || 'Failed to delete users';

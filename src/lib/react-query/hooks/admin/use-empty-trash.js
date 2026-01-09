@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 
 /**
@@ -10,9 +9,11 @@ export function useEmptyTrash() {
 
   return useMutation({
     mutationFn: async ({ locationId }) => {
-      // wpFetch returns parsed JSON, not a Response object
-      const data = await wpFetch('/ca/v1/admin/estimates/trash/empty', {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch('/api/admin/estimates/trash/empty', {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },
@@ -22,12 +23,12 @@ export function useEmptyTrash() {
         }),
       });
 
-      // Check data.ok (not response.ok) - matches pattern from useRestoreEstimate, useBulkRestoreEstimates
-      if (!data?.ok) {
-        throw new Error(data?.error || data?.err || 'Failed to empty trash');
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Failed to empty trash');
       }
 
-      return data;
+      return json;
     },
     onSuccess: (data) => {
       // Invalidate and refetch trash list
@@ -50,7 +51,12 @@ export function useEmptyTrash() {
         );
       }
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useEmptyTrash] Error:', error, { variables });
+      }
+
       toast.error(error.message || 'Failed to empty trash. Please try again.');
     },
   });

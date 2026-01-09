@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
 import { toast } from 'sonner';
 
 /**
@@ -11,8 +10,11 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async ({ userId, locationId, scope = 'both' }) => {
-      const data = await wpFetch(`/ca/v1/admin/users/${userId}/delete`, {
+      // Use Next.js API route instead of direct wpFetch
+      // The API route runs server-side and can read httpOnly cookies
+      const res = await fetch(`/api/admin/users/${userId}/delete`, {
         method: 'POST',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           confirm: 'DELETE',
@@ -20,6 +22,13 @@ export function useDeleteUser() {
           locationId,
         }),
       });
+
+      const json = await res.json().catch(() => null);
+      if (!res.ok || !json?.ok) {
+        throw new Error(json?.error || json?.err || 'Delete failed');
+      }
+
+      const data = json;
 
       const localOk = data?.local?.ok === true;
       const ghlOk = data?.ghl?.ok === true;
@@ -45,7 +54,12 @@ export function useDeleteUser() {
       
       toast.success('User/contact deleted successfully');
     },
-    onError: (error) => {
+    onError: (error, variables) => {
+      // Log error for debugging (sanitized in production)
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[useDeleteUser] Error:', error, { variables });
+      }
+
       const message = error.message || 'Failed to delete user/contact';
       toast.error(message);
     },

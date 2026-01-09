@@ -133,21 +133,31 @@ export async function proxyToWordPress(req, res, wpPath, options = {}) {
  */
 export function createWpProxyHandler(wpPath, options = {}) {
   return async (req, res) => {
-    // Handle dynamic paths (functions that take req and return path)
-    const path = typeof wpPath === 'function' ? wpPath(req) : wpPath;
-    
-    // Handle validation
-    if (options.validate) {
-      const validation = options.validate(req);
-      if (validation && !validation.valid) {
-        return res.status(validation.status || 400).json({ 
-          ok: false, 
-          error: validation.error || 'Validation failed' 
-        });
+    try {
+      // Handle dynamic paths (functions that take req and return path)
+      // Wrap in try-catch to handle validation errors from path functions
+      const path = typeof wpPath === 'function' ? wpPath(req) : wpPath;
+      
+      // Handle validation
+      if (options.validate) {
+        const validation = options.validate(req);
+        if (validation && !validation.valid) {
+          return res.status(validation.status || 400).json({ 
+            ok: false, 
+            err: validation.error || 'Validation failed' 
+          });
+        }
       }
+      
+      return proxyToWordPress(req, res, path, options);
+    } catch (error) {
+      // Catch errors from path function (e.g., "Invalid estimateId")
+      // Return 400 Bad Request instead of 500 Internal Server Error
+      return res.status(400).json({
+        ok: false,
+        err: error instanceof Error ? error.message : 'Invalid request',
+      });
     }
-    
-    return proxyToWordPress(req, res, path, options);
   };
 }
 
