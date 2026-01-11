@@ -43,7 +43,7 @@ export function BookingCard({ estimateId, locationId, inviteToken, booking, work
       <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Installation Booking</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground" suppressHydrationWarning>Installation Booking</p>
             <h3 className="mt-2 text-2xl font-semibold text-foreground">Booking Confirmed</h3>
             <p className="text-sm text-muted-foreground">Your installation has been scheduled</p>
           </div>
@@ -158,7 +158,7 @@ export function BookingCard({ estimateId, locationId, inviteToken, booking, work
     <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Installation Booking</p>
+          <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground" suppressHydrationWarning>Installation Booking</p>
           <h3 className="mt-2 text-2xl font-semibold text-foreground">Schedule Installation</h3>
           <p className="text-sm text-muted-foreground">Choose your preferred date and time</p>
         </div>

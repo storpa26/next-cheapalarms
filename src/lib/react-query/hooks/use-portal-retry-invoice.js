@@ -56,20 +56,20 @@ export function useRetryInvoice() {
         }
       });
       
-      // Invalidate queries and force refetch (refetchType: 'active' overrides staleTime: Infinity)
+      // Invalidate queries and force refetch (refetchType: 'all' overrides staleTime: Infinity and works for inactive queries)
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
           query.queryKey[1] === variables.estimateId,
-        refetchType: 'active', // Force refetch for active queries
+        refetchType: 'all', // Force refetch for all queries (active and inactive)
       });
       queryClient.invalidateQueries({ 
         queryKey: ['estimate', variables.estimateId],
-        refetchType: 'active', // Force refetch
+        refetchType: 'all', // Force refetch
       });
       queryClient.invalidateQueries({ 
         queryKey: ['portal-dashboard'],
-        refetchType: 'active', // Force refetch
+        refetchType: 'all', // Force refetch
       });
       
       toast.success('Invoice created successfully', {

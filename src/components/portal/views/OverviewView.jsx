@@ -26,17 +26,25 @@ export const OverviewView = memo(function OverviewView({
     setMounted(true);
   }, []);
 
-  // Ensure consistent rendering between server and client
-  // During SSR, if estimate is null, always render the welcome message
-  // On client, wait until mounted to avoid hydration mismatch
+  // FIX: Ensure consistent rendering between server and client
+  // Always render the same wrapper structure, only change inner content after mount
   if (!estimate) {
     return (
       <div 
         className="rounded-xl border-2 border-border bg-surface p-6 shadow-lg text-center"
-        suppressHydrationWarning
+        suppressHydrationWarning={true}
       >
-        <h1 className="text-3xl font-semibold text-foreground">Welcome to Your Portal</h1>
-        <p className="mt-2 text-muted-foreground">Request a quote to get started.</p>
+        {mounted ? (
+          <>
+            <h1 className="text-3xl font-semibold text-foreground">Welcome to Your Portal</h1>
+            <p className="mt-2 text-muted-foreground">Request a quote to get started.</p>
+          </>
+        ) : (
+          <>
+            <div className="h-10 w-64 bg-muted animate-pulse rounded mx-auto" />
+            <div className="mt-2 h-6 w-48 bg-muted animate-pulse rounded mx-auto" />
+          </>
+        )}
       </div>
     );
   }

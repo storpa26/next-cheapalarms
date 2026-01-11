@@ -108,7 +108,10 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   // Initialize edited items when entering edit mode
   const handleEnterEditMode = () => {
     const items = estimate?.items || [];
-    setEditedItems(items.map(item => ({ ...item, originalQty: item.qty || item.quantity || 1 })));
+    setEditedItems(items.filter(item => item != null).map(item => ({ 
+      ...item, 
+      originalQty: item?.qty || item?.quantity || 1 
+    })));
     setEditedDiscount(estimate?.discount || null);
     setRemovedItems([]);
     setIsEditMode(true);
@@ -128,9 +131,10 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       return;
     }
     
-    const invalidItems = editedItems.filter(item => {
-      const qty = item.qty || item.quantity || 0;
-      const amount = item.amount || 0;
+    const invalidItems = (editedItems || []).filter(item => {
+      if (!item) return true; // Filter out null items
+      const qty = item?.qty || item?.quantity || 0;
+      const amount = item?.amount || 0;
       return amount <= 0 || qty <= 0;
     });
     
@@ -158,20 +162,20 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         oldTotal: safeOldTotal,
         newTotal: safeNewTotal,
         netChange: safeNetChange,
-        changedItems: changedItems.map(item => ({
-          name: item.name,
-          oldQty: item.originalQty,
-          newQty: item.newQty
+        changedItems: (changedItems || []).filter(item => item != null).map(item => ({
+          name: item?.name || 'Item',
+          oldQty: item?.originalQty || 0,
+          newQty: item?.newQty || 0
         })),
-        addedItems: addedItems.map(item => ({
-          name: item.name,
-          qty: item.qty || 1,
-          amount: item.amount
+        addedItems: (addedItems || []).filter(item => item != null).map(item => ({
+          name: item?.name || 'Item',
+          qty: item?.qty || 1,
+          amount: item?.amount || 0
         })),
-        removedItems: removedItems.map(item => ({
-          name: item.name,
-          qty: item.qty || item.quantity || 1,
-          amount: item.amount
+        removedItems: (removedItems || []).filter(item => item != null).map(item => ({
+          name: item?.name || 'Item',
+          qty: item?.qty || item?.quantity || 1,
+          amount: item?.amount || 0
         })),
         discount: editedDiscount
       };
@@ -180,12 +184,12 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       await updateEstimateMutation.mutateAsync({
         estimateId,
         locationId,
-        items: editedItems.map(item => ({
-          name: item.name,
-          description: item.description,
-          currency: item.currency || estimate.currency || DEFAULT_CURRENCY,
-          amount: item.amount,
-          qty: item.qty || item.quantity || 1
+        items: (editedItems || []).filter(item => item != null).map(item => ({
+          name: item?.name || 'Item',
+          description: item?.description || '',
+          currency: item?.currency || estimate?.currency || DEFAULT_CURRENCY,
+          amount: item?.amount || 0,
+          qty: item?.qty || item?.quantity || 1
         })),
         discount: editedDiscount,
         revisionData, // Send revision data to backend
@@ -239,8 +243,9 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       }
       
       const newItems = [...prev];
-      const currentQty = newItems[index].qty || newItems[index].quantity || 1;
-      const originalQty = newItems[index].originalQty || currentQty;
+      if (!newItems[index]) return prev; // Safety check
+      const currentQty = newItems[index]?.qty || newItems[index]?.quantity || 1;
+      const originalQty = newItems[index]?.originalQty || currentQty;
       
       // Calculate min/max based on original quantity
       const minQty = Math.max(1, originalQty - 10);
@@ -264,6 +269,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   };
 
   const handleRemoveItem = (index) => {
+    if (index < 0 || index >= (editedItems || []).length) return; // Safety check
     const item = editedItems[index];
     // Track removed items if they were original (not custom added)
     if (item && !item.isCustom) {
@@ -285,11 +291,13 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   // Calculate totals
   const originalTotal = estimate?.total || 0;
   const newTotal = useMemo(() => {
-    const itemsTotal = editedItems.reduce((sum, item) => {
-      return sum + (item.amount * (item.qty || item.quantity || 1));
-    }, 0);
+    const itemsTotal = (editedItems || [])
+      .filter(item => item != null)
+      .reduce((sum, item) => {
+        return sum + ((item?.amount || 0) * (item?.qty || item?.quantity || 1));
+      }, 0);
     
-    if (editedDiscount && editedDiscount.value !== 0) {
+    if (editedDiscount && editedDiscount.value !== 0 && editedDiscount.type) {
       if (editedDiscount.type === 'percentage') {
         // For percentage: positive = discount, negative = surcharge
         return itemsTotal * (1 - editedDiscount.value / 100);
@@ -306,22 +314,23 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const changedItems = useMemo(() => {
     if (!isEditMode) return [];
     const original = estimate?.items || [];
-    return editedItems
+    return (editedItems || [])
+      .filter(item => item != null)
       .filter((edited, idx) => {
         const orig = original[idx];
-        return orig && (edited.qty || edited.quantity) !== (orig.qty || orig.quantity);
+        return orig && (edited?.qty || edited?.quantity) !== (orig?.qty || orig?.quantity);
       })
-      .map((edited, idx) => ({
-        name: edited.name,
-        originalQty: edited.originalQty,
-        newQty: edited.qty || edited.quantity
+      .map((edited) => ({
+        name: edited?.name || 'Item',
+        originalQty: edited?.originalQty || 0,
+        newQty: edited?.qty || edited?.quantity || 0
       }));
   }, [isEditMode, editedItems, estimate]);
 
   const addedItems = useMemo(() => {
     if (!isEditMode) return [];
     const originalCount = estimate?.items?.length || 0;
-    return editedItems.slice(originalCount);
+    return (editedItems || []).slice(originalCount).filter(item => item != null);
   }, [isEditMode, editedItems, estimate]);
 
   const handleCreateInvoice = async () => {
@@ -395,11 +404,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     );
   }
 
-  const contact = estimate.contact || {};
-  const items = isEditMode ? editedItems : (estimate.items || []);
-  const portalMeta = estimate.portalMeta || {};
-  const linkedInvoice = estimate.linkedInvoice;
-  const currency = estimate.currency || DEFAULT_CURRENCY;
+  const contact = estimate?.contact || {};
+  const items = isEditMode ? editedItems : (estimate?.items || []);
+  const portalMeta = estimate?.portalMeta || {};
+  const linkedInvoice = estimate?.linkedInvoice;
+  const currency = estimate?.currency || DEFAULT_CURRENCY;
 
   // Compute UI state from portal meta to get accurate status
   const uiState = computeUIState(portalMeta);
@@ -437,9 +446,9 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground">{estimate.title || "ESTIMATE"}</h1>
+            <h1 className="text-2xl font-bold text-foreground">{estimate?.title || "ESTIMATE"}</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Estimate #{estimate.estimateNumber || estimateId}
+              Estimate #{estimate?.estimateNumber || estimateId}
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -593,15 +602,15 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {items.map((item, idx) => {
-                      const itemName = item.name || "Item";
+                    {(items || []).filter(item => item != null).map((item, idx) => {
+                      const itemName = item?.name || "Item";
                       const photoCount = itemPhotoCounts[itemName] || 0;
-                      const itemQty = item.qty || item.quantity || 1;
+                      const itemQty = item?.qty || item?.quantity || 1;
                       const isSelected = !isEditMode && selectedItem?.name === itemName;
                       
                       return (
                         <tr
-                          key={item.id || idx}
+                          key={item?.id || idx}
                           onClick={() => {
                             // Allow photo viewing even in edit mode
                             if (selectedItem?.name === itemName) {
@@ -621,12 +630,12 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                               <div className="flex-1">
                                 <div className="font-medium text-foreground flex items-center gap-2">
                                   {itemName}
-                                  {item.isCustom && (
+                                  {item?.isCustom && (
                                     <span className="text-xs px-1.5 py-0.5 bg-success-bg text-success rounded font-semibold">NEW</span>
                                   )}
                                 </div>
-                                {item.description && (
-                                  <div className="text-xs text-muted-foreground">{item.description}</div>
+                                {item?.description && (
+                                  <div className="text-xs text-muted-foreground">{item?.description}</div>
                                 )}
                               </div>
                               {!isEditMode && photoCount > 0 && (
@@ -657,7 +666,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                                 <span className="w-10 text-center font-medium text-foreground">{itemQty}</span>
                                 <Button
                                   onClick={() => handleQuantityChange(idx, 1)}
-                                  disabled={itemQty >= (item.originalQty || 1) + 10}
+                                  disabled={itemQty >= (item?.originalQty || 1) + 10}
                                   variant="outline"
                                   size="icon-sm"
                                   className="w-7 h-7"
@@ -672,10 +681,10 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                             )}
                           </td>
                           <td className="px-4 py-3 text-right text-sm text-foreground">
-                            {currency} {(item.amount || 0).toFixed(2)}
+                            {currency} {(item?.amount || 0).toFixed(2)}
                           </td>
                           <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
-                            {currency} {((item.amount || 0) * itemQty).toFixed(2)}
+                            {currency} {((item?.amount || 0) * itemQty).toFixed(2)}
                           </td>
                           {isEditMode && (
                             <td className="px-4 py-3 text-center">
@@ -792,16 +801,16 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               <div className="space-y-2 text-sm">
                 <div>
                   <span className="text-muted-foreground">Number:</span>{" "}
-                  <span className="font-medium text-foreground">{linkedInvoice.number || linkedInvoice.invoiceNumber}</span>
+                  <span className="font-medium text-foreground">{linkedInvoice?.number || linkedInvoice?.invoiceNumber || 'N/A'}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Status:</span>{" "}
-                  <span className="font-medium text-foreground">{linkedInvoice.status || "draft"}</span>
+                  <span className="font-medium text-foreground">{linkedInvoice?.status || "draft"}</span>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Amount Due:</span>{" "}
                   <span className="font-medium text-foreground">
-                    {currency} {linkedInvoice.amountDue?.toFixed(2) || "0.00"}
+                    {currency} {linkedInvoice?.amountDue?.toFixed(2) || "0.00"}
                   </span>
                 </div>
               </div>
@@ -812,9 +821,9 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
           <div className="rounded-xl border border-border/60 bg-card p-4">
             <h3 className="mb-3 text-sm font-semibold text-foreground">Actions</h3>
             <div className="space-y-2">
-              {estimate.id && (
+              {estimate?.id && (
                 <a
-                  href={`https://app.gohighlevel.com/v2/location/${locationId || estimate.locationId}/estimates/${estimate.id}`}
+                  href={`https://app.gohighlevel.com/v2/location/${locationId || estimate?.locationId}/estimates/${estimate?.id}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-lg text-foreground hover:bg-muted transition"
@@ -825,35 +834,43 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   View in GHL
                 </a>
               )}
-              {/* Workflow Action Buttons - Use status computer to determine visibility */}
+              {/* Single Admin Button - "Send Estimate" or "Finish" */}
               {portalMeta && (() => {
                 const uiState = computeUIState(portalMeta);
+                const showFinish = uiState.adminCanFinish;
+                const showSend = uiState.adminCanSendEstimate;
+                
+                // Don't show button if neither state is active
+                if (!showFinish && !showSend) {
+                  return null;
+                }
                 
                 return (
                   <>
-                    {/* Approve & Enable Acceptance - Primary action */}
-                    {(uiState.adminCanApproveAndEnable || uiState.adminCanEnableAcceptance) && (
-                      <Button
-                        onClick={handleCompleteReview}
-                        disabled={completeReviewMutation.isPending}
-                        variant="default"
-                        className="w-full bg-green-600 hover:bg-green-700"
-                      >
-                        {completeReviewMutation.isPending ? (
+                    {/* Single button: "Send Estimate" or "Finish" */}
+                    <Button
+                      onClick={showFinish ? handleCompleteReview : handleSendEstimate}
+                      disabled={showFinish ? completeReviewMutation.isPending : sendEstimateMutation.isPending}
+                      variant="default"
+                      className="w-full bg-success text-success-foreground hover:bg-success/90"
+                    >
+                      {showFinish ? (
+                        completeReviewMutation.isPending ? (
                           <>
                             <Spinner size="sm" />
-                            Processing...
+                            Finishing...
                           </>
                         ) : (
-                          <>
-                            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            Approve & Enable Acceptance
-                          </>
-                        )}
-                      </Button>
-                    )}
+                          "Finish"
+                        )
+                      ) : (
+                        sendEstimateMutation.isPending ? (
+                          "Sending..."
+                        ) : (
+                          "Send Estimate"
+                        )
+                      )}
+                    </Button>
                     
                     {/* Request Changes - Secondary action (only when photos required) */}
                     {uiState.adminCanRequestChanges && (
@@ -881,14 +898,6 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   </>
                 );
               })()}
-              <Button
-                onClick={handleSendEstimate}
-                disabled={sendEstimateMutation.isPending}
-                variant="default"
-                className="w-full bg-success text-success-foreground hover:bg-success/90"
-              >
-                {sendEstimateMutation.isPending ? "Sending..." : "Send Estimate"}
-              </Button>
               {!hasInvoice && (displayStatus === 'ACCEPTED' || displayStatus === 'INVOICE_READY') && (
                 <Button
                   onClick={handleCreateInvoice}
@@ -915,7 +924,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
           {/* Photo Gallery */}
           <PhotoGallery
             estimateId={estimateId}
-            items={estimate.items || []}
+            items={estimate?.items || []}
             selectedItem={selectedItem}
             portalMeta={portalMeta}
           />
@@ -935,7 +944,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         onClose={() => setShowDiscountModal(false)}
         onApply={handleApplyDiscount}
         currentDiscount={editedDiscount}
-        estimateTotal={editedItems.reduce((sum, item) => sum + (item.amount * (item.qty || item.quantity || 1)), 0)}
+        estimateTotal={(editedItems || []).filter(item => item != null).reduce((sum, item) => sum + ((item?.amount || 0) * (item?.qty || item?.quantity || 1)), 0)}
         currency={currency}
       />
 

@@ -1,4 +1,5 @@
 import { CheckCircle2, Circle } from "lucide-react";
+import { useState, useEffect } from "react";
 
 /**
  * WorkflowProgress Component
@@ -12,6 +13,12 @@ import { CheckCircle2, Circle } from "lucide-react";
  * NEW WORKFLOW ORDER: Payment comes BEFORE booking
  */
 export function WorkflowProgress({ workflow }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // If no workflow data, don't render
   if (!workflow || typeof workflow !== 'object' || typeof workflow.status !== 'string' || workflow.status === '') {
     return null;
@@ -55,14 +62,18 @@ export function WorkflowProgress({ workflow }) {
     <div className="rounded-xl border border-border bg-background p-6 shadow-sm animate-in fade-in duration-300">
       <div className="mb-4">
         <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground mb-1">Your Progress</p>
-        <p className="text-sm text-muted-foreground">Step {currentStep} of {steps.length}</p>
+        <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+          {mounted ? `Step ${currentStep} of ${steps.length}` : `Step 2 of ${steps.length}`}
+        </p>
       </div>
 
       {/* Progress Steps */}
-      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 mb-4" suppressHydrationWarning>
         {steps.map((step, idx) => {
-          const isCompleted = currentStep > step.step;
-          const isCurrent = currentStep === step.step;
+          // During SSR, use a safe default (step 2) to prevent hydration mismatch
+          const safeCurrentStep = mounted ? currentStep : 2;
+          const isCompleted = safeCurrentStep > step.step;
+          const isCurrent = safeCurrentStep === step.step;
           
           return (
             <div key={step.step} className="flex-1 flex items-center">
@@ -73,7 +84,7 @@ export function WorkflowProgress({ workflow }) {
                     : isCurrent
                     ? 'bg-primary border-primary text-primary-foreground scale-110 shadow-lg shadow-primary/50 animate-pulse'
                     : 'bg-muted border-border-subtle text-muted-foreground'
-                }`}>
+                }`} suppressHydrationWarning>
                   {isCompleted ? (
                     <CheckCircle2 className="h-6 w-6 animate-in zoom-in duration-300" />
                   ) : (
@@ -89,7 +100,7 @@ export function WorkflowProgress({ workflow }) {
               {idx < steps.length - 1 && (
                 <div className={`flex-1 h-1 mx-2 rounded-full transition-all duration-500 ${
                   isCompleted ? 'bg-success' : 'bg-border-subtle'
-                }`} />
+                }`} suppressHydrationWarning />
               )}
             </div>
           );
@@ -100,7 +111,8 @@ export function WorkflowProgress({ workflow }) {
       <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-700 ease-out shadow-sm"
-          style={{ width: `${progressPercentage}%` }}
+          style={{ width: mounted ? `${progressPercentage}%` : '33%' }}
+          suppressHydrationWarning
         />
       </div>
     </div>

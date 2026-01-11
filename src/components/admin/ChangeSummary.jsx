@@ -37,9 +37,9 @@ export function ChangeSummary({
           <p className="text-xs font-medium text-warning uppercase tracking-wide">Quantity Changed:</p>
           {changedItems.map((item, idx) => (
             <div key={idx} className="flex items-center gap-2 text-sm">
-              <span className="text-foreground">{item.name}:</span>
+              <span className="text-foreground">{item?.name || 'Item'}:</span>
               <span className="text-warning">
-                {item.originalQty} → {item.newQty}
+                {item?.originalQty ?? 0} → {item?.newQty ?? 0}
               </span>
             </div>
           ))}
@@ -50,16 +50,20 @@ export function ChangeSummary({
       {addedItems.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-success uppercase tracking-wide">Items Added:</p>
-          {addedItems.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between text-sm">
-              <span className="text-foreground">
-                {item.name} {item.qty > 1 && `(×${item.qty})`}
-              </span>
-              <span className="font-medium text-success">
-                +{currency} {(item.amount * item.qty).toFixed(2)}
-              </span>
-            </div>
-          ))}
+          {addedItems.map((item, idx) => {
+            const qty = item?.qty || item?.quantity || 1;
+            const amount = item?.amount || 0;
+            return (
+              <div key={idx} className="flex items-center justify-between text-sm">
+                <span className="text-foreground">
+                  {item?.name || 'Item'} {qty > 1 && `(×${qty})`}
+                </span>
+                <span className="font-medium text-success">
+                  +{currency} {(amount * qty).toFixed(2)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -67,28 +71,32 @@ export function ChangeSummary({
       {removedItems.length > 0 && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-error uppercase tracking-wide">Items Removed:</p>
-          {removedItems.map((item, idx) => (
-            <div key={idx} className="flex items-center justify-between text-sm">
-              <span className="text-foreground line-through">{item.name}</span>
-              <span className="font-medium text-error">
-                -{currency} {(item.amount * item.qty).toFixed(2)}
-              </span>
-            </div>
-          ))}
+          {removedItems.map((item, idx) => {
+            const qty = item?.qty || item?.quantity || 1;
+            const amount = item?.amount || 0;
+            return (
+              <div key={idx} className="flex items-center justify-between text-sm">
+                <span className="text-foreground line-through">{item?.name || 'Item'}</span>
+                <span className="font-medium text-error">
+                  -{currency} {(amount * qty).toFixed(2)}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Discount/Surcharge */}
-      {discount && discount.value > 0 && (
+      {discount && discount.value !== undefined && discount.value > 0 && discount?.type && (
         <div className="space-y-1">
           <p className="text-xs font-medium text-info uppercase tracking-wide">Price Adjustment:</p>
           <div className="flex items-center justify-between text-sm">
             <span className="text-foreground">
-              {discount.name || 'Adjustment'}
-              {discount.type === 'percentage' && ` (${discount.value}%)`}
+              {discount?.name || 'Adjustment'}
+              {discount?.type === 'percentage' && ` (${discount.value}%)`}
             </span>
             <span className="font-medium text-info">
-              {discount.type === 'fixed' ? `-${currency} ${discount.value.toFixed(2)}` : `-${discount.value}%`}
+              {discount?.type === 'fixed' ? `-${currency} ${discount.value.toFixed(2)}` : `-${discount.value}%`}
             </span>
           </div>
         </div>

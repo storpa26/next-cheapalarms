@@ -119,8 +119,7 @@ export function computeUIState(portalMeta) {
       canReject: false,
       // Admin action flags
       adminCanSendEstimate: false,
-      adminCanEnableAcceptance: false,
-      adminCanApproveAndEnable: false,
+      adminCanFinish: false,
       adminCanRequestChanges: false,
       adminCanTogglePhotosRequired: false,
     };
@@ -143,8 +142,15 @@ export function computeUIState(portalMeta) {
     statusMessage,
     
     // Customer actions
-    canRequestReview: workflow.status === 'sent' && !quote.approval_requested && 
-      (!quote.photos_required || (photos.uploaded || 0) > 0),
+    // Only show "Request Review" button when resubmitting photos (after admin requested changes)
+    // Check for change_requested_at to detect that admin reviewed once and requested changes
+    // After resubmission, workflow.status is 'sent' (not auto-requested), so check for 'sent' OR 'under_review'
+    canRequestReview: quote.photos_required && 
+      photos.submission_status === 'submitted' && 
+      quote.change_requested_at && 
+      !quote.acceptance_enabled &&
+      !quote.approval_requested &&
+      (workflow.status === 'sent' || workflow.status === 'under_review'),
     canUploadPhotos: quote.photos_required && 
       (workflow.status === 'sent' || workflow.status === 'under_review') && 
       !isAccepted && !isRejected,
@@ -157,14 +163,14 @@ export function computeUIState(portalMeta) {
     canPay: isAccepted && invoice.id && !isPaid,
     canReject: workflow.status !== 'requested' && !isAccepted && !isRejected,
     
-    // Admin actions
+    // Admin actions - Single button with two states
+    // Show "Send Estimate" when estimate hasn't been sent yet
     adminCanSendEstimate: workflow.status === 'requested' || !workflow.status,
-    // Can enable acceptance when review requested, no photos required, and estimate sent
-    adminCanEnableAcceptance: !quote.acceptance_enabled && !quote.photos_required && 
-      workflow.status === 'under_review' && quote.sentAt && quote.approval_requested,
-    // Can approve and enable when review requested, photos submitted, not reviewed, and not enabled
-    adminCanApproveAndEnable: quote.photos_required && workflow.status === 'under_review' && 
-      photos.submission_status === 'submitted' && !photos.reviewed && !quote.acceptance_enabled && quote.approval_requested,
+    // Show "Finish" when photos submitted and need review, OR no photos and review requested
+    adminCanFinish: (quote.photos_required && workflow.status === 'under_review' && 
+      photos.submission_status === 'submitted' && !photos.reviewed && !quote.acceptance_enabled && quote.approval_requested) ||
+      (!quote.photos_required && workflow.status === 'under_review' && 
+      !quote.acceptance_enabled && quote.sentAt && quote.approval_requested),
     // Can request changes when review requested, photos submitted, not reviewed
     adminCanRequestChanges: quote.photos_required && workflow.status === 'under_review' && 
       photos.submission_status === 'submitted' && !photos.reviewed && !quote.acceptance_enabled && quote.approval_requested,

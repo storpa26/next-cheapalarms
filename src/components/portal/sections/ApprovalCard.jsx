@@ -127,12 +127,14 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           <div>
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Approval & payment</p>
             <h3 className="mt-2 text-2xl font-semibold text-foreground">Finalize estimate</h3>
-            <p className="text-sm text-muted-foreground">
-              {statusMessage || (isAccepted
-                ? "Your estimate has been accepted"
-                : isRejected
-                  ? "This estimate has been rejected"
-                  : "Review and accept or reject your estimate")}
+            <p className="text-sm text-muted-foreground" suppressHydrationWarning>
+              {mounted && statusMessage 
+                ? statusMessage
+                : isAccepted
+                  ? "Your estimate has been accepted"
+                  : isRejected
+                    ? "This estimate has been rejected"
+                    : "Estimate sent - ready for review"}
             </p>
           </div>
           <div className="rounded-full bg-secondary/15 p-4">
@@ -251,16 +253,16 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
 
         {/* Action Buttons */}
         {!isAccepted && !isRejected && (
-          <div className="mt-5 space-y-3">
+          <div className="mt-5 space-y-3" suppressHydrationWarning>
             {isGuestMode ? (
               <div className="rounded-2xl border-2 border-border bg-muted px-4 py-4 text-center">
                 <p className="text-sm font-medium text-muted-foreground">
                   Please create an account to accept or reject this estimate
                 </p>
               </div>
-            ) : (
+            ) : mounted ? (
               <>
-                {/* Request Review Button - Show when estimate is sent and review not yet requested */}
+                {/* Request Review Button - Only show when resubmitting photos (after admin already reviewed once) */}
                 {canRequestReview && (
                   <Button
                     type="button"
@@ -329,6 +331,11 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   </Button>
                 )}
               </>
+            ) : (
+              // Placeholder during SSR - match structure but don't render buttons
+              <div className="rounded-2xl border-2 border-border bg-muted px-4 py-4 text-center">
+                <div className="h-10 w-full bg-muted animate-pulse rounded" />
+              </div>
             )}
           </div>
         )}

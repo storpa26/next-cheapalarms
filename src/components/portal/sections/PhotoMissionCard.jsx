@@ -116,7 +116,11 @@ export function PhotoMissionCard({
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
-        body: JSON.stringify({ estimateId, locationId }),
+        body: JSON.stringify({ 
+          estimateId, 
+          locationId,
+          inviteToken: view?.account?.inviteToken || '' 
+        }),
       });
 
       if (!response.ok) {
@@ -134,11 +138,14 @@ export function PhotoMissionCard({
       setLocalSubmitted(true);
       
       // Background refetch of portal status
-      queryClient.refetchQueries({
+      // Use await to ensure refetch completes before showing success toast
+      await queryClient.refetchQueries({
         predicate: (query) => {
           return query.queryKey[0] === 'portal-status' && 
                  query.queryKey[1] === estimateId;
         },
+      }).catch(err => {
+        console.error('[PhotoMissionCard] Refetch failed:', err);
       });
       
       toast.success('Photos submitted successfully', {

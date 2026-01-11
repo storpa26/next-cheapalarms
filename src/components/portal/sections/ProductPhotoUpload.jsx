@@ -85,8 +85,15 @@ function ProductSlot({
       
       try {
         // Ensure upload session exists
-        let session = getCurrentSession();
-        if (!session || session.estimateId !== estimateId) {
+        // FIX: Pass estimateId to getCurrentSession for Map-based session lookup
+        let session = getCurrentSession(estimateId);
+        const now = Date.now() / 1000;
+        const isSessionExpired = session?.exp != null && 
+                                 session.exp !== 0 && 
+                                 typeof session.exp === 'number' &&
+                                 session.exp < now;
+        
+        if (!session || session.estimateId !== estimateId || isSessionExpired) {
           setUploadProgress(10);
           session = await startUploadSession(estimateId, locationId);
         }
@@ -115,9 +122,10 @@ function ProductSlot({
         };
 
         // Upload file with progress tracking
+        // FIX: Pass estimateId as 5th parameter for proper session lookup
         const uploadResult = await uploadFile(compressedFile, metadata, (progressData) => {
           setUploadProgress(20 + (progressData.progress * 0.6)); // 20-80%
-        });
+        }, null, estimateId);
 
         // Store photo metadata
         setUploadProgress(90);

@@ -14,8 +14,9 @@ export function UploadButtons({ onFileSelect, uploading = false }) {
     /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
   const handleFileChange = (e) => {
-    if (e.target.files && e.target.files[0]) {
-      onFileSelect(e.target.files[0]);
+    if (e.target.files && e.target.files.length > 0) {
+      // Support multiple file selection
+      onFileSelect(e.target.files);
     }
   };
 
@@ -65,6 +66,7 @@ export function UploadButtons({ onFileSelect, uploading = false }) {
         onChange={handleFileChange}
         className="hidden"
         disabled={uploading}
+        multiple
       />
       {isMobile && (
         <input

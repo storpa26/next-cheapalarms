@@ -64,13 +64,18 @@ export function useStoreEstimatePhotos() {
     onSuccess: (data, variables) => {
       // Invalidate queries (this automatically triggers refetch for active queries)
       queryClient.invalidateQueries({ queryKey: ['estimate-photos', variables.estimateId] });
-      toast.success('Photo uploaded successfully');
+      // FIX: Removed duplicate toast - UploadModal shows its own success toast
+      // toast.success('Photo uploaded successfully');
     },
     onError: (error) => {
-      toast.error('Failed to upload photo', {
+      toast.error('Failed to save photos', {
         description: error.message || 'Please try again or contact support if the problem persists.',
+        duration: 5000,
       });
     },
+    // FIX: Add retry configuration for transient failures
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff, max 30s
   });
 }
 

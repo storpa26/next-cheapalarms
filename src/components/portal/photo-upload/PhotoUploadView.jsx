@@ -182,7 +182,11 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
-        body: JSON.stringify({ estimateId, locationId }),
+        body: JSON.stringify({ 
+          estimateId, 
+          locationId,
+          inviteToken: view?.account?.inviteToken || '' 
+        }),
       });
 
       if (!response.ok) {
@@ -197,10 +201,13 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
       }
 
       // Invalidate portal status to refresh submission status
-      // refetchType: 'active' forces refetch even with staleTime: Infinity
+      // Use predicate to match all portal-status queries for this estimateId (regardless of locationId/inviteToken)
+      // refetchType: 'all' forces refetch even with staleTime: Infinity and inactive queries
       await queryClient.invalidateQueries({
-        queryKey: ['portal-status', estimateId],
-        refetchType: 'active', // Force refetch for active queries
+        predicate: (query) => 
+          query.queryKey[0] === 'portal-status' && 
+          query.queryKey[1] === estimateId,
+        refetchType: 'all', // Force refetch for all queries (active and inactive)
       });
       
       toast.success('Photos submitted successfully', {

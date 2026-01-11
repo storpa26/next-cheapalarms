@@ -25,7 +25,7 @@ export function useRequestReview() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
         credentials: 'include',
-        body: JSON.stringify({ estimateId, locationId }),
+        body: JSON.stringify({ estimateId, locationId, inviteToken }),
       });
 
       if (!res.ok) {
@@ -102,20 +102,20 @@ export function useRequestReview() {
       toast.error(err.message || 'Failed to request review');
     },
     onSuccess: (data, variables) => {
-      // Invalidate queries and force refetch (refetchType: 'active' overrides staleTime: Infinity)
+      // Invalidate queries and force refetch (refetchType: 'all' overrides staleTime: Infinity and works for inactive queries)
       queryClient.invalidateQueries({ 
         predicate: (query) => 
           query.queryKey[0] === 'portal-status' && 
           query.queryKey[1] === variables.estimateId,
-        refetchType: 'active', // Force refetch for active queries
+        refetchType: 'all', // Force refetch for all queries (active and inactive)
       });
       queryClient.invalidateQueries({ 
         queryKey: ['estimate', variables.estimateId],
-        refetchType: 'active', // Force refetch
+        refetchType: 'all', // Force refetch
       });
       queryClient.invalidateQueries({ 
         queryKey: ['portal-dashboard'],
-        refetchType: 'active', // Force refetch
+        refetchType: 'all', // Force refetch
       });
       
       // Show success toast

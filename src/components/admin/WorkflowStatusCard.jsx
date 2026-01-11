@@ -248,7 +248,7 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
           </div>
 
           {/* Booking Information */}
-          {booking && booking.scheduledDate && (
+          {booking && booking !== null && booking?.scheduledDate && (
             <div className="pt-3 border-t border-border/60">
               <div className="flex items-center gap-2 mb-2">
                 <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -258,19 +258,19 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Date:</span>
                   <span className="text-foreground font-medium">
-                    {formatBookingDate(booking.scheduledDate)}
+                    {formatBookingDate(booking?.scheduledDate)}
                   </span>
                 </div>
-                {booking.scheduledTime && (
+                {booking?.scheduledTime && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Time:</span>
-                    <span className="text-foreground font-medium">{escapeHtml(booking.scheduledTime)}</span>
+                    <span className="text-foreground font-medium">{escapeHtml(booking?.scheduledTime)}</span>
                   </div>
                 )}
-                {booking.notes && (
+                {booking?.notes && (
                   <div className="mt-2 pt-2 border-t border-border/40">
                     <span className="text-muted-foreground">Notes:</span>
-                    <p className="text-foreground mt-1 whitespace-pre-wrap">{escapeHtml(booking.notes)}</p>
+                    <p className="text-foreground mt-1 whitespace-pre-wrap">{escapeHtml(booking?.notes)}</p>
                   </div>
                 )}
               </div>
@@ -278,7 +278,7 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
           )}
 
           {/* Payment Information */}
-          {payment && typeof payment === 'object' && (
+          {payment && payment !== null && typeof payment === 'object' && (
             <div className="pt-3 border-t border-border/60">
               <div className="flex items-center gap-2 mb-2">
                 <CreditCard className="h-4 w-4 text-muted-foreground" />
@@ -287,12 +287,12 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <Badge className={payment.status === 'paid' ? 'bg-success-bg text-success border-success/30' : 'bg-muted text-muted-foreground border-border'}>
-                    {getPaymentStatusLabel(payment.status)}
+                  <Badge className={payment?.status === 'paid' ? 'bg-success-bg text-success border-success/30' : 'bg-muted text-muted-foreground border-border'}>
+                    {getPaymentStatusLabel(payment?.status)}
                   </Badge>
                 </div>
                 {(() => {
-                  const formattedAmount = formatPaymentAmount(payment.amount);
+                  const formattedAmount = formatPaymentAmount(payment?.amount);
                   return formattedAmount && (
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Amount:</span>
@@ -302,16 +302,16 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
                     </div>
                   );
                 })()}
-                {payment.paidAt && (
+                {payment?.paidAt && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Paid:</span>
-                    <span className="text-foreground font-medium">{formatDate(payment.paidAt)}</span>
+                    <span className="text-foreground font-medium">{formatDate(payment?.paidAt)}</span>
                   </div>
                 )}
-                {payment.provider && (
+                {payment?.provider && (
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">Provider:</span>
-                    <span className="text-foreground font-medium capitalize">{escapeHtml(payment.provider)}</span>
+                    <span className="text-foreground font-medium capitalize">{escapeHtml(payment?.provider)}</span>
                   </div>
                 )}
               </div>
