@@ -1,39 +1,46 @@
 import Head from "next/head";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import Link from "next/link";
-import { Settings, Plus, MoreVertical } from "lucide-react";
+import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { useAdminInvoices, useBulkDeleteInvoices } from "@/lib/react-query/hooks/admin";
+import { 
+  useAdminInvoices,
+  useBulkDeleteInvoices,
+  useDeleteInvoice
+} from "@/lib/react-query/hooks/admin";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { Spinner } from "@/components/ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
-import { InvoiceDetailModal } from "@/components/admin/InvoiceDetailModal";
 import { SummaryCard } from "@/components/admin/SummaryCard";
 import { StatusTabs } from "@/components/admin/StatusTabs";
 import { Avatar } from "@/components/admin/Avatar";
 import { SearchBar } from "@/components/admin/SearchBar";
+import { DeleteDialog } from "@/components/admin/DeleteDialog";
 import { BulkDeleteDialog } from "@/components/admin/BulkDeleteDialog";
 import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
+import { InvoiceDetailModal } from "@/components/admin/InvoiceDetailModal";
 import { Checkbox } from "@/components/ui/checkbox";
+import Link from "next/link";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
-import { toast } from "sonner";
 
 export default function InvoicesListPage() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [page, setPage] = useState(1);
   const [locationId, setLocationId] = useState("");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  const [deleteScope, setDeleteScope] = useState('both');
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
   const pageSize = DEFAULT_PAGE_SIZE;
 
+  const deleteInvoiceMutation = useDeleteInvoice();
   const bulkDeleteMutation = useBulkDeleteInvoices();
 
   // Get invoiceId from URL query for deep linking
@@ -43,6 +50,7 @@ export default function InvoicesListPage() {
   // Map tab to status filter
   const statusFilter = activeTab === "all" ? "" : activeTab;
 
+  // Fetch invoices
   const { data, isLoading, error, refetch } = useAdminInvoices({
     search: search || undefined,
     status: statusFilter || undefined,
@@ -50,39 +58,42 @@ export default function InvoicesListPage() {
     pageSize,
   });
 
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
     refetch();
-  };
-
-  // Handle Xero OAuth callback messages
-  useEffect(() => {
-    const { xero_connected, xero_error, tenant_id } = router.query;
-    
-    if (xero_connected === 'true') {
-      toast.success('Xero connected successfully!');
-      // Clean up URL
-      const { xero_connected: _, tenant_id: __, ...restQuery } = router.query;
-      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true });
-    }
-    
-    if (xero_error) {
-      toast.error(`Xero connection failed: ${decodeURIComponent(xero_error)}`);
-      // Clean up URL
-      const { xero_error: _, ...restQuery } = router.query;
-      router.replace({ pathname: router.pathname, query: restQuery }, undefined, { shallow: true });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.query]);
+  }, [queryClient, refetch]);
 
   const invoices = useMemo(() => data?.items ?? [], [data?.items]);
   const total = data?.total ?? 0;
-  const totalPages = Math.ceil(total / pageSize);
+  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
 
   // Clear selection when page, filters, or tab changes
   useEffect(() => {
     setSelectedIds(new Set());
   }, [page, search, activeTab]);
+
+  const handleRowClick = useCallback((invoiceId) => {
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: { ...router.query, invoiceId },
+      },
+      undefined,
+      { shallow: true }
+    );
+  }, [router]);
+
+  const handleCloseModal = useCallback(() => {
+    const { invoiceId, ...restQuery } = router.query;
+    router.replace(
+      {
+        pathname: router.pathname,
+        query: restQuery,
+      },
+      undefined,
+      { shallow: true }
+    );
+  }, [router]);
 
   // Handle select all
   const handleSelectAll = useCallback((checked) => {
@@ -119,19 +130,29 @@ export default function InvoicesListPage() {
       });
       setSelectedIds(new Set());
       setBulkDeleteDialogOpen(false);
+      
+      // Close modal if any deleted invoice is currently open
+      if (selectedInvoiceId && invoiceIds.includes(selectedInvoiceId)) {
+        handleCloseModal();
+      }
+      
+      // Refresh the list
+      handleRefresh();
     } catch (error) {
       // Error handled by mutation
     }
-  }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope]);
+  }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope, selectedInvoiceId, handleCloseModal, handleRefresh]);
 
   // Calculate summary metrics
   const summaryMetrics = useMemo(() => {
-    const sent = invoices.filter(i => i.ghlStatus === "sent");
-    const paid = invoices.filter(i => i.ghlStatus === "paid");
-    const partiallyPaid = invoices.filter(i => i.ghlStatus === "partiallyPaid");
+    // Use portalStatus (prioritize) with fallback to ghlStatus
+    const sent = invoices.filter(i => (i.portalStatus || i.ghlStatus) === "sent");
+    const paid = invoices.filter(i => (i.portalStatus || i.ghlStatus) === "paid");
+    const partiallyPaid = invoices.filter(i => (i.portalStatus || i.ghlStatus) === "partial" || (i.portalStatus || i.ghlStatus) === "partiallyPaid");
     const overdue = invoices.filter(i => {
       if (!i.dueDate) return false;
-      return new Date(i.dueDate) < new Date() && i.ghlStatus !== "paid";
+      const status = i.portalStatus || i.ghlStatus;
+      return new Date(i.dueDate) < new Date() && status !== "paid";
     });
 
     return {
@@ -154,27 +175,68 @@ export default function InvoicesListPage() {
     };
   }, [invoices]);
 
-  const handleRowClick = (invoiceId) => {
-    router.replace(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, invoiceId },
-      },
-      undefined,
-      { shallow: true }
-    );
+  // Handle delete
+  const handleDeleteClick = useCallback((invoiceId, locId) => {
+    setInvoiceToDelete({ id: invoiceId, locationId: locId || locationId });
+    setDeleteDialogOpen(true);
+  }, [locationId]);
+
+  const handleDeleteConfirm = useCallback(async () => {
+    if (!invoiceToDelete) return;
+    
+    try {
+      await deleteInvoiceMutation.mutateAsync({
+        invoiceId: invoiceToDelete.id,
+        locationId: invoiceToDelete.locationId || locationId,
+        scope: deleteScope,
+      });
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+      
+      // Close modal if the deleted invoice is currently open
+      if (selectedInvoiceId === invoiceToDelete.id) {
+        handleCloseModal();
+      }
+      
+      // Refresh the list
+      handleRefresh();
+    } catch (error) {
+      // Error handled by mutation
+    }
+  }, [invoiceToDelete, locationId, deleteScope, deleteInvoiceMutation, selectedInvoiceId, handleCloseModal, handleRefresh]);
+
+  // Keyboard shortcuts
+  const shortcuts = useMemo(() => ({
+    Escape: (e) => {
+      e.preventDefault();
+      if (deleteDialogOpen) {
+        setDeleteDialogOpen(false);
+      }
+    },
+  }), [deleteDialogOpen]);
+
+  useKeyboardShortcuts(shortcuts, true, [deleteDialogOpen]);
+
+  const getStatusBadgeClass = (status) => {
+    const classes = {
+      draft: "bg-muted text-muted-foreground border-border",
+      sent: "bg-info-bg text-info border-info/30",
+      paid: "bg-success-bg text-success border-success/30",
+      partial: "bg-warning-bg text-warning border-warning/30",
+      partiallyPaid: "bg-warning-bg text-warning border-warning/30", // Backward compatibility
+      voided: "bg-error-bg text-error border-error/30",
+      accepted: "bg-success-bg text-success border-success/30",
+      rejected: "bg-error-bg text-error border-error/30",
+    };
+    return classes[status] || "bg-muted text-muted-foreground border-border";
   };
 
-  const handleCloseModal = () => {
-    const { invoiceId, ...restQuery } = router.query;
-    router.replace(
-      {
-        pathname: router.pathname,
-        query: restQuery,
-      },
-      undefined,
-      { shallow: true }
-    );
+  // Helper function to format status for display
+  const formatStatusLabel = (status) => {
+    if (!status) return "sent";
+    if (status === "partial") return "Partially Paid";
+    if (status === "partiallyPaid") return "Partially Paid"; // Backward compatibility
+    return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
   const statusTabs = [
@@ -182,21 +244,8 @@ export default function InvoicesListPage() {
     { value: "draft", label: "Draft" },
     { value: "sent", label: "Sent" },
     { value: "paid", label: "Paid" },
-    { value: "partiallyPaid", label: "Partially Paid" },
+    { value: "partial", label: "Partially Paid" },
   ];
-
-  const getStatusBadgeClass = (status) => {
-    const classes = {
-      draft: "bg-muted text-muted-foreground border-border",
-      sent: "bg-info-bg text-info border-info/30",
-      paid: "bg-success-bg text-success border-success/30",
-      partiallyPaid: "bg-warning-bg text-warning border-warning/30",
-      voided: "bg-error-bg text-error border-error/30",
-      accepted: "bg-success-bg text-success border-success/30",
-      rejected: "bg-error-bg text-error border-error/30",
-    };
-    return classes[status] || "bg-muted text-muted-foreground border-border";
-  };
 
   return (
     <>
@@ -210,16 +259,12 @@ export default function InvoicesListPage() {
             <div>
               <h1 className="text-3xl font-bold text-foreground">Invoices</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Create and manage all invoices generated for your business
+                Manage all invoices for your business
               </p>
             </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" size="icon">
                 <Settings className="h-5 w-5" />
-              </Button>
-              <Button variant="default">
-                <Plus className="h-4 w-4" />
-                New Invoice
               </Button>
             </div>
           </div>
@@ -227,13 +272,13 @@ export default function InvoicesListPage() {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <SummaryCard
-              label={`${summaryMetrics.sent.count} in sent`}
+              label={`${summaryMetrics.sent.count} sent`}
               value={summaryMetrics.sent.total}
               currency={DEFAULT_CURRENCY}
               variant="sent"
             />
             <SummaryCard
-              label={`${summaryMetrics.paid.count} in paid`}
+              label={`${summaryMetrics.paid.count} paid`}
               value={summaryMetrics.paid.total}
               currency={DEFAULT_CURRENCY}
               variant="accepted"
@@ -262,17 +307,7 @@ export default function InvoicesListPage() {
               setSearch(value);
               setPage(1);
             }}
-            startDate={startDate}
-            onStartDateChange={(value) => {
-              setStartDate(value);
-              setPage(1);
-            }}
-            endDate={endDate}
-            onEndDateChange={(value) => {
-              setEndDate(value);
-              setPage(1);
-            }}
-            placeholder="Search by number, name, email..."
+            placeholder="Search by invoice number, email..."
           />
 
           {/* Table */}
@@ -283,19 +318,7 @@ export default function InvoicesListPage() {
           ) : error ? (
             <div className="rounded-lg border border-error/30 bg-error-bg p-4 text-sm text-error">
               <p className="font-semibold">Error loading invoices</p>
-              <p className="mt-1">
-                {error.message?.includes('SSL') || error.message?.includes('SSL_ERROR') || error.message?.includes('cURL error 35')
-                  ? "Unable to connect to GoHighLevel API due to SSL certificate issue. This is usually caused by outdated SSL certificates on your server, firewall blocking the connection, or network connectivity issues. Please contact your hosting provider for assistance."
-                  : error.message || "An unexpected error occurred"}
-              </p>
-              {process.env.NODE_ENV === 'development' && (
-                <details className="mt-2 text-xs">
-                  <summary className="cursor-pointer text-error">Technical details</summary>
-                  <pre className="mt-2 overflow-auto rounded bg-error-bg/50 p-2">
-                    {JSON.stringify(error, null, 2)}
-                  </pre>
-                </details>
-              )}
+              <p className="mt-1">{error.message || "An unexpected error occurred"}</p>
             </div>
           ) : invoices.length === 0 ? (
             <div className="rounded-lg border border-border bg-surface p-12 text-center">
@@ -327,11 +350,6 @@ export default function InvoicesListPage() {
                             <h3 className="font-semibold text-foreground text-sm mb-1">
                               Invoice #{invoice.invoiceNumber || invoice.id}
                             </h3>
-                            {invoice.linkedEstimateId && (
-                              <p className="text-xs text-primary">
-                                Estimate: {invoice.linkedEstimateId}
-                              </p>
-                            )}
                           </div>
                         </div>
                         <span
@@ -340,7 +358,7 @@ export default function InvoicesListPage() {
                             ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
                           `}
                         >
-                          {invoice.portalStatus || invoice.ghlStatus || "sent"}
+                          {formatStatusLabel(invoice.portalStatus || invoice.ghlStatus || "sent")}
                         </span>
                       </div>
                       
@@ -371,7 +389,9 @@ export default function InvoicesListPage() {
                         </div>
                         <div>
                           <p className="text-xs text-muted-foreground">Amount Due</p>
-                          <p className="text-sm font-semibold text-success">
+                          <p className={`text-sm font-semibold ${
+                            invoice.amountDue === 0 ? 'text-success' : 'text-foreground'
+                          }`}>
                             {invoice.amountDue !== undefined
                               ? `${invoice.currency || DEFAULT_CURRENCY} ${invoice.amountDue.toFixed(2)}`
                               : "—"}
@@ -463,11 +483,12 @@ export default function InvoicesListPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <Button
                               variant="link"
-                              className="font-medium text-sm p-0 h-auto"
+                              className="font-medium text-sm text-left max-w-xs truncate block p-0 h-auto"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleRowClick(invoice.id);
                               }}
+                              title={`Invoice #${invoice.invoiceNumber || invoice.id}`}
                             >
                               {invoice.invoiceNumber || invoice.id}
                             </Button>
@@ -492,7 +513,9 @@ export default function InvoicesListPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-foreground">
                             {invoice.currency || DEFAULT_CURRENCY} {invoice.total?.toFixed(2) || "0.00"}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-foreground">
+                          <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-medium ${
+                            invoice.amountDue === 0 ? 'text-success' : 'text-foreground'
+                          }`}>
                             {invoice.currency || DEFAULT_CURRENCY} {invoice.amountDue?.toFixed(2) || "0.00"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
@@ -502,7 +525,7 @@ export default function InvoicesListPage() {
                                 ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
                               `}
                             >
-                              {invoice.portalStatus || invoice.ghlStatus || "sent"}
+                              {formatStatusLabel(invoice.portalStatus || invoice.ghlStatus || "sent")}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
@@ -529,14 +552,14 @@ export default function InvoicesListPage() {
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
                             <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                // TODO: Add dropdown menu
+                                handleDeleteClick(invoice.id, invoice.locationId);
                               }}
-                              variant="ghost"
-                              size="icon-sm"
                             >
-                              <MoreVertical className="h-4 w-4" />
+                              Delete
                             </Button>
                           </td>
                         </tr>
@@ -596,6 +619,24 @@ export default function InvoicesListPage() {
           scope={bulkDeleteScope}
           onScopeChange={setBulkDeleteScope}
           itemType="Invoice"
+          trashMode={false}
+        />
+
+        {/* Delete Dialog */}
+        <DeleteDialog
+          open={deleteDialogOpen}
+          onOpenChange={setDeleteDialogOpen}
+          onConfirm={handleDeleteConfirm}
+          title="Delete Invoice"
+          description={invoiceToDelete 
+            ? `This invoice will be permanently deleted. This action cannot be undone.`
+            : undefined
+          }
+          itemName={invoiceToDelete?.id}
+          isLoading={deleteInvoiceMutation.isPending}
+          showScopeSelection={true}
+          scope={deleteScope}
+          onScopeChange={setDeleteScope}
           trashMode={false}
         />
 

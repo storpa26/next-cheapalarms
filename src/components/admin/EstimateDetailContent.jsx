@@ -805,7 +805,16 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                 </div>
                 <div>
                   <span className="text-muted-foreground">Status:</span>{" "}
-                  <span className="font-medium text-foreground">{linkedInvoice?.status || "draft"}</span>
+                  <Badge
+                    variant={
+                      linkedInvoice?.status === "paid" ? "success" :
+                      linkedInvoice?.status === "draft" ? "default" :
+                      "warning"
+                    }
+                    className="text-xs font-medium"
+                  >
+                    {linkedInvoice?.status || "draft"}
+                  </Badge>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Amount Due:</span>{" "}

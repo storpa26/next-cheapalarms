@@ -32,6 +32,8 @@ import SpinnerDemo from './sections/components/Spinner.demo';
 import SkeletonDemo from './sections/components/Skeleton.demo';
 import DialogDemo from './sections/components/Dialog.demo';
 import ToastDemo from './sections/components/Toast.demo';
+import DatePickerDemo from './sections/components/DatePicker.demo';
+import TimePickerDemo from './sections/components/TimePicker.demo';
 
 // Patterns
 import PageHeaderDemo from './sections/patterns/PageHeader.demo';
@@ -47,6 +49,7 @@ import SidebarDemo from './sections/patterns/Sidebar.demo';
 import EstimatesListDemo from './sections/compositions/EstimatesList.demo';
 import PhotoUploadDemo from './sections/compositions/PhotoUpload.demo';
 import DashboardOverviewDemo from './sections/compositions/DashboardOverview.demo';
+import BookingDemo from './sections/compositions/Booking.demo';
 
 export const registry = [
   // Foundations
@@ -196,6 +199,36 @@ import { Grid } from '@/components/ui/grid';
 <Textarea rows={6} placeholder="Large textarea" />
 <Textarea disabled placeholder="Disabled" />`,
     tags: ['textarea', 'form', 'text', 'multiline'],
+    hasProps: true,
+  },
+  {
+    id: 'components-date-picker',
+    group: 'Components',
+    title: 'Date Picker',
+    description: 'Modern calendar date picker with gradient selected states, smooth animations, and clean design. Features month navigation, today/clear buttons, and date range validation.',
+    DemoComponent: DatePickerDemo,
+    code: `import { DatePicker, DatePickerTrigger, DatePickerContent } from '@/components/ui/date-picker';
+
+<DatePicker value={date} onValueChange={setDate} minDate={today}>
+  <DatePickerTrigger placeholder="Select date..." />
+  <DatePickerContent />
+</DatePicker>`,
+    tags: ['date', 'picker', 'calendar', 'form', 'modern', '3D', 'gradient'],
+    hasProps: true,
+  },
+  {
+    id: 'components-time-picker',
+    group: 'Components',
+    title: 'Time Picker',
+    description: 'Modern time picker with scrollable hour/minute selection. Supports 12-hour and 24-hour formats, with gradient selected states and smooth animations.',
+    DemoComponent: TimePickerDemo,
+    code: `import { TimePicker, TimePickerTrigger, TimePickerContent } from '@/components/ui/time-picker';
+
+<TimePicker value={time} onValueChange={setTime} format="12h" interval={15}>
+  <TimePickerTrigger placeholder="Select time..." />
+  <TimePickerContent />
+</TimePicker>`,
+    tags: ['time', 'picker', 'clock', 'form', 'modern', '3D', 'gradient'],
     hasProps: true,
   },
   {
@@ -604,6 +637,37 @@ toast.promise(fetchData(), {
   <StatCard title="Users" value="1,234" />
 </Grid>`,
     tags: ['composition', 'dashboard', 'metrics', 'overview'],
+  },
+  {
+    id: 'compositions-booking',
+    group: 'Compositions',
+    title: 'Booking Form',
+    description: 'Modern booking component with form and confirmation states. Features 3D elevation effects, smooth animations, gradient buttons, and clean design using design system components.',
+    DemoComponent: BookingDemo,
+    code: `import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from '@/components/ui/alert';
+
+<Card className="shadow-elevated">
+  <CardHeader>
+    <CardTitle>Schedule Installation</CardTitle>
+  </CardHeader>
+  <CardContent>
+    <form className="space-y-6">
+      <Input type="date" className="rounded-xl" />
+      <Input type="time" className="rounded-xl" />
+      <Textarea placeholder="Additional notes..." className="rounded-xl" />
+    </form>
+  </CardContent>
+  <CardFooter>
+    <Button className="bg-gradient-to-r from-primary to-secondary">
+      Confirm Booking
+    </Button>
+  </CardFooter>
+</Card>`,
+    tags: ['composition', 'booking', 'form', 'calendar', 'schedule', '3D', 'modern', 'SaaS'],
   },
 ];
 

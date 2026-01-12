@@ -127,12 +127,13 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
   };
 
   // Workflow steps (4 external steps mapped from 5 internal states)
+  // FIX: Payment first, booking later (new workflow order)
   const getExternalStep = (workflowStatus) => {
     switch (workflowStatus) {
       case 'requested': return 1;
       case 'reviewing': case 'reviewed': case 'accepted': return 2;
-      case 'booked': return 3;
-      case 'paid': case 'completed': return 4;
+      case 'paid': case 'completed': return 3;  // Payment is step 3 (payment first)
+      case 'booked': return 4;                  // Booking is step 4 (booking later)
       default: return 1;
     }
   };
@@ -141,8 +142,8 @@ export function WorkflowStatusCard({ workflow, booking, payment }) {
   const steps = [
     { label: 'Request', step: 1, completed: externalStep >= 1 },
     { label: 'Review', step: 2, completed: externalStep >= 2 },
-    { label: 'Book', step: 3, completed: externalStep >= 3 },
-    { label: 'Payment', step: 4, completed: externalStep >= 4 },
+    { label: 'Payment', step: 3, completed: externalStep >= 3 },   // Payment is step 3 (payment first)
+    { label: 'Book', step: 4, completed: externalStep >= 4 },      // Booking is step 4 (booking later)
   ];
 
   return (

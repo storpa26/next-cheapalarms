@@ -124,19 +124,12 @@ export function UploadModal({
     window.addEventListener('beforeunload', handleBeforeUnload);
     
     return () => {
-      isMountedRef.current = false; // MUST FIX: Mark as unmounted to prevent state updates after unmount
+      isMountedRef.current = false; // Mark as unmounted to prevent state updates after unmount
       
-      // Cancel all ongoing uploads on unmount
-      // FIX: Only abort via ref (uploads are tracked per-tempId), abortAllUploads is redundant
-      // abortAllUploads() would abort ALL uploads globally, not just this modal's uploads
-      uploadAbortControllersRef.current.forEach((abortFn) => {
-        if (typeof abortFn === 'function') {
-          abortFn();
-        }
-      });
-      uploadAbortControllersRef.current.clear();
+      // PHASE 1: Don't cancel uploads on unmount - let them continue in background
+      // Uploads will complete and auto-save automatically
       
-      // MUST FIX: Clear progress debounce timers to prevent state updates on unmounted component
+      // Clear progress debounce timers to prevent state updates on unmounted component
       progressDebounceTimersRef.current.forEach((timer) => {
         clearTimeout(timer);
       });
@@ -146,12 +139,9 @@ export function UploadModal({
       // But we clear the tracking set anyway for memory
       thumbnailUrlsRef.current.clear();
       
-      // FIX: Clear session on unmount to prevent memory leaks
-      // Note: We don't clear session if there might be other components using it
-      // But since each modal is for a specific estimateId, it's safe to clear
-      if (estimateId) {
-        clearSession(estimateId);
-      }
+      // Note: We don't clear the session on unmount because uploads are still in progress
+      // The session will expire naturally or be cleaned up by the uploadApi cleanup function
+      // Clearing it here would cause uploads to fail
       
       // Remove beforeunload listener
       window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -591,23 +581,17 @@ export function UploadModal({
     });
   };
 
-  // MUST FIX: Cancel all uploads when modal closes to prevent memory leaks and wasted bandwidth
+  // PHASE 1: Allow uploads to continue in background - don't cancel on modal close
   const handleClose = useCallback(() => {
-    // Cancel all active uploads when closing
-    uploadAbortControllersRef.current.forEach((abortFn) => {
-      if (typeof abortFn === 'function') {
-        abortFn();
-      }
-    });
-    
-    // MUST FIX: Clear all progress debounce timers to prevent state updates after modal closes
+    // Clear progress debounce timers to prevent state updates after modal closes
+    // But DON'T cancel uploads - let them continue in background
     progressDebounceTimersRef.current.forEach((timer) => {
       clearTimeout(timer);
     });
     progressDebounceTimersRef.current.clear();
     
-    // Clear upload tracking
-    uploadAbortControllersRef.current.clear();
+    // Note: Uploads continue in background and will auto-save when complete
+    // User can close modal and continue working - uploads won't be cancelled
     
     // Close modal
     onClose();
@@ -681,15 +665,15 @@ export function UploadModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-black/40 backdrop-blur-[2px] transition-opacity"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
         onClick={handleClose}
       />
 
-      {/* Bottom Sheet - Centered, relative to drawer */}
-      <div className="relative bg-surface w-full max-w-full md:max-w-md rounded-t-3xl shadow-2xl overflow-hidden max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300">
+      {/* Centered Modal */}
+      <div className="relative bg-surface w-full max-w-md rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in zoom-in-95 fade-in duration-200">
         
         {/* Modal Header */}
         <div className="px-6 py-5 border-b border-border flex justify-between items-center bg-surface sticky top-0 z-10">

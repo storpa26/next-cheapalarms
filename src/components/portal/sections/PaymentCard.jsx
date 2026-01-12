@@ -21,7 +21,7 @@ const stripePromise = STRIPE_PUBLISHABLE_KEY ? loadStripe(STRIPE_PUBLISHABLE_KEY
 /**
  * Payment Form Component (inside Stripe Elements)
  */
-function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess }) {
+function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, workflow }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -34,9 +34,17 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
     setStripeReady(!!stripePromise);
   }, []);
 
-  // Create payment intent when component mounts
+  // Guard: Only initialize if workflow is at payment step
+  const shouldInitialize = workflow?.status === 'accepted' || workflow?.status === 'booked';
+
+  // Create payment intent when component mounts - ONLY if workflow is at payment step
   useEffect(() => {
-    if (!amount || amount <= 0 || clientSecret) return; // Don't recreate if already created
+    // Don't initialize if not at payment step
+    if (!shouldInitialize) return;
+    
+    // Don't recreate if already created, or if amount is invalid
+    if (!amount || amount <= 0 || clientSecret) return;
+    
     if (!stripePromise) {
       setError('Stripe is not configured. Missing publishable key.');
       return;
@@ -77,7 +85,7 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess })
     };
 
     createPaymentIntent();
-  }, [amount, estimateId, locationId, clientSecret]);
+  }, [shouldInitialize, amount, estimateId, locationId, clientSecret, workflow]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -495,6 +503,7 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
           locationId={locationId}
           inviteToken={inviteToken}
           amount={payableAmount}
+          workflow={workflow}
           onSuccess={handlePaymentSuccess}
         />
       </div>

@@ -117,13 +117,15 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
           <div className="flex items-center gap-3">
             <Badge
               variant={
+                invoice.portalStatus === "paid" ? "success" :
+                invoice.portalStatus === "partial" ? "warning" :
                 invoice.portalStatus === "accepted" ? "success" :
                 invoice.portalStatus === "rejected" ? "destructive" :
                 "warning"
               }
               className="text-xs font-medium"
             >
-              {invoice.portalStatus || "sent"}
+              {invoice.portalStatus === "partial" ? "Partially Paid" : (invoice.portalStatus || "sent")}
             </Badge>
           </div>
         </div>
@@ -151,7 +153,9 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
           </div>
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Amount Due</p>
-            <p className="mt-1 text-xl font-semibold text-foreground">
+            <p className={`mt-1 text-xl font-semibold ${
+              invoice.amountDue === 0 ? 'text-success' : 'text-foreground'
+            }`}>
               {invoice.currency || DEFAULT_CURRENCY} {invoice.amountDue?.toFixed(2) || "0.00"}
             </p>
             {invoice.dueDate && (

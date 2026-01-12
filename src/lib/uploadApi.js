@@ -3,6 +3,9 @@
  * Ported from reference implementation that works perfectly
  */
 
+import imageCompression from 'browser-image-compression';
+import PQueue from 'p-queue';
+
 // Get WordPress API base from environment
 const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || 'http://localhost:10013/wp-json';
 
@@ -28,9 +31,10 @@ export { UPLOAD_CONFIG };
 // Map<estimateId, session>
 const sessionMap = new Map();
 
-// Web Worker pool for compression (limit concurrent workers)
-let activeWorkerCount = 0;
-const MAX_CONCURRENT_WORKERS = 3; // Limit concurrent workers to prevent resource exhaustion
+// PHASE 2: Upload queue system - prevents server overload with parallel uploads
+const uploadQueue = new PQueue({ 
+  concurrency: 3, // Upload 3 files at a time
+});
 
 // Track active XMLHttpRequest instances for cancellation
 const activeXhrInstances = new Map(); // Map<uploadId, XMLHttpRequest>
@@ -95,11 +99,10 @@ export async function startUploadSession(estimateId, locationId) {
 }
 
 /**
- * Upload a single file with progress tracking
- * Uses XMLHttpRequest for real-time progress updates
- * Returns an object with promise and abort function for cancellation
+ * Internal upload function - performs actual upload
+ * PHASE 2: This is wrapped by uploadQueue for concurrency control
  */
-export function uploadFile(file, metadata, onProgress, uploadId = null, estimateId = null) {
+function _uploadFileInternal(file, metadata, onProgress, uploadId = null, estimateId = null) {
   // FIX: Get session from Map based on estimateId
   // If estimateId not provided, try to get from metadata or use first available session
   let session = null;
@@ -288,6 +291,57 @@ export function uploadFile(file, metadata, onProgress, uploadId = null, estimate
 }
 
 /**
+ * PHASE 2: Upload a single file with progress tracking (queued version)
+ * Uses upload queue for concurrency control (3 concurrent uploads)
+ * Wraps _uploadFileInternal with p-queue
+ * Returns a promise with abort function for cancellation
+ */
+export function uploadFile(file, metadata, onProgress, uploadId = null, estimateId = null) {
+  // Add upload to queue with priority (lower photoIndex = higher priority)
+  const priority = metadata?.photoIndex ? -metadata.photoIndex : 0;
+  
+  // Store reference to internal promise for abort functionality
+  let internalPromise = null;
+  
+  // Create a task that returns the upload promise
+  const uploadTask = async () => {
+    // Store internal promise reference when task executes
+    internalPromise = _uploadFileInternal(file, metadata, onProgress, uploadId, estimateId);
+    return internalPromise;
+  };
+  
+  // Add to queue and get the queued promise
+  const queuedPromise = uploadQueue.add(uploadTask, { 
+    priority, // Lower index = higher priority (photos upload in order)
+    throwOnTimeout: true,
+    timeout: UPLOAD_CONFIG.timeout + 5000, // Queue timeout (upload timeout + buffer)
+  });
+  
+  // Preserve abort functionality by proxying to internal promise
+  // Note: Abort only works after task starts executing (not while queued)
+  // This is a limitation of p-queue, but acceptable since uploads start quickly
+  queuedPromise.abort = () => {
+    if (internalPromise && typeof internalPromise.abort === 'function') {
+      return internalPromise.abort();
+    }
+    // If task hasn't started yet, we can't abort (queue limitation)
+    // This is acceptable since uploads typically start quickly
+    if (process.env.NODE_ENV === 'development') {
+      console.warn('Cannot abort: upload task has not started executing yet');
+    }
+  };
+  
+  // Preserve promise properties for API compatibility
+  // Note: These will work after the task starts executing
+  // For immediate access, we'll use a getter pattern
+  queuedPromise.uploadId = uploadId;
+  queuedPromise.isAborted = () => internalPromise?.isAborted?.() || false;
+  queuedPromise.isResolved = () => internalPromise?.isResolved?.() || false;
+  
+  return queuedPromise;
+}
+
+/**
  * Abort an active upload by ID
  * FIX: Now properly rejects the promise when aborting
  */
@@ -331,7 +385,8 @@ export function abortAllUploads() {
 }
 
 /**
- * Compress image before upload using Web Worker (non-blocking)
+ * PHASE 2: Compress image before upload using browser-image-compression
+ * Uses OffscreenCanvas API internally (non-blocking, better than Web Workers)
  * Optimized: Skip compression for files < 2MB for faster uploads
  */
 export async function compressImage(file) {
@@ -340,180 +395,24 @@ export async function compressImage(file) {
     return file;
   }
 
-  // Try to use Web Worker for non-blocking compression
-  // Helper function for synchronous fallback
-  const compressSync = () => {
-    return new Promise((resolve) => {
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const img = new Image();
-      let objectUrl = null;
-
-      img.onload = () => {
-        // Calculate new dimensions using config constants
-        const maxWidth = UPLOAD_CONFIG.maxImageWidth;
-        const maxHeight = UPLOAD_CONFIG.maxImageHeight;
-        let { width, height } = img;
-
-        if (width > maxWidth || height > maxHeight) {
-          const ratio = Math.min(maxWidth / width, maxHeight / height);
-          width = width * ratio;
-          height = height * ratio;
-        }
-
-        canvas.width = width;
-        canvas.height = height;
-
-        // Draw and compress
-        ctx.drawImage(img, 0, 0, width, height);
-
-        canvas.toBlob(
-          (blob) => {
-            // MEMORY LEAK FIX: Revoke object URL after image is loaded
-            if (objectUrl) {
-              URL.revokeObjectURL(objectUrl);
-              objectUrl = null;
-            }
-            
-            if (blob) {
-              const compressedFile = new File([blob], file.name, {
-                type: file.type,
-                lastModified: Date.now(),
-              });
-              resolve(compressedFile);
-            } else {
-              resolve(file);
-            }
-          },
-          file.type,
-          UPLOAD_CONFIG.compressionQuality
-        );
-      };
-
-      img.onerror = () => {
-        // MEMORY LEAK FIX: Revoke object URL on error too
-        if (objectUrl) {
-          URL.revokeObjectURL(objectUrl);
-          objectUrl = null;
-        }
-        // If image load fails, return original
-        resolve(file);
-      };
-
-      // MEMORY LEAK FIX: Store URL reference and revoke after use
-      objectUrl = URL.createObjectURL(file);
-      img.src = objectUrl;
-    });
+  const options = {
+    maxSizeMB: 2, // Max file size in MB after compression
+    maxWidthOrHeight: UPLOAD_CONFIG.maxImageWidth, // Max width or height
+    useWebWorker: true, // Uses OffscreenCanvas internally (non-blocking)
+    fileType: file.type, // Preserve original file type
+    initialQuality: UPLOAD_CONFIG.compressionQuality, // 0.8 = 80% quality
   };
 
-  // Try Web Worker first if available (with concurrency limit)
-  // FIX: Simplified atomic increment - outer if already checks the condition
-  if (typeof Worker !== 'undefined' && activeWorkerCount < MAX_CONCURRENT_WORKERS) {
-    // Increment counter (JavaScript is single-threaded, so this is safe)
-    // If multiple calls happen rapidly, the outer check ensures we don't exceed limit
-    activeWorkerCount++;
-    
-    try {
-      return new Promise((resolve) => {
-        // FIX: Use configurable worker path - defaults to public folder structure
-        // In Next.js, files in public/ are served from root, so '/workers/' works
-        // Could be made configurable via environment variable if needed in the future
-        const workerPath = '/workers/image-compress.worker.js';
-        const worker = new Worker(workerPath);
-        let resolved = false;
-        let timeoutId = null;
-        
-        const cleanup = () => {
-          if (timeoutId) {
-            clearTimeout(timeoutId);
-            timeoutId = null;
-          }
-          worker.terminate(); // Terminate worker after use (simple and safe)
-          activeWorkerCount--; // Decrement active worker count
-        };
-        
-        const fallbackToSync = (reason) => {
-          if (resolved) return;
-          resolved = true;
-          cleanup();
-          // FIX: Only log warnings in development
-          if (process.env.NODE_ENV === 'development') {
-            console.warn(`Web Worker ${reason}, using synchronous compression`);
-          }
-          compressSync().then(resolve);
-        };
-        
-        worker.onmessage = (e) => {
-          cleanup();
-          if (resolved) return;
-          resolved = true;
-          
-          if (e.data.success && e.data.buffer) {
-            // Recreate File from ArrayBuffer
-            const compressedFile = new File([e.data.buffer], e.data.fileName, {
-              type: e.data.fileType,
-              lastModified: Date.now(),
-            });
-            resolve(compressedFile);
-          } else {
-            fallbackToSync('compression failed: ' + (e.data.error || 'unknown error'));
-          }
-        };
-        
-        worker.onerror = (error) => {
-          // FIX: ErrorEvent compatibility - access message, filename, or lineno
-          const errorMessage = error.message || error.filename || error.lineno || 'Worker error';
-          fallbackToSync('error: ' + errorMessage);
-        };
-        
-        // Fallback timeout using config constant
-        timeoutId = setTimeout(() => {
-          if (!resolved) {
-            fallbackToSync('timeout');
-          }
-        }, UPLOAD_CONFIG.workerTimeout);
-        
-        // Convert file to data URL for worker
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          if (resolved) return;
-          
-          worker.postMessage({
-            fileData: e.target.result, // Data URL
-            fileName: file.name,
-            fileType: file.type,
-            maxWidth: UPLOAD_CONFIG.maxImageWidth,
-            maxHeight: UPLOAD_CONFIG.maxImageHeight,
-            quality: UPLOAD_CONFIG.compressionQuality,
-          });
-        };
-        reader.onerror = () => {
-          fallbackToSync('file read error');
-        };
-        reader.readAsDataURL(file);
-      });
-    } catch (error) {
-      activeWorkerCount = Math.max(0, activeWorkerCount - 1); // Decrement on error (safe)
-      // Fallback to synchronous compression if Worker fails to initialize
-      // FIX: Only log warnings in development
-      if (process.env.NODE_ENV === 'development') {
-        console.warn('Web Worker not available, using synchronous compression:', error);
-      }
-      return compressSync();
-    }
-  } else if (typeof Worker !== 'undefined' && activeWorkerCount >= MAX_CONCURRENT_WORKERS) {
-    // FIX: Add Worker check to else if - only reachable if Worker is defined but limit reached
-    // Too many workers active, fallback to sync
-    // FIX: Only log warnings in development
+  try {
+    const compressedFile = await imageCompression(file, options);
+    return compressedFile;
+  } catch (error) {
+    // If compression fails, fallback to original file
     if (process.env.NODE_ENV === 'development') {
-      console.warn('Worker concurrency limit reached, using synchronous compression');
+      console.warn('Image compression failed, using original:', error);
     }
-    return compressSync();
+    return file;
   }
-  
-  // No Worker support (typeof Worker === 'undefined'), use synchronous compression
-  return compressSync();
-
 }
 
 /**
@@ -568,11 +467,13 @@ export function clearSession(estimateId = null) {
 }
 
 /**
- * Reset worker pool counter (cleanup function for memory management)
- * Note: Workers are terminated after each use, so this just resets the counter
+ * PHASE 2: Reset worker pool counter (deprecated - no longer using Web Workers)
+ * Kept for backward compatibility, but does nothing now
+ * @deprecated No longer needed - browser-image-compression handles workers internally
  */
 export function resetWorkerPool() {
-  activeWorkerCount = 0;
+  // No-op: We're using browser-image-compression now, which handles workers internally
+  // Kept for backward compatibility only
 }
 
 /**
