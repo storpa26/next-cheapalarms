@@ -5,17 +5,18 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { requireAdmin } from "@/lib/auth/requireAdmin";
 import { getWordPressUsers, getGHLContacts, matchContactsToUsers, getStatusBadge } from "@/lib/admin/services/customers-data";
 import { toast } from "@/components/ui/use-toast";
 import { isAuthError, isPermissionError } from "@/lib/admin/utils/error-handler";
 import { useWordPressUsers, useGHLContacts } from "@/lib/react-query/hooks";
-import { useDeleteUser, useDeleteGhlContact, useBulkDeleteUsers } from "@/lib/react-query/hooks/admin";
+import { useDeleteUser, useDeleteGhlContact, useBulkDeleteUsers, useDeleteByEmail } from "@/lib/react-query/hooks/admin";
 import { useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { DeleteDialog } from "@/components/admin/DeleteDialog";
 import { BulkDeleteDialog } from "@/components/admin/BulkDeleteDialog";
+import { DeleteByEmailDialog } from "@/components/admin/DeleteByEmailDialog";
 import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
@@ -34,10 +35,12 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
   const [selectedUserIds, setSelectedUserIds] = useState(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
+  const [deleteByEmailDialogOpen, setDeleteByEmailDialogOpen] = useState(false);
   const queryClient = useQueryClient();
   const deleteUserMutation = useDeleteUser();
   const deleteGhlContactMutation = useDeleteGhlContact();
   const bulkDeleteUsersMutation = useBulkDeleteUsers();
+  const deleteByEmailMutation = useDeleteByEmail();
 
   // Use React Query hooks for data fetching (with caching)
   const {
@@ -48,7 +51,9 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
     refetch: refetchUsers,
   } = useWordPressUsers({
     enabled: true,
-    initialData: initialWpUsers,
+    initialData: initialWpUsers || [],
+    // Add staleTime to prevent immediate refetch during hydration
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const {
@@ -60,38 +65,46 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
   } = useGHLContacts({
     limit: 50,
     enabled: true,
-    initialData: initialGhlContacts,
+    initialData: initialGhlContacts || [],
+    // Add staleTime to prevent immediate refetch during hydration
+    staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
   const loading = loadingUsers || loadingContacts || refreshing;
   const wpErrMsg = wpUsersIsError ? (wpUsersError?.message || "Failed to load WordPress users.") : null;
   const ghlErrMsg = ghlContactsIsError ? (ghlContactsError?.message || "Failed to load GHL contacts.") : null;
 
-  // Match contacts to users
-  const matchedContacts = matchContactsToUsers(ghlContacts, wpUsers);
+  // Match contacts to users - memoize to prevent hydration issues
+  const matchedContacts = useMemo(() => {
+    return matchContactsToUsers(ghlContacts, wpUsers);
+  }, [ghlContacts, wpUsers]);
 
-  // Filter based on search
-  const filteredWpUsers = wpUsers.filter((user) => {
-    if (!q?.trim()) return true;
+  // Filter based on search - memoize to prevent hydration issues
+  const filteredWpUsers = useMemo(() => {
+    if (!q?.trim()) return wpUsers;
     const s = q.toLowerCase();
-    return (
-      user.name?.toLowerCase().includes(s) ||
-      user.email?.toLowerCase().includes(s) ||
-      user.firstName?.toLowerCase().includes(s) ||
-      user.lastName?.toLowerCase().includes(s)
-    );
-  });
+    return wpUsers.filter((user) => {
+      return (
+        user.name?.toLowerCase().includes(s) ||
+        user.email?.toLowerCase().includes(s) ||
+        user.firstName?.toLowerCase().includes(s) ||
+        user.lastName?.toLowerCase().includes(s)
+      );
+    });
+  }, [wpUsers, q]);
 
-  const filteredGhlContacts = matchedContacts.filter((contact) => {
-    if (!q?.trim()) return true;
+  const filteredGhlContacts = useMemo(() => {
+    if (!q?.trim()) return matchedContacts;
     const s = q.toLowerCase();
-    return (
-      (contact.firstName || "").toLowerCase().includes(s) ||
-      (contact.lastName || "").toLowerCase().includes(s) ||
-      (contact.email || "").toLowerCase().includes(s) ||
-      (contact.phone || "").includes(s)
-    );
-  });
+    return matchedContacts.filter((contact) => {
+      return (
+        (contact.firstName || "").toLowerCase().includes(s) ||
+        (contact.lastName || "").toLowerCase().includes(s) ||
+        (contact.email || "").toLowerCase().includes(s) ||
+        (contact.phone || "").includes(s)
+      );
+    });
+  }, [matchedContacts, q]);
 
   // Clear selection when tab or search changes
   useEffect(() => {
@@ -156,6 +169,20 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
       setRefreshing(false);
     }
   }, [refetchUsers, refetchContacts]);
+
+  const handleDeleteByEmail = useCallback(async (email) => {
+    try {
+      await deleteByEmailMutation.mutateAsync({
+        email,
+        locationId: locationId || undefined,
+      });
+      setDeleteByEmailDialogOpen(false);
+      // Refresh data after deletion
+      await handleRefresh();
+    } catch (error) {
+      // Error handled by mutation
+    }
+  }, [deleteByEmailMutation, locationId, handleRefresh]);
 
   async function handleInviteGhlContact(ghlContactId) {
     setInviting((prev) => ({ ...prev, [ghlContactId]: true }));
@@ -232,6 +259,15 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
                 ) : (
                   "Refresh"
                 )}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setDeleteByEmailDialogOpen(true)}
+                className="gap-2"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete by Email
               </Button>
             </div>
           </CardHeader>
@@ -554,6 +590,14 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
           }
           isLoading={deleteGhlContactMutation.isPending}
           showScopeSelection={false}
+        />
+
+        {/* Delete by Email Dialog */}
+        <DeleteByEmailDialog
+          open={deleteByEmailDialogOpen}
+          onOpenChange={setDeleteByEmailDialogOpen}
+          onConfirm={handleDeleteByEmail}
+          isLoading={deleteByEmailMutation.isPending}
         />
       </AdminLayout>
     </>

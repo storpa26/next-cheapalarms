@@ -20,5 +20,6 @@ export { useBulkDeleteEstimates } from './use-bulk-delete-estimates';
 export { useBulkDeleteInvoices } from './use-bulk-delete-invoices';
 export { useBulkDeleteUsers } from './use-bulk-delete-users';
 export { useEmptyTrash } from './use-empty-trash';
+export { useDeleteByEmail } from './use-delete-by-email';
 // Note: useSyncEstimate and useSyncInvoice are kept in files but not exported (for potential future use)
 
