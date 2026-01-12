@@ -37,10 +37,16 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
   const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
   const [deleteByEmailDialogOpen, setDeleteByEmailDialogOpen] = useState(false);
   const queryClient = useQueryClient();
+  const [isHydrated, setIsHydrated] = useState(false);
   const deleteUserMutation = useDeleteUser();
   const deleteGhlContactMutation = useDeleteGhlContact();
   const bulkDeleteUsersMutation = useBulkDeleteUsers();
   const deleteByEmailMutation = useDeleteByEmail();
+
+  // Track hydration state to prevent hydration mismatches
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   // Use React Query hooks for data fetching (with caching)
   const {
@@ -54,6 +60,8 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
     initialData: initialWpUsers || [],
     // Add staleTime to prevent immediate refetch during hydration
     staleTime: 1000 * 60 * 5, // 5 minutes
+    // Prevent refetch on mount if we have initialData (prevents hydration mismatch)
+    refetchOnMount: false,
   });
 
   const {
@@ -68,6 +76,8 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
     initialData: initialGhlContacts || [],
     // Add staleTime to prevent immediate refetch during hydration
     staleTime: 1000 * 60 * 5, // 5 minutes
+    // Prevent refetch on mount if we have initialData (prevents hydration mismatch)
+    refetchOnMount: false,
   });
 
   const loading = loadingUsers || loadingContacts || refreshing;
@@ -75,15 +85,20 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
   const ghlErrMsg = ghlContactsIsError ? (ghlContactsError?.message || "Failed to load GHL contacts.") : null;
 
   // Match contacts to users - memoize to prevent hydration issues
+  // Use initial data during SSR/hydration to ensure consistency
   const matchedContacts = useMemo(() => {
-    return matchContactsToUsers(ghlContacts, wpUsers);
-  }, [ghlContacts, wpUsers]);
+    // During initial render (before hydration), use initial data to match server render
+    const contactsToUse = !isHydrated ? (initialGhlContacts || []) : ghlContacts;
+    const usersToUse = !isHydrated ? (initialWpUsers || []) : wpUsers;
+    return matchContactsToUsers(contactsToUse, usersToUse);
+  }, [ghlContacts, wpUsers, initialGhlContacts, initialWpUsers, isHydrated]);
 
   // Filter based on search - memoize to prevent hydration issues
   const filteredWpUsers = useMemo(() => {
-    if (!q?.trim()) return wpUsers;
+    const usersToUse = !isHydrated ? (initialWpUsers || []) : wpUsers;
+    if (!q?.trim()) return usersToUse;
     const s = q.toLowerCase();
-    return wpUsers.filter((user) => {
+    return usersToUse.filter((user) => {
       return (
         user.name?.toLowerCase().includes(s) ||
         user.email?.toLowerCase().includes(s) ||
@@ -91,7 +106,7 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
         user.lastName?.toLowerCase().includes(s)
       );
     });
-  }, [wpUsers, q]);
+  }, [wpUsers, q, initialWpUsers, isHydrated]);
 
   const filteredGhlContacts = useMemo(() => {
     if (!q?.trim()) return matchedContacts;
