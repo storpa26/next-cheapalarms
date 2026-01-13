@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Stack } from "@/components/ui/stack"
+import { Stack } from "../../../../components/ui/stack"
 import { useEffect, useState } from "react"
 
 export default function MotionDemo() {

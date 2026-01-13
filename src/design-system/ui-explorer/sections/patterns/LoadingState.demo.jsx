@@ -1,6 +1,6 @@
 import * as React from "react"
-import { LoadingState } from "@/components/ui/loading-state"
-import { Stack } from "@/components/ui/stack"
+import { LoadingState } from "../../../../components/ui/loading-state"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function LoadingStateDemo() {
   return (

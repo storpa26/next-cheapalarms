@@ -1,8 +1,8 @@
 import Head from "next/head";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
-import { LoginBackground } from "@/components/auth/LoginBackground";
-import { LoginCard } from "@/components/auth/LoginCard";
-import { LoginForm } from "@/components/auth/LoginForm";
+import { ThemeToggle } from "../components/ui/theme-toggle";
+import { LoginBackground } from "../components/auth/LoginBackground";
+import { LoginCard } from "../components/auth/LoginCard";
+import { LoginForm } from "../components/auth/LoginForm";
 
 /**
  * Login Page

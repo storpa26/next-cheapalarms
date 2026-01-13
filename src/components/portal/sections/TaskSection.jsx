@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "../../ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 
 export const TaskSection = memo(function TaskSection({ tasks, taskState, setTaskState }) {
   const toggleTask = (id) => {

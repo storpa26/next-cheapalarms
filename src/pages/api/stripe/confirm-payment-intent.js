@@ -1,4 +1,4 @@
-import { proxyToWordPress } from "@/lib/api/wp-proxy";
+import { proxyToWordPress } from "../../../lib/api/wp-proxy";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

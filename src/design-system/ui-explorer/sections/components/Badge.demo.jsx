@@ -1,6 +1,6 @@
 import * as React from "react"
-import { Badge } from "@/components/ui/badge"
-import { Stack } from "@/components/ui/stack"
+import { Badge } from "../../../../components/ui/badge"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function BadgeDemo() {
   return (

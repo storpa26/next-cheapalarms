@@ -1,8 +1,8 @@
 import * as React from "react"
-import { PageHeader } from "@/components/ui/page-header"
-import { StatCard } from "@/components/ui/stat-card"
-import { Grid } from "@/components/ui/grid"
-import { Button } from "@/components/ui/button"
+import { PageHeader } from "../../../../components/ui/page-header"
+import { StatCard } from "../../../../components/ui/stat-card"
+import { Grid } from "../../../../components/ui/grid"
+import { Button } from "../../../../components/ui/button"
 import { Users, DollarSign, TrendingUp, AlertCircle } from "lucide-react"
 
 export default function DashboardOverviewDemo() {

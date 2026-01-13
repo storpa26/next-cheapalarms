@@ -1,8 +1,8 @@
 import { ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { formatAddress } from "@/components/portal/utils/portal-utils";
+import { Button } from "../../ui/button";
+import { Spinner } from "../../ui/spinner";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "../../ui/select";
+import { formatAddress } from "../utils/portal-utils";
 
 import { useState } from "react";
 import { CheckCircle, Clock, AlertCircle, FileText, X } from "lucide-react";

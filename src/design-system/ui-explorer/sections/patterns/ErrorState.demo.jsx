@@ -1,5 +1,5 @@
 import * as React from "react"
-import { ErrorState } from "@/components/ui/error-state"
+import { ErrorState } from "../../../../components/ui/error-state"
 
 export default function ErrorStateDemo() {
   return (

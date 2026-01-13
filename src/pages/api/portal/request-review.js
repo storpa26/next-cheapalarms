@@ -1,4 +1,4 @@
-import { WP_API_BASE } from "@/lib/wp";
+import { WP_API_BASE } from "../../../lib/wp";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

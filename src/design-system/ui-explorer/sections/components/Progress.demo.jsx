@@ -1,6 +1,6 @@
 import * as React from "react"
-import { Progress } from "@/components/ui/progress"
-import { Stack } from "@/components/ui/stack"
+import { Progress } from "../../../../components/ui/progress"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function ProgressDemo() {
   return (

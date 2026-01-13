@@ -1,12 +1,12 @@
 import Head from "next/head";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../../components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 import { useState, useCallback } from "react";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { useXeroStatus, useXeroAuthorize, useXeroDisconnect } from "@/lib/react-query/hooks/admin";
-import { Spinner } from "@/components/ui/spinner";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
+import { useXeroStatus, useXeroAuthorize, useXeroDisconnect } from "../../../lib/react-query/hooks/admin";
+import { Spinner } from "../../../components/ui/spinner";
 import { CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 
 export default function AdminIntegrations() {

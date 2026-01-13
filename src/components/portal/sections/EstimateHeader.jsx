@@ -1,6 +1,6 @@
 import { ChevronDown } from "lucide-react";
 import { useState, useEffect } from "react";
-import { formatAddress } from "@/components/portal/utils/portal-utils";
+import { formatAddress } from "../utils/portal-utils";
 
 export function EstimateHeader({ estimate, progress, estimates, total, hasPhotos, onBackToList, onSelectEstimate, menuOpen, setMenuOpen }) {
   // Use statusValue if available (actual status), otherwise use status (display label)

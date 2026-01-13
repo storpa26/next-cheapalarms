@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Grid } from "@/components/ui/grid"
+import { Grid } from "../../../../components/ui/grid"
 
 export default function RadiiDemo() {
   const radii = [

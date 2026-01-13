@@ -1,11 +1,11 @@
 import { useRouter } from "next/router";
 import { useEffect, useMemo, useCallback, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { usePortalStatus, usePortalDashboard, useEstimate } from "@/lib/react-query/hooks";
-import { normaliseStatus } from "@/components/portal/utils/status-normalizer";
-import { formatAddress } from "@/components/portal/utils/portal-utils";
-import { getEstimateDetails } from "@/lib/wp";
-import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { usePortalStatus, usePortalDashboard, useEstimate } from "../lib/react-query/hooks";
+import { normaliseStatus } from "../components/portal/utils/status-normalizer";
+import { formatAddress } from "../components/portal/utils/portal-utils";
+import { getEstimateDetails } from "../lib/wp";
+import { DEFAULT_CURRENCY } from "../lib/admin/constants";
 
 /**
  * Custom hook to manage all portal state and data fetching

@@ -1,5 +1,5 @@
-import { SignOutButton } from "@/components/ui/sign-out-button";
-import { cn } from "@/lib/utils";
+import { SignOutButton } from "../../ui/sign-out-button";
+import { cn } from "../../../lib/utils";
 
 /**
  * Topbar - Admin header with page title and icon

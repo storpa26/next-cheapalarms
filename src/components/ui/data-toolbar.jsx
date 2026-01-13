@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 import { Stack } from "./stack"
 import { Input } from "./input"
 import { Button } from "./button"

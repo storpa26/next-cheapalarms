@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Card } from "../../ui/card";
 import { useEffect, useRef, useState } from "react";
 
 const scenes = [

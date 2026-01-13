@@ -13,7 +13,7 @@
  * Note: This route is called by Xero (external redirect), so it cannot use
  * proxyToWordPress directly. It must handle the redirect flow itself.
  */
-import { getWpBase } from "@/lib/api/wp-proxy";
+import { getWpBase } from "../../../lib/api/wp-proxy";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {

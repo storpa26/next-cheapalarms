@@ -1,7 +1,7 @@
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Checkbox } from '../ui/checkbox';
+import { Input } from '../ui/input';
+import { Card } from '../ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 export function ContextControls({ context, data, onContextChange, onDataChange }) {
   const updateContext = (key, value) => {

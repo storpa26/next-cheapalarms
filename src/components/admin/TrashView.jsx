@@ -1,18 +1,18 @@
 import { useState, useMemo, useCallback } from "react";
 import { Trash2, RotateCcw, Eye, AlertCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar } from "@/components/admin/Avatar";
-import { EstimateActionsMenu } from "@/components/admin/EstimateActionsMenu";
-import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
-import { RestoreDialog } from "@/components/admin/RestoreDialog";
-import { EmptyTrashDialog } from "@/components/admin/EmptyTrashDialog";
-import { useRestoreEstimate, useBulkRestoreEstimates, useEmptyTrash } from "@/lib/react-query/hooks/admin";
-import { formatTimeAgo } from "@/lib/admin/utils/time-utils";
-import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { Button } from "../ui/button";
+import { Checkbox } from "../ui/checkbox";
+import { Badge } from "../ui/badge";
+import { Spinner } from "../ui/spinner";
+import { Skeleton } from "../ui/skeleton";
+import { Avatar } from "./Avatar";
+import { EstimateActionsMenu } from "./EstimateActionsMenu";
+import { FloatingActionBar } from "./FloatingActionBar";
+import { RestoreDialog } from "./RestoreDialog";
+import { EmptyTrashDialog } from "./EmptyTrashDialog";
+import { useRestoreEstimate, useBulkRestoreEstimates, useEmptyTrash } from "../../lib/react-query/hooks/admin";
+import { formatTimeAgo } from "../../lib/admin/utils/time-utils";
+import { DEFAULT_CURRENCY } from "../../lib/admin/constants";
 
 /**
  * Trash view component for displaying soft-deleted estimates

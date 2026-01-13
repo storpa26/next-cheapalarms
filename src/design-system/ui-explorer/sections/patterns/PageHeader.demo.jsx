@@ -1,6 +1,6 @@
 import * as React from "react"
-import { PageHeader } from "@/components/ui/page-header"
-import { Button } from "@/components/ui/button"
+import { PageHeader } from "../../../../components/ui/page-header"
+import { Button } from "../../../../components/ui/button"
 
 export default function PageHeaderDemo() {
   return (

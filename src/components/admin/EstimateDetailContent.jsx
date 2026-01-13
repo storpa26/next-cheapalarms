@@ -1,8 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { Spinner } from "../ui/spinner";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,9 +12,9 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
-import { parseWpFetchError } from "@/lib/admin/utils/error-handler";
+} from "../ui/alert-dialog";
+import { DEFAULT_CURRENCY } from "../../lib/admin/constants";
+import { parseWpFetchError } from "../../lib/admin/utils/error-handler";
 import { 
   useAdminEstimate, 
   useCreateInvoiceFromEstimate, 
@@ -24,9 +24,9 @@ import {
   useRequestChanges,
   useSendRevisionNotification,
   useDeleteEstimate
-} from "@/lib/react-query/hooks/admin";
-import { computeUIState } from "@/lib/portal/status-computer";
-import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
+} from "../../lib/react-query/hooks/admin";
+import { computeUIState } from "../../lib/portal/status-computer";
+import { useEstimatePhotos } from "../../lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
 import { AddCustomItemModal } from "./AddCustomItemModal";
 import { DiscountModal } from "./DiscountModal";

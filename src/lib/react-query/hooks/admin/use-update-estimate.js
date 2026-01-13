@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '@/lib/wp';
-import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
+import { wpFetch } from '../../../wp';
+import { DEFAULT_CURRENCY } from '../../../admin/constants';
 
 /**
  * React Query hook for updating estimate items/prices

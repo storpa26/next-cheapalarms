@@ -4,11 +4,11 @@ import { UploadModal } from "./UploadModal";
 import { ProgressBar } from "./ProgressBar";
 import { StickySubmitBar } from "./StickySubmitBar";
 import { calculateProgress, validateAllProducts, groupPhotosByProduct } from "./utils";
-import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/react-query/hooks";
+import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "../../../lib/react-query/hooks";
 import { useQueryClient } from "@tanstack/react-query";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "../../ui/spinner";
 import { toast } from "sonner";
-import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
+import { getWpNonceSafe } from "../../../lib/api/get-wp-nonce";
 
 /**
  * Main photo upload view component

@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
 import { ChevronDown, ChevronUp, CheckCircle2, Clock, XCircle, Loader2 } from 'lucide-react';
-import { getCurrentStep } from '@/lib/workflow-simulator/steps';
+import { getCurrentStep } from '../../lib/workflow-simulator/steps';
 
 const SYSTEM_ICONS = {
   ghl: '🔵',

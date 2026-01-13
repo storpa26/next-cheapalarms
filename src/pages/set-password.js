@@ -1,7 +1,7 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
 import { useEffect, useState } from "react";
-import { TOKEN_COOKIE } from "@/lib/wp";
+import { TOKEN_COOKIE } from "../lib/wp";
 
 export default function SetPasswordPage() {
   const router = useRouter();

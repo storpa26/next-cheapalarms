@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "../ui/badge";
 
 const statusColors = {
   "In Progress": "from-blue-500 to-blue-600",

@@ -18,10 +18,10 @@ import {
   MoreVertical,
   Check,
 } from "lucide-react"
-import { cn } from "@/lib/utils"
-import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { cn } from "../../lib/utils"
+import { Input } from "./input"
+import { Badge } from "./badge"
+import { Button } from "./button"
 
 // Hook to detect mobile
 function useIsMobile() {

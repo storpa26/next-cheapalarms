@@ -1,4 +1,4 @@
-import { resendPortalInvite } from "@/lib/wp";
+import { resendPortalInvite } from "../../../lib/wp";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

@@ -1,4 +1,4 @@
-import { WP_API_BASE } from "@/lib/wp";
+import { WP_API_BASE } from "../../../lib/wp";
 import { parse as parseCookie } from "cookie";
 
 export default async function handler(req, res) {

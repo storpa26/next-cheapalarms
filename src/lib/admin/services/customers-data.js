@@ -3,8 +3,8 @@
  * Handles WordPress users and GHL contacts
  */
 
-import { WP_API_BASE } from "@/lib/wp";
-import { buildAuthHeaders } from "@/lib/admin/utils/request-utils";
+import { WP_API_BASE } from "../../wp";
+import { buildAuthHeaders } from "../utils/request-utils";
 
 /**
  * Fetches WordPress users with portal access

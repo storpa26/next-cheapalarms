@@ -1,4 +1,4 @@
-import { proxyToWordPress } from "@/lib/api/wp-proxy";
+import { proxyToWordPress } from "../../../lib/api/wp-proxy";
 
 /**
  * Get Xero Connection Status

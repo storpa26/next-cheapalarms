@@ -1,9 +1,9 @@
 import * as React from "react"
-import { Container } from "@/components/ui/container"
-import { Stack } from "@/components/ui/stack"
-import { Grid } from "@/components/ui/grid"
-import { Spacer } from "@/components/ui/spacer"
-import { Divider } from "@/components/ui/divider"
+import { Container } from "../../../../components/ui/container"
+import { Stack } from "../../../../components/ui/stack"
+import { Grid } from "../../../../components/ui/grid"
+import { Spacer } from "../../../../components/ui/spacer"
+import { Divider } from "../../../../components/ui/divider"
 
 export default function LayoutDemo() {
   return (

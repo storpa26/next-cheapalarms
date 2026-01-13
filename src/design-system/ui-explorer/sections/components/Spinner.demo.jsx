@@ -1,6 +1,6 @@
 import * as React from "react"
-import { Spinner } from "@/components/ui/spinner"
-import { Stack } from "@/components/ui/stack"
+import { Spinner } from "../../../../components/ui/spinner"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function SpinnerDemo() {
   return (

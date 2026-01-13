@@ -1,8 +1,8 @@
 import * as React from "react"
 import { toast } from "sonner"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { Button } from "../../../../components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 import { CheckCircle2, XCircle, AlertTriangle, Info, Loader2 } from "lucide-react"
 
 export default function ToastDemo() {

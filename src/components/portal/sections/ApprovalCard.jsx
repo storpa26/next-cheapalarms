@@ -1,10 +1,10 @@
 import { ArrowRight, Shield, Sparkles, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAcceptEstimate, useRejectEstimate, useRetryInvoice, useRequestReview } from "@/lib/react-query/hooks";
-import { computeUIState } from "@/lib/portal/status-computer";
-import { Spinner } from "@/components/ui/spinner";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { useAcceptEstimate, useRejectEstimate, useRetryInvoice, useRequestReview } from "../../../lib/react-query/hooks";
+import { computeUIState } from "../../../lib/portal/status-computer";
+import { Spinner } from "../../ui/spinner";
+import { Button } from "../../ui/button";
+import { Textarea } from "../../ui/textarea";
 import { toast } from "sonner";
 
 export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {

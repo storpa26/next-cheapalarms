@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardHeader, CardTitle, CardContent } from "../ui/card";
+import { Badge } from "../ui/badge";
 import CompanyDetailModal from "./CompanyDetailModal";
 
 export default function CompaniesSection({ companies, loading }) {

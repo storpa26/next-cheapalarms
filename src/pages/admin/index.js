@@ -1,13 +1,13 @@
 import Head from "next/head";
 import { useMemo } from "react";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { AlertsStrip } from "@/components/admin/ui/AlertsStrip";
-import { CardStat } from "@/components/admin/ui/CardStat";
-import { ActivityList } from "@/components/admin/ui/ActivityList";
-import { HealthStatusCard } from "@/components/admin/HealthStatusCard";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { Spinner } from "@/components/ui/spinner";
-import { useAdminDashboard } from "@/lib/react-query/hooks/admin";
+import AdminLayout from "../../components/admin/layout/AdminLayout";
+import { AlertsStrip } from "../../components/admin/ui/AlertsStrip";
+import { CardStat } from "../../components/admin/ui/CardStat";
+import { ActivityList } from "../../components/admin/ui/ActivityList";
+import { HealthStatusCard } from "../../components/admin/HealthStatusCard";
+import { requireAdmin } from "../../lib/auth/requireAdmin";
+import { Spinner } from "../../components/ui/spinner";
+import { useAdminDashboard } from "../../lib/react-query/hooks/admin";
 
 export default function AdminOverview() {
   const { data, isLoading, error } = useAdminDashboard();

@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "@/components/ui/select";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "../../../components/ui/select";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../../components/ui/card";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,7 +15,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "../../../components/ui/alert-dialog";
 import { toast } from "sonner";
 
 const initialProduct = {

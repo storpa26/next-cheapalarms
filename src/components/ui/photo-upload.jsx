@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
-import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
-import { WP_API_BASE } from "@/lib/wp";
+import { Button } from "./button";
+import { Progress } from "./progress";
+import { WP_API_BASE } from "../../lib/wp";
 
 export const PhotoUpload = forwardRef(function PhotoUpload({ estimateId, locationId, onUploadComplete, onError }, ref) {
   const [uploading, setUploading] = useState(false);

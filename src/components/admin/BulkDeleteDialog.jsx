@@ -7,8 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Radio } from "@/components/ui/radio";
+} from "../ui/alert-dialog";
+import { Radio } from "../ui/radio";
 import { AlertCircle, Trash2 } from "lucide-react";
 
 export function BulkDeleteDialog({

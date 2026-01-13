@@ -1,7 +1,7 @@
 import * as React from "react"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { Input } from "../../../../components/ui/input"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function InputDemo() {
   const [disabled, setDisabled] = React.useState(false)

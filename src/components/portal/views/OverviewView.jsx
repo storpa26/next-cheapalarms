@@ -1,8 +1,8 @@
 import { ArrowRight, Camera, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react";
 import { useState, useEffect, memo } from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../ui/button";
 import Link from "next/link";
-import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { DEFAULT_CURRENCY } from "../../../lib/admin/constants";
 import { RevisionBanner } from "../sections/RevisionBanner";
 import { WorkflowProgress } from "../sections/WorkflowProgress";
 import { BookingCard } from "../sections/BookingCard";

@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { parseWpFetchError } from '@/lib/admin/utils/error-handler';
+import { parseWpFetchError } from '../../../admin/utils/error-handler';
 
 /**
  * React Query mutation for syncing an estimate from GHL

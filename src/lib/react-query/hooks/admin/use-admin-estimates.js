@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { DEFAULT_PAGE_SIZE } from '@/lib/admin/constants';
+import { DEFAULT_PAGE_SIZE } from '../../../admin/constants';
 
 /**
  * React Query hook for fetching admin estimates list

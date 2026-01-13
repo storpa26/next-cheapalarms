@@ -1,7 +1,7 @@
 import { memo } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, formatCurrency } from "@/components/portal/utils/portal-utils";
+import { Button } from "../../ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { formatDate, formatCurrency } from "../utils/portal-utils";
 
 export const PaymentSection = memo(function PaymentSection({ payments }) {
   const outstanding = payments.outstanding ?? 0;

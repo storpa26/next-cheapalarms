@@ -1,10 +1,10 @@
 import * as React from "react"
 import { useState } from "react"
-import { PageHeader } from "@/components/ui/page-header"
-import { DataToolbar } from "@/components/ui/data-toolbar"
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { PageHeader } from "../../../../components/ui/page-header"
+import { DataToolbar } from "../../../../components/ui/data-toolbar"
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../../components/ui/table"
+import { Badge } from "../../../../components/ui/badge"
+import { Button } from "../../../../components/ui/button"
 
 export default function EstimatesListDemo() {
   const [searchValue, setSearchValue] = useState("")

@@ -7,8 +7,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Input } from "@/components/ui/input";
+} from "../ui/alert-dialog";
+import { Input } from "../ui/input";
 import { AlertCircle, Trash2, Mail } from "lucide-react";
 import { useState, useEffect } from "react";
 

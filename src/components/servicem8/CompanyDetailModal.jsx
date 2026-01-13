@@ -1,6 +1,6 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
+import { Badge } from "../ui/badge";
+import { Card, CardContent } from "../ui/card";
 
 export default function CompanyDetailModal({ company, open, onClose }) {
   if (!company) return null;

@@ -1,8 +1,8 @@
 import { memo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate } from "@/components/portal/utils/portal-utils";
+import { Badge } from "../../ui/badge";
+import { Button } from "../../ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { formatDate } from "../utils/portal-utils";
 
 export const DocumentSection = memo(function DocumentSection({ documents }) {
   return (

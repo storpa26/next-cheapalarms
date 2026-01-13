@@ -1,15 +1,15 @@
 import { useState, useMemo } from 'react';
-import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Input } from '@/components/ui/input';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { EmailPreview } from '@/components/email-templates/EmailPreview';
-import { EmailTypeSelector } from '@/components/email-templates/EmailTypeSelector';
-import { ContextControls } from '@/components/email-templates/ContextControls';
-import { EmailCodeView } from '@/components/email-templates/EmailCodeView';
-import { detectEmailVariation, getEmailTemplate } from '@/lib/email-templates/context';
+import { Card } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Checkbox } from '../components/ui/checkbox';
+import { Input } from '../components/ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { EmailPreview } from '../components/email-templates/EmailPreview';
+import { EmailTypeSelector } from '../components/email-templates/EmailTypeSelector';
+import { ContextControls } from '../components/email-templates/ContextControls';
+import { EmailCodeView } from '../components/email-templates/EmailCodeView';
+import { detectEmailVariation, getEmailTemplate } from '../lib/email-templates/context';
 
 export default function EmailTemplatePage() {
   const [selectedType, setSelectedType] = useState('quote-request');

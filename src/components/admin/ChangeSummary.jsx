@@ -1,4 +1,4 @@
-import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { DEFAULT_CURRENCY } from "../../lib/admin/constants";
 
 /**
  * ChangeSummary - Displays before/after comparison when editing estimate

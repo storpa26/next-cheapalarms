@@ -1,6 +1,6 @@
 import { useState, memo } from "react";
 import { ChevronDown, ChevronUp, Edit, CheckCircle2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../ui/button";
 
 function ConfigurationSummaryCard({
   profile,

@@ -1,12 +1,12 @@
 import * as React from "react"
 import { Clock } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 import {
   generateHours,
   generateMinutes,
   formatTime,
   parseTime,
-} from "@/lib/utils/time-utils"
+} from "../../lib/utils/time-utils"
 
 const TimePickerContext = React.createContext({
   value: null,

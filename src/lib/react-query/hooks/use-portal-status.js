@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getPortalStatus } from '@/lib/wp';
+import { getPortalStatus } from '../../wp';
 
 /**
  * React Query hook for fetching portal status

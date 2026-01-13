@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getPortalDashboard } from '@/lib/wp';
+import { getPortalDashboard } from '../../wp';
 
 /**
  * React Query hook for fetching portal dashboard data

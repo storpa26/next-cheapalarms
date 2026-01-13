@@ -1,7 +1,7 @@
 import * as React from "react"
-import { DatePicker, DatePickerTrigger, DatePickerContent } from "@/components/ui/date-picker"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { DatePicker, DatePickerTrigger, DatePickerContent } from "../../../../components/ui/date-picker"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function DatePickerDemo() {
   const [value, setValue] = React.useState("")

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { CreditCard, CheckCircle2, ArrowRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "../../ui/button";
+import { Spinner } from "../../ui/spinner";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
 import { loadStripe } from "@stripe/stripe-js";
@@ -11,7 +11,7 @@ import {
   useStripe,
   useElements,
 } from "@stripe/react-stripe-js";
-import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
+import { getWpNonceSafe } from "../../../lib/api/get-wp-nonce";
 
 // Initialize Stripe (publishable key from backend config)
 // We'll get this from an API endpoint or environment variable

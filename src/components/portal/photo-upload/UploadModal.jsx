@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { X } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
+import { Button } from "../../ui/button";
+import { Textarea } from "../../ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -11,12 +11,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "../../ui/alert-dialog";
 import { UploadButtons } from "./UploadButtons";
 import { PhotoGrid } from "./PhotoGrid";
 import { SkipSection } from "./SkipSection";
-import { startUploadSession, uploadFile, compressImage, getCurrentSession, clearSession, UPLOAD_CONFIG } from "@/lib/uploadApi";
-import { useStoreEstimatePhotos } from "@/lib/react-query/hooks";
+import { startUploadSession, uploadFile, compressImage, getCurrentSession, clearSession, UPLOAD_CONFIG } from "../../../lib/uploadApi";
+import { useStoreEstimatePhotos } from "../../../lib/react-query/hooks";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 

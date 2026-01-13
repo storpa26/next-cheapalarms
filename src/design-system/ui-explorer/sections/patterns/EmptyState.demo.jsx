@@ -1,5 +1,5 @@
 import * as React from "react"
-import { EmptyState } from "@/components/ui/empty-state"
+import { EmptyState } from "../../../../components/ui/empty-state"
 import { Package } from "lucide-react"
 
 export default function EmptyStateDemo() {

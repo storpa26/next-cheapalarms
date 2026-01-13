@@ -58,17 +58,17 @@ export function detectEmailVariation(emailType, context) {
   }
 }
 
-import { QuoteRequestEmail } from '@/components/email-templates/QuoteRequestEmail';
-import { PasswordResetEmail } from '@/components/email-templates/PasswordResetEmail';
-import { PortalInviteEmail } from '@/components/email-templates/PortalInviteEmail';
-import { EstimateEmail } from '@/components/email-templates/EstimateEmail';
-import { InvoiceEmail } from '@/components/email-templates/InvoiceEmail';
-import { AcceptanceEmail } from '@/components/email-templates/AcceptanceEmail';
-import { BookingEmail } from '@/components/email-templates/BookingEmail';
-import { PaymentEmail } from '@/components/email-templates/PaymentEmail';
-import { ChangesRequestedEmail } from '@/components/email-templates/ChangesRequestedEmail';
-import { ReviewCompletionEmail } from '@/components/email-templates/ReviewCompletionEmail';
-import { RevisionEmail } from '@/components/email-templates/RevisionEmail';
+import { QuoteRequestEmail } from '../../components/email-templates/QuoteRequestEmail';
+import { PasswordResetEmail } from '../../components/email-templates/PasswordResetEmail';
+import { PortalInviteEmail } from '../../components/email-templates/PortalInviteEmail';
+import { EstimateEmail } from '../../components/email-templates/EstimateEmail';
+import { InvoiceEmail } from '../../components/email-templates/InvoiceEmail';
+import { AcceptanceEmail } from '../../components/email-templates/AcceptanceEmail';
+import { BookingEmail } from '../../components/email-templates/BookingEmail';
+import { PaymentEmail } from '../../components/email-templates/PaymentEmail';
+import { ChangesRequestedEmail } from '../../components/email-templates/ChangesRequestedEmail';
+import { ReviewCompletionEmail } from '../../components/email-templates/ReviewCompletionEmail';
+import { RevisionEmail } from '../../components/email-templates/RevisionEmail';
 
 export function getEmailTemplate(emailType, variation) {
   const templateMap = {

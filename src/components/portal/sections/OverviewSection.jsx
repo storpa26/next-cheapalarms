@@ -1,7 +1,7 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, formatCurrency, badgeVariant } from "@/components/portal/utils/portal-utils";
+import { Badge } from "../../ui/badge";
+import { Button } from "../../ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { formatDate, formatCurrency, badgeVariant } from "../utils/portal-utils";
 import { memo } from "react";
 
 export const OverviewSection = memo(function OverviewSection({

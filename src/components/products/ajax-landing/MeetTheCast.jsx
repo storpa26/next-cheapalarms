@@ -1,4 +1,4 @@
-import { Card } from "@/components/ui/card";
+import { Card } from "../../ui/card";
 
 const brandTeal = "#0DC5C7";
 const brandPink = "#F78AB3";

@@ -1,7 +1,7 @@
 import { Info, X, UserPlus, LogIn, Eye } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/router";
-import { Button } from "@/components/ui/button";
+import { Button } from "../ui/button";
 
 /**
  * Beautiful guest access banner with brand colors

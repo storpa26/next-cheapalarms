@@ -1,6 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { getWpNonceSafe } from '@/lib/api/get-wp-nonce';
+import { getWpNonceSafe } from '../../api/get-wp-nonce';
 
 /**
  * React Query mutation for retrying invoice creation after a failure.

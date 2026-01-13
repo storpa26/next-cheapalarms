@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
+import { Button } from "../ui/button";
+import { useEstimatePhotos } from "../../lib/react-query/hooks/use-estimate-photos";
 
 /**
  * PhotoGallery component for displaying customer photos in admin sidebar

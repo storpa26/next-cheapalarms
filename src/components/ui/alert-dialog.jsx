@@ -1,7 +1,7 @@
 import * as React from "react";
 import { createPortal } from "react-dom";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
+import { cn } from "../../lib/utils";
+import { Button } from "./button";
 
 const AlertDialogContext = React.createContext({
   isOpen: false,

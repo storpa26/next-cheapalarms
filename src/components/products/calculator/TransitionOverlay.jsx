@@ -1,6 +1,6 @@
 import { useEffect, memo } from "react";
 import { Sparkles } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
+import { Progress } from "../../ui/progress";
 
 /**
  * TransitionOverlay Component

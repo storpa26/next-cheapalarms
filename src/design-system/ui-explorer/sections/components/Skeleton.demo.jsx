@@ -1,6 +1,6 @@
 import * as React from "react"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Stack } from "@/components/ui/stack"
+import { Skeleton } from "../../../../components/ui/skeleton"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function SkeletonDemo() {
   return (

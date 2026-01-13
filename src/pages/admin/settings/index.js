@@ -1,10 +1,10 @@
 import Head from "next/head";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../../components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
 import { useState } from "react";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
 
 export default function AdminSettings() {
   const [gstRate, setGstRate] = useState(0.1);

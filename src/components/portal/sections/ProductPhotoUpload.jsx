@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import { Camera, Image, X, Eye, CheckCircle, XCircle, Trash2 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Button } from "../../ui/button";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,14 +10,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "@/lib/react-query/hooks";
+} from "../../ui/alert-dialog";
+import { useEstimate, useEstimatePhotos, useStoreEstimatePhotos } from "../../../lib/react-query/hooks";
 import { useQueryClient } from "@tanstack/react-query";
-import { Spinner } from "@/components/ui/spinner";
-import { Skeleton } from "@/components/ui/skeleton";
-import { getErrorMessage } from "@/lib/api/error-messages";
+import { Spinner } from "../../ui/spinner";
+import { Skeleton } from "../../ui/skeleton";
+import { getErrorMessage } from "../../../lib/api/error-messages";
 import { toast } from "sonner";
-import { startUploadSession, uploadFile, compressImage, getCurrentSession } from "@/lib/uploadApi";
+import { startUploadSession, uploadFile, compressImage, getCurrentSession } from "../../../lib/uploadApi";
 
 const MAX_PHOTOS_PER_SLOT = 2;
 

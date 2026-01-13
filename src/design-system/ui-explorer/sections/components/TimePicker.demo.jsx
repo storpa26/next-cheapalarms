@@ -1,7 +1,7 @@
 import * as React from "react"
-import { TimePicker, TimePickerTrigger, TimePickerContent } from "@/components/ui/time-picker"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { TimePicker, TimePickerTrigger, TimePickerContent } from "../../../../components/ui/time-picker"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function TimePickerDemo() {
   const [value, setValue] = React.useState("")

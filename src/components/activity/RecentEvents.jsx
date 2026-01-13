@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "../ui/badge";
 
 const priorityColors = {
   high: "from-red-500 to-red-600",

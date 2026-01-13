@@ -1,15 +1,15 @@
 import Head from "next/head";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../../../components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Input } from "../../../components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { useState, useCallback } from "react";
-import { useDebounce } from "@/hooks/useDebounce";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { HealthStatusCard } from "@/components/admin/HealthStatusCard";
-import { useAdminLogs } from "@/lib/react-query/hooks/admin/use-admin-logs";
-import { Spinner } from "@/components/ui/spinner";
+import { useDebounce } from "../../../hooks/useDebounce";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
+import { HealthStatusCard } from "../../../components/admin/HealthStatusCard";
+import { useAdminLogs } from "../../../lib/react-query/hooks/admin/use-admin-logs";
+import { Spinner } from "../../../components/ui/spinner";
 import { RefreshCw, Search, XCircle, AlertCircle, Info, Bug } from "lucide-react";
 
 export default function AdminLogs() {

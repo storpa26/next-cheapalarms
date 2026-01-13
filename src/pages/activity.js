@@ -1,17 +1,17 @@
 import Head from "next/head";
 import { useState, useEffect } from "react";
-import { ActiveJobs } from "@/components/activity/ActiveJobs";
-import { WorkerStatus } from "@/components/activity/WorkerStatus";
-import { CustomerActivity } from "@/components/activity/CustomerActivity";
-import { RecentEvents } from "@/components/activity/RecentEvents";
+import { ActiveJobs } from "../components/activity/ActiveJobs";
+import { WorkerStatus } from "../components/activity/WorkerStatus";
+import { CustomerActivity } from "../components/activity/CustomerActivity";
+import { RecentEvents } from "../components/activity/RecentEvents";
 import {
   generateActiveJobs,
   generateWorkerStatus,
   generateCustomerActivity,
   generateRecentEvents,
-} from "@/lib/activity/mock-data";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+} from "../lib/activity/mock-data";
+import { isAuthenticated, getLoginRedirect } from "../lib/auth";
+import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 
 export default function ActivityPage() {
   const [activeTab, setActiveTab] = useState("jobs");

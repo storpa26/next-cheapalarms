@@ -1,6 +1,6 @@
 import * as React from "react"
-import { StatCard } from "@/components/ui/stat-card"
-import { Grid } from "@/components/ui/grid"
+import { StatCard } from "../../../../components/ui/stat-card"
+import { Grid } from "../../../../components/ui/grid"
 import { Users, DollarSign, TrendingUp, AlertCircle } from "lucide-react"
 
 export default function StatCardDemo() {

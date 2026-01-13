@@ -1,5 +1,5 @@
 import { serialize } from "cookie";
-import { TOKEN_COOKIE } from "@/lib/wp";
+import { TOKEN_COOKIE } from "../../../lib/wp";
 
 export default function handler(req, res) {
   if (req.method !== "POST") {

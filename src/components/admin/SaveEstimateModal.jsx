@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
+import { Button } from '../ui/button';
+import { Textarea } from '../ui/textarea';
+import { Checkbox } from '../ui/checkbox';
+import { DEFAULT_CURRENCY } from '../../lib/admin/constants';
 import { Modal } from './Modal';
 
 /**

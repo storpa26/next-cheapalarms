@@ -1,7 +1,7 @@
 import * as React from "react"
-import { Radio } from "@/components/ui/radio"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { Radio } from "../../../../components/ui/radio"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function RadioDemo() {
   const [value, setValue] = React.useState("option1")

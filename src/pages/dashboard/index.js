@@ -1,15 +1,15 @@
 import Head from "next/head";
-import { ThemeToggle } from "@/components/ui/theme-toggle";
+import { ThemeToggle } from "../../components/ui/theme-toggle";
 import Link from "next/link";
-import { SignOutButton } from "@/components/ui/sign-out-button";
-import { Badge } from "@/components/ui/badge";
+import { SignOutButton } from "../../components/ui/sign-out-button";
+import { Badge } from "../../components/ui/badge";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "../../components/ui/card";
 import {
   Table,
   TableBody,
@@ -18,12 +18,12 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "../../components/ui/table";
 import { useState } from "react";
-import { getEstimates } from "@/lib/wp";
-import { Button } from "@/components/ui/button";
-import { toast } from "@/components/ui/use-toast";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import { getEstimates } from "../../lib/wp";
+import { Button } from "../../components/ui/button";
+import { toast } from "../../components/ui/use-toast";
+import { isAuthenticated, getLoginRedirect } from "../../lib/auth";
 
 export default function DashboardPage({ estimates, error }) {
   const [resending, setResending] = useState({});
@@ -260,7 +260,7 @@ function StatusBadge({ status }) {
   return <Badge variant={variant}>{label || "Unknown"}</Badge>;
 }
 
-import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
+import { getWpNonceSafe } from "../../lib/api/get-wp-nonce";
 
 async function handleResendInvite(estimate, setResending) {
   const key = estimate.id ?? "";

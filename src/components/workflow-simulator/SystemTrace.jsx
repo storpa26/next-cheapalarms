@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
-import { Card } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
+import { Card } from '../ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import { Copy, CheckCircle2, XCircle, Clock } from 'lucide-react';
-import { getStateDiff, formatStateForDisplay } from '@/lib/workflow-simulator/state-manager';
-import { computeUIState } from '@/lib/workflow-simulator/status-computer';
+import { getStateDiff, formatStateForDisplay } from '../../lib/workflow-simulator/state-manager';
+import { computeUIState } from '../../lib/workflow-simulator/status-computer';
 
 // Security: Safe JSON stringify with circular reference detection
 function safeStringify(obj, space = 2) {

@@ -11,7 +11,7 @@ import {
   Plug,
   ScrollText,
 } from "lucide-react";
-import { Sidebar as UISidebar } from "@/components/ui/sidebar";
+import { Sidebar as UISidebar } from "../../ui/sidebar";
 import { navItems } from "../nav";
 
 // Map icons to navigation items

@@ -1,8 +1,8 @@
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { badgeVariant } from "@/components/portal/utils/portal-utils";
-import { Detail } from "@/components/portal/utils/Detail";
-import { formatDate } from "@/components/portal/utils/portal-utils";
+import { Badge } from "../../ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { badgeVariant } from "../utils/portal-utils";
+import { Detail } from "../utils/Detail";
+import { formatDate } from "../utils/portal-utils";
 import { memo } from "react";
 
 export const EstimateSection = memo(function EstimateSection({ view }) {

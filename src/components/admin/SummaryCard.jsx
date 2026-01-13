@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { DEFAULT_CURRENCY } from "../../lib/admin/constants";
 
 export const SummaryCard = memo(function SummaryCard({ label, value, currency = DEFAULT_CURRENCY, variant = "default", onClick }) {
   const variants = {

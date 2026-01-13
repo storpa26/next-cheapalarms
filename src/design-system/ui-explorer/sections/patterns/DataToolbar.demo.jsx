@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useState } from "react"
-import { DataToolbar } from "@/components/ui/data-toolbar"
-import { Button } from "@/components/ui/button"
+import { DataToolbar } from "../../../../components/ui/data-toolbar"
+import { Button } from "../../../../components/ui/button"
 
 export default function DataToolbarDemo() {
   const [searchValue, setSearchValue] = useState("")

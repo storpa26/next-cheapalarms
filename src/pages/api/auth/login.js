@@ -1,5 +1,5 @@
 import { serialize } from "cookie";
-import { authenticate, TOKEN_COOKIE } from "@/lib/wp";
+import { authenticate, TOKEN_COOKIE } from "../../../lib/wp";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {

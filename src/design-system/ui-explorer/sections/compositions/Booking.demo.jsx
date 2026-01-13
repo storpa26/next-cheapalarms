@@ -1,14 +1,14 @@
 import * as React from "react"
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { Textarea } from "@/components/ui/textarea"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert"
-import { DatePicker, DatePickerTrigger, DatePickerContent } from "@/components/ui/date-picker"
-import { TimePicker, TimePickerTrigger, TimePickerContent } from "@/components/ui/time-picker"
-import { formatDate } from "@/lib/utils/date-utils"
-import { formatTime } from "@/lib/utils/time-utils"
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "../../../../components/ui/card"
+import { Textarea } from "../../../../components/ui/textarea"
+import { Button } from "../../../../components/ui/button"
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from "../../../../components/ui/alert"
+import { DatePicker, DatePickerTrigger, DatePickerContent } from "../../../../components/ui/date-picker"
+import { TimePicker, TimePickerTrigger, TimePickerContent } from "../../../../components/ui/time-picker"
+import { formatDate } from "../../../../lib/utils/date-utils"
+import { formatTime } from "../../../../lib/utils/time-utils"
 import { Calendar, Clock, MessageSquare, CheckCircle2, ArrowRight } from "lucide-react"
-import { Spinner } from "@/components/ui/spinner"
+import { Spinner } from "../../../../components/ui/spinner"
 
 export default function BookingDemo() {
   const [state, setState] = React.useState('form') // 'form' | 'success' | 'loading'

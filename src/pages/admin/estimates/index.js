@@ -2,31 +2,31 @@ import Head from "next/head";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Settings, Plus } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
+import { Button } from "../../../components/ui/button";
+import { Badge } from "../../../components/ui/badge";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
 import { 
   useAdminEstimates, 
   useAdminEstimatesTrash,
   useDeleteEstimate,
   useBulkDeleteEstimates
-} from "@/lib/react-query/hooks/admin";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { Spinner } from "@/components/ui/spinner";
+} from "../../../lib/react-query/hooks/admin";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
+import { Spinner } from "../../../components/ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
-import { EstimateDetailModal } from "@/components/admin/EstimateDetailModal";
-import { SummaryCard } from "@/components/admin/SummaryCard";
-import { StatusTabs } from "@/components/admin/StatusTabs";
-import { Avatar } from "@/components/admin/Avatar";
-import { SearchBar } from "@/components/admin/SearchBar";
-import { DeleteDialog } from "@/components/admin/DeleteDialog";
-import { BulkDeleteDialog } from "@/components/admin/BulkDeleteDialog";
-import { EstimateActionsMenu } from "@/components/admin/EstimateActionsMenu";
-import { TrashView } from "@/components/admin/TrashView";
-import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { EstimateDetailModal } from "../../../components/admin/EstimateDetailModal";
+import { SummaryCard } from "../../../components/admin/SummaryCard";
+import { StatusTabs } from "../../../components/admin/StatusTabs";
+import { Avatar } from "../../../components/admin/Avatar";
+import { SearchBar } from "../../../components/admin/SearchBar";
+import { DeleteDialog } from "../../../components/admin/DeleteDialog";
+import { BulkDeleteDialog } from "../../../components/admin/BulkDeleteDialog";
+import { EstimateActionsMenu } from "../../../components/admin/EstimateActionsMenu";
+import { TrashView } from "../../../components/admin/TrashView";
+import { FloatingActionBar } from "../../../components/admin/FloatingActionBar";
+import { Checkbox } from "../../../components/ui/checkbox";
+import { useKeyboardShortcuts } from "../../../hooks/useKeyboardShortcuts";
+import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "../../../lib/admin/constants";
 
 export default function EstimatesListPage() {
   const router = useRouter();

@@ -1,8 +1,8 @@
 import * as React from "react"
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Stack } from "@/components/ui/stack"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "../../../../components/ui/card"
+import { Button } from "../../../../components/ui/button"
+import { Stack } from "../../../../components/ui/stack"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../../components/ui/tabs"
 
 export default function CardDemo() {
   const [shadow, setShadow] = React.useState("card")

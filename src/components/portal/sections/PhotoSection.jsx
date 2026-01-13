@@ -1,8 +1,8 @@
 /* eslint-disable @next/next/no-img-element */
 import { memo, useState, useCallback } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "../../ui/button";
+import { Input } from "../../ui/input";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,10 +12,10 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+} from "../../ui/alert-dialog";
 import { ProductPhotoUpload } from "./ProductPhotoUpload";
-import { useEstimatePhotos } from "@/lib/react-query/hooks";
-import { Spinner } from "@/components/ui/spinner";
+import { useEstimatePhotos } from "../../../lib/react-query/hooks";
+import { Spinner } from "../../ui/spinner";
 
 function EmptyPhotoState({ onSelectFiles, onSkip }) {
   return (

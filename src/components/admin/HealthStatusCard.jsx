@@ -1,7 +1,7 @@
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { useHealthCheck } from "@/lib/react-query/hooks/admin/use-health-check";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card";
+import { Button } from "../ui/button";
+import { Spinner } from "../ui/spinner";
+import { useHealthCheck } from "../../lib/react-query/hooks/admin/use-health-check";
 import { RefreshCw, CheckCircle2, AlertCircle, XCircle, Clock } from "lucide-react";
 import { useCallback, useMemo } from "react";
 

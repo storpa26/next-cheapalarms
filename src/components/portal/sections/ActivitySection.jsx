@@ -1,6 +1,6 @@
 import { memo } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate } from "@/components/portal/utils/portal-utils";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { formatDate } from "../utils/portal-utils";
 
 export const ActivitySection = memo(function ActivitySection({ entries }) {
   return (

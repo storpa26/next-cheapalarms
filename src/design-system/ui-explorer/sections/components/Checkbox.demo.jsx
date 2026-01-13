@@ -1,7 +1,7 @@
 import * as React from "react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { Checkbox } from "../../../../components/ui/checkbox"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function CheckboxDemo() {
   const [checked, setChecked] = React.useState(false)

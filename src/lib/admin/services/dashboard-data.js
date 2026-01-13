@@ -3,9 +3,9 @@
  * Handles fetching and processing dashboard statistics
  */
 
-import { wpFetch, WP_API_BASE } from "@/lib/wp";
-import { cookieHeader, buildAuthHeaders } from "@/lib/admin/utils/request-utils";
-import { formatTimeAgo } from "@/lib/admin/utils/time-utils";
+import { wpFetch, WP_API_BASE } from "../../wp";
+import { cookieHeader, buildAuthHeaders } from "../utils/request-utils";
+import { formatTimeAgo } from "../utils/time-utils";
 
 /**
  * Fetches product counts from WordPress API

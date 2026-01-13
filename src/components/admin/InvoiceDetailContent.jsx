@@ -1,12 +1,12 @@
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import { useAdminInvoice, useSendInvoice, useSyncInvoiceToXero, useXeroStatus, useDeleteInvoice } from "@/lib/react-query/hooks/admin";
-import { useEstimatePhotos } from "@/lib/react-query/hooks/use-estimate-photos";
+import { Badge } from "../ui/badge";
+import { Spinner } from "../ui/spinner";
+import { useAdminInvoice, useSendInvoice, useSyncInvoiceToXero, useXeroStatus, useDeleteInvoice } from "../../lib/react-query/hooks/admin";
+import { useEstimatePhotos } from "../../lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
 import { DeleteDialog } from "./DeleteDialog";
-import { DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { DEFAULT_CURRENCY } from "../../lib/admin/constants";
 import { toast } from "sonner";
 import { CheckCircle2, XCircle, Trash2 } from "lucide-react";
 

@@ -1,8 +1,8 @@
 import { memo } from "react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { badgeVariant, formatDate } from "@/components/portal/utils/portal-utils";
-import { Detail } from "@/components/portal/utils/Detail";
+import { Badge } from "../../ui/badge";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../ui/card";
+import { badgeVariant, formatDate } from "../utils/portal-utils";
+import { Detail } from "../utils/Detail";
 
 function InstallationTimeline({ timeline }) {
   return (

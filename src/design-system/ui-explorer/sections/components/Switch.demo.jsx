@@ -1,7 +1,7 @@
 import * as React from "react"
-import { Switch } from "@/components/ui/switch"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { Switch } from "../../../../components/ui/switch"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function SwitchDemo() {
   const [checked, setChecked] = React.useState(false)

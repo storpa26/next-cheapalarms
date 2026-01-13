@@ -1,7 +1,7 @@
 import * as React from "react"
-import { Textarea } from "@/components/ui/textarea"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
+import { Textarea } from "../../../../components/ui/textarea"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function TextareaDemo() {
   const [disabled, setDisabled] = React.useState(false)

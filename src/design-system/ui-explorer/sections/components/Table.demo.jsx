@@ -1,7 +1,7 @@
 import * as React from "react"
-import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "../../../../components/ui/table"
+import { Badge } from "../../../../components/ui/badge"
+import { Button } from "../../../../components/ui/button"
 
 export default function TableDemo() {
   return (

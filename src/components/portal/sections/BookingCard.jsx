@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { Calendar, Clock, MessageSquare, ArrowRight, CheckCircle2 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
-import { Alert, AlertDescription, AlertIcon, AlertTitle } from "@/components/ui/alert";
-import { DatePicker, DatePickerTrigger, DatePickerContent } from "@/components/ui/date-picker";
-import { TimePicker, TimePickerTrigger, TimePickerContent } from "@/components/ui/time-picker";
-import { Spinner } from "@/components/ui/spinner";
+import { Card, CardHeader, CardTitle, CardContent } from "../../ui/card";
+import { Button } from "../../ui/button";
+import { Textarea } from "../../ui/textarea";
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from "../../ui/alert";
+import { DatePicker, DatePickerTrigger, DatePickerContent } from "../../ui/date-picker";
+import { TimePicker, TimePickerTrigger, TimePickerContent } from "../../ui/time-picker";
+import { Spinner } from "../../ui/spinner";
 import { useRouter } from "next/router";
 import { toast } from "sonner";
-import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
-import { formatDate } from "@/lib/utils/date-utils";
-import { formatTime } from "@/lib/utils/time-utils";
+import { getWpNonceSafe } from "../../../lib/api/get-wp-nonce";
+import { formatDate } from "../../../lib/utils/date-utils";
+import { formatTime } from "../../../lib/utils/time-utils";
 
 /**
  * BookingCard Component

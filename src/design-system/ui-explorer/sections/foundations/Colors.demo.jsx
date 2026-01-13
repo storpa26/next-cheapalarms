@@ -1,6 +1,6 @@
 import * as React from "react"
-import { Grid } from "@/components/ui/grid"
-import { Stack } from "@/components/ui/stack"
+import { Grid } from "../../../../components/ui/grid"
+import { Stack } from "../../../../components/ui/stack"
 import { useEffect, useState } from "react"
 
 export default function ColorsDemo() {

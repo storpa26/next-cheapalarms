@@ -1,17 +1,17 @@
 import Head from "next/head";
 import { useState, useEffect } from "react";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { isAuthenticated, getLoginRedirect } from "@/lib/auth";
+import AdminLayout from "../components/admin/layout/AdminLayout";
+import { isAuthenticated, getLoginRedirect } from "../lib/auth";
 import {
   generateServiceM8Jobs,
   generateServiceM8Workers,
   generateServiceM8Companies,
   generateServiceM8Stats,
-} from "@/lib/servicem8/mock-data";
-import JobsSection from "@/components/servicem8/JobsSection";
-import WorkersSection from "@/components/servicem8/WorkersSection";
-import CompaniesSection from "@/components/servicem8/CompaniesSection";
-import StatsCards from "@/components/servicem8/StatsCards";
+} from "../lib/servicem8/mock-data";
+import JobsSection from "../components/servicem8/JobsSection";
+import WorkersSection from "../components/servicem8/WorkersSection";
+import CompaniesSection from "../components/servicem8/CompaniesSection";
+import StatsCards from "../components/servicem8/StatsCards";
 
 export default function ServiceM8Page() {
   const [activeTab, setActiveTab] = useState("overview");

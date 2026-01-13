@@ -1,9 +1,9 @@
 import * as React from "react"
-import { SectionHeader } from "@/components/ui/section-header"
-import { Progress } from "@/components/ui/progress"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Stack } from "@/components/ui/stack"
+import { SectionHeader } from "../../../../components/ui/section-header"
+import { Progress } from "../../../../components/ui/progress"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Badge } from "../../../../components/ui/badge"
+import { Stack } from "../../../../components/ui/stack"
 import { Camera, CheckCircle2 } from "lucide-react"
 
 export default function PhotoUploadDemo() {

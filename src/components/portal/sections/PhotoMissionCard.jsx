@@ -1,12 +1,12 @@
 import { Camera, Check, AlertCircle, Loader2 } from "lucide-react";
 import { useState, useMemo } from "react";
-import { Button } from "@/components/ui/button";
-import { useEstimate, useEstimatePhotos } from "@/lib/react-query/hooks";
+import { Button } from "../../ui/button";
+import { useEstimate, useEstimatePhotos } from "../../../lib/react-query/hooks";
 import { ProductListCard, UploadModal, ProgressBar, calculateProgress, groupPhotosByProduct, validateAllProducts } from "../photo-upload";
-import { Spinner } from "@/components/ui/spinner";
+import { Spinner } from "../../ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { getWpNonceSafe } from "@/lib/api/get-wp-nonce";
+import { getWpNonceSafe } from "../../../lib/api/get-wp-nonce";
 
 /**
  * Photo Mission Card - Shows product list with upload status

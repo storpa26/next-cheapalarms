@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 import { Stack } from "./stack"
 import { Spinner } from "./spinner"
 import { Skeleton } from "./skeleton"

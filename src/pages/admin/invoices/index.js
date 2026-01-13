@@ -2,28 +2,28 @@ import Head from "next/head";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
+import { Button } from "../../../components/ui/button";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
 import { 
   useAdminInvoices,
   useBulkDeleteInvoices,
   useDeleteInvoice
-} from "@/lib/react-query/hooks/admin";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { Spinner } from "@/components/ui/spinner";
+} from "../../../lib/react-query/hooks/admin";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
+import { Spinner } from "../../../components/ui/spinner";
 import { useQueryClient } from "@tanstack/react-query";
-import { SummaryCard } from "@/components/admin/SummaryCard";
-import { StatusTabs } from "@/components/admin/StatusTabs";
-import { Avatar } from "@/components/admin/Avatar";
-import { SearchBar } from "@/components/admin/SearchBar";
-import { DeleteDialog } from "@/components/admin/DeleteDialog";
-import { BulkDeleteDialog } from "@/components/admin/BulkDeleteDialog";
-import { FloatingActionBar } from "@/components/admin/FloatingActionBar";
-import { InvoiceDetailModal } from "@/components/admin/InvoiceDetailModal";
-import { Checkbox } from "@/components/ui/checkbox";
+import { SummaryCard } from "../../../components/admin/SummaryCard";
+import { StatusTabs } from "../../../components/admin/StatusTabs";
+import { Avatar } from "../../../components/admin/Avatar";
+import { SearchBar } from "../../../components/admin/SearchBar";
+import { DeleteDialog } from "../../../components/admin/DeleteDialog";
+import { BulkDeleteDialog } from "../../../components/admin/BulkDeleteDialog";
+import { FloatingActionBar } from "../../../components/admin/FloatingActionBar";
+import { InvoiceDetailModal } from "../../../components/admin/InvoiceDetailModal";
+import { Checkbox } from "../../../components/ui/checkbox";
 import Link from "next/link";
-import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
-import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "@/lib/admin/constants";
+import { useKeyboardShortcuts } from "../../../hooks/useKeyboardShortcuts";
+import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "../../../lib/admin/constants";
 
 export default function InvoicesListPage() {
   const router = useRouter();

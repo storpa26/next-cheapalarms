@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { Sparkles, ListChecks, CreditCard, MessageCircle, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Sidebar as UISidebar } from "@/components/ui/sidebar";
-import { SignOutButton } from "@/components/ui/sign-out-button";
+import { Button } from "../../ui/button";
+import { Sidebar as UISidebar } from "../../ui/sidebar";
+import { SignOutButton } from "../../ui/sign-out-button";
 
 const CUSTOMER_NAV_ITEMS = [
   { label: "Overview", icon: Sparkles, href: "#overview" },

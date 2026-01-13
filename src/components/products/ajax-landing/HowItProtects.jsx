@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Card } from "@/components/ui/card";
+import { Card } from "../../ui/card";
 import { protectionDevices } from "../../../data/how-it-protects";
 
 const brandTeal = "#0DC5C7";

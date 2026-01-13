@@ -21,7 +21,7 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogAction,
-} from "@/components/ui/alert-dialog";
+} from "../../components/ui/alert-dialog";
 import { useAjaxCalculator } from "../../hooks/useAjaxCalculator";
 
 function extractContactId(result) {

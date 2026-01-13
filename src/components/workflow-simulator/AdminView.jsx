@@ -1,9 +1,9 @@
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '../ui/button';
+import { Card } from '../ui/card';
+import { Badge } from '../ui/badge';
+import { Switch } from '../ui/switch';
 import { CheckCircle2, FileText, AlertCircle } from 'lucide-react';
-import { computeUIState } from '@/lib/workflow-simulator/status-computer';
+import { computeUIState } from '../../lib/workflow-simulator/status-computer';
 
 export function AdminView({ portalMeta, onAction, uiState }) {
   const computed = uiState || computeUIState(portalMeta);

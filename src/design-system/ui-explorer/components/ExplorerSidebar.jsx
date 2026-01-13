@@ -1,9 +1,9 @@
 import * as React from "react"
 import { useRouter } from "next/router"
-import { Input } from "@/components/ui/input"
+import { Input } from "../../../components/ui/input"
 import { Search } from "lucide-react"
 import { registry, getGroups, searchItems } from "../registry"
-import { cn } from "@/lib/utils"
+import { cn } from "../../../lib/utils"
 
 export function ExplorerSidebar({ activeId }) {
   const router = useRouter()

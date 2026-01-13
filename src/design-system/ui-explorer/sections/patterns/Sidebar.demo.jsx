@@ -18,12 +18,12 @@ import {
   Menu,
   X,
 } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Stack } from "@/components/ui/stack"
-import { Radio } from "@/components/ui/radio"
-import { Button } from "@/components/ui/button"
-import { Sidebar } from "@/components/ui/sidebar"
-import { cn } from "@/lib/utils"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "../../../../components/ui/card"
+import { Stack } from "../../../../components/ui/stack"
+import { Radio } from "../../../../components/ui/radio"
+import { Button } from "../../../../components/ui/button"
+import { Sidebar } from "../../../../components/ui/sidebar"
+import { cn } from "../../../../lib/utils"
 
 // Admin navigation items
 const ADMIN_NAV_ITEMS = [

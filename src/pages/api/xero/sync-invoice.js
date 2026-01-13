@@ -1,4 +1,4 @@
-import { proxyToWordPress } from "@/lib/api/wp-proxy";
+import { proxyToWordPress } from "../../../lib/api/wp-proxy";
 
 /**
  * Sync Invoice to Xero

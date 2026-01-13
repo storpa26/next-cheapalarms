@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, TrendingDown, TrendingUp, Info } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { DEFAULT_CURRENCY } from '@/lib/admin/constants';
+import { Button } from '../../ui/button';
+import { DEFAULT_CURRENCY } from '../../../lib/admin/constants';
 
 /**
  * Banner shown in customer portal when estimate has been revised

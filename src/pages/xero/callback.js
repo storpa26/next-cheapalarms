@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/router';
-import { getWpBase } from "@/lib/api/wp-proxy";
+import { getWpBase } from "../../lib/api/wp-proxy";
 
 /**
  * Xero OAuth Callback Page

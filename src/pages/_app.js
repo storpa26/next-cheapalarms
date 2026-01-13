@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import '../styles/globals.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../lib/react-query/query-client';
-import { Toaster } from '@/components/ui/sonner';
+import { Toaster } from '../components/ui/sonner';
 
 // Initialize Sentry on client-side
 if (typeof window !== 'undefined') {

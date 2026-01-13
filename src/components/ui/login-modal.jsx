@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useRouter } from "next/router";
 import { Button } from "./button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./card";
-import { TOKEN_COOKIE } from "@/lib/wp";
+import { TOKEN_COOKIE } from "../../lib/wp";
 
 export function LoginModal({ open, onClose, email, estimateId, onLoginSuccess }) {
   const router = useRouter();

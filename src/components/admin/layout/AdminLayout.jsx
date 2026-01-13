@@ -2,7 +2,7 @@ import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useRouter } from "next/router";
 import { useState, useEffect, useMemo } from "react";
-import { getRouteMetadata } from "@/lib/admin/route-metadata";
+import { getRouteMetadata } from "../../../lib/admin/route-metadata";
 
 export default function AdminLayout({ title: titleProp, children }) {
   const router = useRouter();

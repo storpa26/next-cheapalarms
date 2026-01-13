@@ -142,9 +142,9 @@ export const registry = [
     title: 'Layout Primitives',
     description: 'Container, Stack, Grid, Spacer, and Divider components for building consistent layouts.',
     DemoComponent: LayoutDemo,
-    code: `import { Container } from '@/components/ui/container';
-import { Stack } from '@/components/ui/stack';
-import { Grid } from '@/components/ui/grid';
+    code: `import { Container } from '../../components/ui/container';
+import { Stack } from '../../components/ui/stack';
+import { Grid } from '../../components/ui/grid';
 
 <Container>
   <Stack gap={4}>
@@ -163,7 +163,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Button',
     description: 'Primary action button with multiple variants and sizes.',
     DemoComponent: ButtonDemo,
-    code: `import { Button } from '@/components/ui/button';
+    code: `import { Button } from '../../components/ui/button';
 
 <Button variant="default">Default</Button>
 <Button variant="secondary">Secondary</Button>
@@ -179,7 +179,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Input',
     description: 'Text input field with focus states and validation support.',
     DemoComponent: InputDemo,
-    code: `import { Input } from '@/components/ui/input';
+    code: `import { Input } from '../../components/ui/input';
 
 <Input placeholder="Enter text..." />
 <Input type="email" placeholder="Email" />
@@ -193,7 +193,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Textarea',
     description: 'Multi-line text input for longer content with configurable rows.',
     DemoComponent: TextareaDemo,
-    code: `import { Textarea } from '@/components/ui/textarea';
+    code: `import { Textarea } from '../../components/ui/textarea';
 
 <Textarea placeholder="Enter your message..." />
 <Textarea rows={6} placeholder="Large textarea" />
@@ -207,7 +207,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Date Picker',
     description: 'Modern calendar date picker with gradient selected states, smooth animations, and clean design. Features month navigation, today/clear buttons, and date range validation.',
     DemoComponent: DatePickerDemo,
-    code: `import { DatePicker, DatePickerTrigger, DatePickerContent } from '@/components/ui/date-picker';
+    code: `import { DatePicker, DatePickerTrigger, DatePickerContent } from '../../components/ui/date-picker';
 
 <DatePicker value={date} onValueChange={setDate} minDate={today}>
   <DatePickerTrigger placeholder="Select date..." />
@@ -222,7 +222,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Time Picker',
     description: 'Modern time picker with scrollable hour/minute selection. Supports 12-hour and 24-hour formats, with gradient selected states and smooth animations.',
     DemoComponent: TimePickerDemo,
-    code: `import { TimePicker, TimePickerTrigger, TimePickerContent } from '@/components/ui/time-picker';
+    code: `import { TimePicker, TimePickerTrigger, TimePickerContent } from '../../components/ui/time-picker';
 
 <TimePicker value={time} onValueChange={setTime} format="12h" interval={15}>
   <TimePickerTrigger placeholder="Select time..." />
@@ -237,7 +237,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Select',
     description: 'Custom branded dropdown with gradient borders, animated chevron, and brand-colored selections. Fully accessible with keyboard navigation.',
     DemoComponent: SelectDemo,
-    code: `import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
+    code: `import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '../../components/ui/select';
 
 <Select value={value} onValueChange={setValue}>
   <SelectTrigger placeholder="Select an option...">
@@ -258,7 +258,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Checkbox',
     description: 'Boolean input for selecting one or multiple options.',
     DemoComponent: CheckboxDemo,
-    code: `import { Checkbox } from '@/components/ui/checkbox';
+    code: `import { Checkbox } from '../../components/ui/checkbox';
 
 <label className="flex items-center gap-2">
   <Checkbox />
@@ -275,7 +275,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Radio',
     description: 'Single choice input for selecting one option from a group.',
     DemoComponent: RadioDemo,
-    code: `import { Radio } from '@/components/ui/radio';
+    code: `import { Radio } from '../../components/ui/radio';
 
 <label className="flex items-center gap-2">
   <Radio name="size" value="small" />
@@ -294,7 +294,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Switch',
     description: 'Toggle switch for on/off states and boolean settings.',
     DemoComponent: SwitchDemo,
-    code: `import { Switch } from '@/components/ui/switch';
+    code: `import { Switch } from '../../components/ui/switch';
 
 <label className="flex items-center gap-2">
   <Switch checked={enabled} onClick={() => setEnabled(!enabled)} />
@@ -311,7 +311,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Card',
     description: 'Container component for grouping related content with consistent styling.',
     DemoComponent: CardDemo,
-    code: `import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+    code: `import { Card, CardHeader, CardTitle, CardContent } from '../../components/ui/card';
 
 <Card>
   <CardHeader>
@@ -330,7 +330,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Badge',
     description: 'Small status indicator with semantic color variants.',
     DemoComponent: BadgeDemo,
-    code: `import { Badge } from '@/components/ui/badge';
+    code: `import { Badge } from '../../components/ui/badge';
 
 <Badge>Default</Badge>
 <Badge variant="success">Success</Badge>
@@ -343,7 +343,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Alert',
     description: 'Banner component for displaying important messages with semantic variants.',
     DemoComponent: AlertDemo,
-    code: `import { Alert, AlertTitle, AlertDescription, AlertIcon } from '@/components/ui/alert';
+    code: `import { Alert, AlertTitle, AlertDescription, AlertIcon } from '../../components/ui/alert';
 
 <Alert variant="success">
   <AlertIcon variant="success" />
@@ -358,7 +358,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Tabs',
     description: 'Tabbed navigation component for organizing content into sections.',
     DemoComponent: TabsDemo,
-    code: `import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+    code: `import { Tabs, TabsList, TabsTrigger, TabsContent } from '../../components/ui/tabs';
 
 <Tabs defaultValue="tab1">
   <TabsList>
@@ -376,7 +376,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Table',
     description: 'Data table component with hover states and consistent styling.',
     DemoComponent: TableDemo,
-    code: `import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@/components/ui/table';
+    code: `import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '../../components/ui/table';
 
 <Table>
   <TableHeader>
@@ -400,7 +400,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Progress',
     description: 'Progress bar component for showing completion status.',
     DemoComponent: ProgressDemo,
-    code: `import { Progress } from '@/components/ui/progress';
+    code: `import { Progress } from '../../components/ui/progress';
 
 <Progress value={50} />`,
     tags: ['progress', 'bar', 'loading'],
@@ -411,7 +411,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Spinner',
     description: 'Loading spinner component in multiple sizes.',
     DemoComponent: SpinnerDemo,
-    code: `import { Spinner } from '@/components/ui/spinner';
+    code: `import { Spinner } from '../../components/ui/spinner';
 
 <Spinner size="md" />`,
     tags: ['spinner', 'loading', 'indicator'],
@@ -422,7 +422,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Skeleton',
     description: 'Placeholder component for loading states.',
     DemoComponent: SkeletonDemo,
-    code: `import { Skeleton } from '@/components/ui/skeleton';
+    code: `import { Skeleton } from '../../components/ui/skeleton';
 
 <Skeleton className="h-4 w-full" />
 <Skeleton className="h-12 w-12 rounded-full" />`,
@@ -434,7 +434,7 @@ import { Grid } from '@/components/ui/grid';
     title: 'Dialog',
     description: 'Modal dialog component for overlays and confirmations.',
     DemoComponent: DialogDemo,
-    code: `import { Dialog } from '@/components/ui/dialog';
+    code: `import { Dialog } from '../../components/ui/dialog';
 
 <Dialog isOpen={isOpen} onClose={() => setIsOpen(false)}>
   <div className="p-6">
@@ -483,7 +483,7 @@ toast.promise(fetchData(), {
     title: 'PageHeader',
     description: 'Standard page header with title, description, and action buttons.',
     DemoComponent: PageHeaderDemo,
-    code: `import { PageHeader } from '@/components/ui/page-header';
+    code: `import { PageHeader } from '../../components/ui/page-header';
 
 <PageHeader
   title="Page Title"
@@ -498,7 +498,7 @@ toast.promise(fetchData(), {
     title: 'SectionHeader',
     description: 'Section header component for organizing content within a page.',
     DemoComponent: SectionHeaderDemo,
-    code: `import { SectionHeader } from '@/components/ui/section-header';
+    code: `import { SectionHeader } from '../../components/ui/section-header';
 
 <SectionHeader
   title="Section Title"
@@ -513,7 +513,7 @@ toast.promise(fetchData(), {
     title: 'StatCard',
     description: 'Card component for displaying statistics and metrics.',
     DemoComponent: StatCardDemo,
-    code: `import { StatCard } from '@/components/ui/stat-card';
+    code: `import { StatCard } from '../../components/ui/stat-card';
 
 <StatCard
   title="Total Users"
@@ -529,7 +529,7 @@ toast.promise(fetchData(), {
     title: 'EmptyState',
     description: 'Display when there is no data to show.',
     DemoComponent: EmptyStateDemo,
-    code: `import { EmptyState } from '@/components/ui/empty-state';
+    code: `import { EmptyState } from '../../components/ui/empty-state';
 
 <EmptyState
   icon={<Package />}
@@ -545,7 +545,7 @@ toast.promise(fetchData(), {
     title: 'LoadingState',
     description: 'Loading indicator component with spinner or skeleton variants.',
     DemoComponent: LoadingStateDemo,
-    code: `import { LoadingState } from '@/components/ui/loading-state';
+    code: `import { LoadingState } from '../../components/ui/loading-state';
 
 <LoadingState message="Loading..." />
 <LoadingState variant="skeleton" />`,
@@ -557,7 +557,7 @@ toast.promise(fetchData(), {
     title: 'ErrorState',
     description: 'Error display component with optional retry action.',
     DemoComponent: ErrorStateDemo,
-    code: `import { ErrorState } from '@/components/ui/error-state';
+    code: `import { ErrorState } from '../../components/ui/error-state';
 
 <ErrorState
   title="Failed to load"
@@ -572,7 +572,7 @@ toast.promise(fetchData(), {
     title: 'DataToolbar',
     description: 'Toolbar component for filtering, searching, and managing data lists.',
     DemoComponent: DataToolbarDemo,
-    code: `import { DataToolbar } from '@/components/ui/data-toolbar';
+    code: `import { DataToolbar } from '../../components/ui/data-toolbar';
 
 <DataToolbar
   searchValue={search}
@@ -588,7 +588,7 @@ toast.promise(fetchData(), {
     title: 'Sidebar',
     description: 'Modern SaaS sidebar navigation with 6 design variations. Features brand gradients, glassmorphism, and sleek animations. Supports both admin and customer portal styles.',
     DemoComponent: SidebarDemo,
-    code: `import { Sidebar } from '@/components/ui/sidebar';
+    code: `import { Sidebar } from '../../components/ui/sidebar';
 
 <Sidebar
   variant="minimal"
@@ -644,11 +644,11 @@ toast.promise(fetchData(), {
     title: 'Booking Form',
     description: 'Modern booking component with form and confirmation states. Features 3D elevation effects, smooth animations, gradient buttons, and clean design using design system components.',
     DemoComponent: BookingDemo,
-    code: `import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Button } from '@/components/ui/button';
-import { Alert, AlertDescription, AlertIcon, AlertTitle } from '@/components/ui/alert';
+    code: `import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '../../components/ui/card';
+import { Input } from '../../components/ui/input';
+import { Textarea } from '../../components/ui/textarea';
+import { Button } from '../../components/ui/button';
+import { Alert, AlertDescription, AlertIcon, AlertTitle } from '../../components/ui/alert';
 
 <Card className="shadow-elevated">
   <CardHeader>

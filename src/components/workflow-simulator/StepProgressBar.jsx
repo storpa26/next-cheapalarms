@@ -1,5 +1,5 @@
 import { CheckCircle2, Circle } from 'lucide-react';
-import { getCurrentStep } from '@/lib/workflow-simulator/steps';
+import { getCurrentStep } from '../../lib/workflow-simulator/steps';
 
 export function StepProgressBar({ portalMeta, currentStepId }) {
   const totalSteps = 8;

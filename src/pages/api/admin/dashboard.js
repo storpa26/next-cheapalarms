@@ -1,4 +1,4 @@
-import { getDashboardData } from "@/lib/admin/services/dashboard-data";
+import { getDashboardData } from "../../../lib/admin/services/dashboard-data";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {

@@ -1,8 +1,8 @@
 import * as React from "react"
-import { Button } from "@/components/ui/button"
-import { Stack } from "@/components/ui/stack"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs"
+import { Button } from "../../../../components/ui/button"
+import { Stack } from "../../../../components/ui/stack"
+import { Card, CardContent, CardHeader, CardTitle } from "../../../../components/ui/card"
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../../components/ui/tabs"
 
 export default function ButtonDemo() {
   const [variant, setVariant] = React.useState("default")

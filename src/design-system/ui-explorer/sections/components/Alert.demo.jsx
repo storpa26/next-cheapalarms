@@ -1,6 +1,6 @@
 import * as React from "react"
-import { Alert, AlertTitle, AlertDescription, AlertIcon } from "@/components/ui/alert"
-import { Stack } from "@/components/ui/stack"
+import { Alert, AlertTitle, AlertDescription, AlertIcon } from "../../../../components/ui/alert"
+import { Stack } from "../../../../components/ui/stack"
 
 export default function AlertDemo() {
   return (

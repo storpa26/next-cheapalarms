@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "../../lib/utils"
 import { Button } from "./button"
 import {
   getCalendarGrid,
@@ -14,7 +14,7 @@ import {
   getMonthYearLabel,
   isBefore,
   isAfter,
-} from "@/lib/utils/date-utils"
+} from "../../lib/utils/date-utils"
 
 const DatePickerContext = React.createContext({
   value: null,

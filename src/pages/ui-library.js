@@ -1,7 +1,7 @@
 import { useRouter } from "next/router"
 import { useEffect } from "react"
-import { ExplorerLayout } from "@/design-system/ui-explorer/components/ExplorerLayout"
-import { registry } from "@/design-system/ui-explorer/registry"
+import { ExplorerLayout } from "../design-system/ui-explorer/components/ExplorerLayout"
+import { registry } from "../design-system/ui-explorer/registry"
 
 export default function UILibraryPage() {
   const router = useRouter()
