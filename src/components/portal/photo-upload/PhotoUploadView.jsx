@@ -285,7 +285,12 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
                   try {
                     const date = new Date(submittedAt);
                     if (!isNaN(date.getTime())) {
-                      return `on ${date.toLocaleDateString()}`;
+                      // SSR-safe date formatting
+                      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      const month = months[date.getUTCMonth()];
+                      const day = date.getUTCDate();
+                      const year = date.getUTCFullYear();
+                      return `on ${day} ${month} ${year}`;
                     }
                   } catch {}
                   return null;

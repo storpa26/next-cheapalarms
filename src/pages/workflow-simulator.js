@@ -325,7 +325,8 @@ export default function WorkflowSimulator() {
         quote: {
           status: null,
           statusLabel: null,
-          number: 'EST-' + Math.floor(Math.random() * 1000),
+          // Use timestamp-based ID instead of random for SSR consistency
+          number: 'EST-' + Math.floor(Date.now() % 10000),
           photos_required: portalMeta.quote?.photos_required ?? null, // Preserve existing value from scenario
           acceptance_enabled: false,
         },

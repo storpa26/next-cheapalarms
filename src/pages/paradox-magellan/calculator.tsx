@@ -9,18 +9,15 @@ import { CALCULATOR_STEPS } from '../../types/paradox-calculator';
 import ProgressIndicator from '../../components/paradox-calculator/ProgressIndicator';
 import QuoteSummary from '../../components/paradox-calculator/QuoteSummary';
 import PropertyTypeStep from '../../components/paradox-calculator/PropertyTypeStep';
-import ControlPanelStep from '../../components/paradox-calculator/ControlPanelStep';
-import KeypadsStep from '../../components/paradox-calculator/KeypadsStep';
-import RemotesStep from '../../components/paradox-calculator/RemotesStep';
+import ControlDevicesStep from '../../components/paradox-calculator/ControlDevicesStep';
 import MotionDetectorsStep from '../../components/paradox-calculator/MotionDetectorsStep';
 import OutdoorMotionStep from '../../components/paradox-calculator/OutdoorMotionStep';
-import DoorContactsStep from '../../components/paradox-calculator/DoorContactsStep';
-import SirensStep from '../../components/paradox-calculator/SirensStep';
-import SmokeDetectorsStep from '../../components/paradox-calculator/SmokeDetectorsStep';
-import AccessoriesStep from '../../components/paradox-calculator/AccessoriesStep';
+import EntryProtectionStep from '../../components/paradox-calculator/EntryProtectionStep';
+import SafetyExtrasStep from '../../components/paradox-calculator/SafetyExtrasStep';
 import ReviewStep from '../../components/paradox-calculator/ReviewStep';
 import SubmitSuccess from '../../components/paradox-calculator/SubmitSuccess';
 import WarningModal from '../../components/paradox-calculator/WarningModal';
+import ScrollIndicator from '../../components/paradox-calculator/ScrollIndicator';
 
 const CalculatorContent = () => {
   const { 
@@ -43,27 +40,26 @@ const CalculatorContent = () => {
 
   // Validation for proceeding
   const canProceed = () => {
-    if (currentStep === 3 && !hasKeypad()) return false; // Keypads required
+    if (currentStep === 2 && !hasKeypad()) return false; // Keypads required (now step 2)
     return true;
   };
 
   const handleNext = () => {
-    // Keypad validation
-    if (currentStep === 3 && !hasKeypad()) {
+    // Keypad validation (now step 2)
+    if (currentStep === 2 && !hasKeypad()) {
       setShowKeypadWarning(true);
       return;
     }
     
-    // Siren validation
-    if (currentStep === 8 && !hasSiren()) {
+    // Siren validation (now step 5)
+    if (currentStep === 5 && !hasSiren()) {
       setShowSirenWarning(true);
       return;
     }
 
-    // Skip outdoor step for apartments
-    if (currentStep === 5 && isApartment) {
-      // Skip to step 7 (door contacts)
-      nextStep();
+    // Skip outdoor step for apartments (now step 4)
+    if (currentStep === 4 && isApartment) {
+      // Skip to step 5 (entry protection)
       nextStep();
       return;
     }
@@ -72,8 +68,8 @@ const CalculatorContent = () => {
   };
 
   const handleBack = () => {
-    // Handle skipped outdoor step
-    if (currentStep === 7 && isApartment) {
+    // Handle skipped outdoor step (now step 4)
+    if (currentStep === 5 && isApartment) {
       prevStep();
       prevStep();
       return;
@@ -98,16 +94,12 @@ const CalculatorContent = () => {
   const renderStep = () => {
     switch (currentStep) {
       case 1: return <PropertyTypeStep />;
-      case 2: return <ControlPanelStep />;
-      case 3: return <KeypadsStep />;
-      case 4: return <RemotesStep />;
-      case 5: return <MotionDetectorsStep />;
-      case 6: return <OutdoorMotionStep />;
-      case 7: return <DoorContactsStep />;
-      case 8: return <SirensStep />;
-      case 9: return <SmokeDetectorsStep />;
-      case 10: return <AccessoriesStep />;
-      case 11: return <ReviewStep onSubmit={handleSubmit} />;
+      case 2: return <ControlDevicesStep />;
+      case 3: return <MotionDetectorsStep />;
+      case 4: return <OutdoorMotionStep />;
+      case 5: return <EntryProtectionStep />;
+      case 6: return <SafetyExtrasStep />;
+      case 7: return <ReviewStep onSubmit={handleSubmit} />;
       default: return <PropertyTypeStep />;
     }
   };
@@ -132,7 +124,8 @@ const CalculatorContent = () => {
       </header>
 
       {/* Main content */}
-      <main className="container mx-auto px-4 py-8">
+      <main className="container mx-auto px-4 py-8 relative">
+        <ScrollIndicator />
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
@@ -155,9 +148,9 @@ const CalculatorContent = () => {
           onNext={handleNext}
           onBack={handleBack}
           showBack={!isFirstStep}
-          nextLabel={currentStep === 10 ? 'Review Quote' : 'Continue'}
+          nextLabel={currentStep === 6 ? 'Review Quote' : 'Continue'}
           nextDisabled={!canProceed()}
-          validationError={currentStep === 3 && !hasKeypad() ? 'Select at least one keypad' : undefined}
+          validationError={currentStep === 2 && !hasKeypad() ? 'Select at least one keypad' : undefined}
         />
       )}
 

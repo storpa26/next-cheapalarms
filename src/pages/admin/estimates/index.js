@@ -1,13 +1,15 @@
 import Head from "next/head";
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
-import { Settings, Plus } from "lucide-react";
+import { Settings, Plus, Download, FileText } from "lucide-react";
+import * as XLSX from 'xlsx';
 import { Button } from "../../../components/ui/button";
 import { Badge } from "../../../components/ui/badge";
 import AdminLayout from "../../../components/admin/layout/AdminLayout";
 import { 
   useAdminEstimates, 
   useAdminEstimatesTrash,
+  useAdminEstimatesChart,
   useDeleteEstimate,
   useBulkDeleteEstimates
 } from "../../../lib/react-query/hooks/admin";
@@ -24,6 +26,8 @@ import { BulkDeleteDialog } from "../../../components/admin/BulkDeleteDialog";
 import { EstimateActionsMenu } from "../../../components/admin/EstimateActionsMenu";
 import { TrashView } from "../../../components/admin/TrashView";
 import { FloatingActionBar } from "../../../components/admin/FloatingActionBar";
+import { EstimatesChart } from "../../../components/admin/EstimatesChart";
+import { TimeRangeSelector } from "../../../components/admin/TimeRangeSelector";
 import { Checkbox } from "../../../components/ui/checkbox";
 import { useKeyboardShortcuts } from "../../../hooks/useKeyboardShortcuts";
 import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "../../../lib/admin/constants";
@@ -44,6 +48,7 @@ export default function EstimatesListPage() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
+  const [chartRange, setChartRange] = useState('30d');
   const pageSize = DEFAULT_PAGE_SIZE;
 
   const deleteEstimateMutation = useDeleteEstimate();
@@ -61,6 +66,8 @@ export default function EstimatesListPage() {
     search: search || undefined,
     portalStatus: portalStatusFilter || undefined,
     workflowStatus: workflowStatusFilter || undefined,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
     page,
     pageSize,
     enabled: activeTab !== "trash",
@@ -76,6 +83,16 @@ export default function EstimatesListPage() {
     locationId: locationId || undefined,
     limit: 100,
     enabled: activeTab === "trash",
+  });
+
+  // Fetch chart data (only when not in trash tab)
+  const { 
+    data: chartData, 
+    isLoading: chartLoading, 
+    error: chartError 
+  } = useAdminEstimatesChart({
+    range: chartRange,
+    enabled: activeTab !== "trash",
   });
 
   const handleRefresh = useCallback(() => {
@@ -131,6 +148,54 @@ export default function EstimatesListPage() {
       // Error handled by mutation
     }
   }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope]);
+
+  // Handle Excel export
+  const handleExportCSV = useCallback(() => {
+    const estimates = data?.items || [];
+    if (estimates.length === 0) return;
+
+    // Prepare data with proper date handling
+    const worksheetData = estimates.map(est => ({
+      'Estimate Number': est.estimateNumber || est.id || '',
+      'Title': est.title || 'ESTIMATE',
+      'Customer Name': est.contactName || '',
+      'Email': est.contactEmail || '',
+      'Total': est.total || 0,
+      'Currency': est.currency || DEFAULT_CURRENCY,
+      'GHL Status': est.ghlStatus || '',
+      'Portal Status': est.portalStatus || '',
+      'Workflow Status': est.workflowStatus || '',
+      'Created At': est.createdAt ? new Date(est.createdAt) : null,
+      'Updated At': est.updatedAt ? new Date(est.updatedAt) : null,
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(worksheetData);
+
+    // Auto-size columns to prevent truncation
+    const colWidths = [
+      { wch: 15 }, // Estimate Number
+      { wch: 25 }, // Title
+      { wch: 20 }, // Customer Name
+      { wch: 25 }, // Email
+      { wch: 12 }, // Total
+      { wch: 8 },  // Currency
+      { wch: 12 }, // GHL Status
+      { wch: 12 }, // Portal Status
+      { wch: 15 }, // Workflow Status
+      { wch: 20 }, // Created At
+      { wch: 20 }, // Updated At
+    ];
+    ws['!cols'] = colWidths;
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, 'Estimates');
+
+    // Generate file and download
+    const fileName = `estimates-export-${new Date().toISOString().split('T')[0]}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  }, [data?.items]);
 
   // Use backend summary totals (calculated across ALL estimates, not just current page)
   const summaryMetrics = useMemo(() => {
@@ -303,47 +368,80 @@ export default function EstimatesListPage() {
       </Head>
       <AdminLayout title="Estimates">
         <div className="space-y-6">
-          {/* Page Header */}
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-foreground">Estimates</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Create and manage all estimates generated for your business
-              </p>
+          {/* Chart Section - Only show when not in trash */}
+          {activeTab !== "trash" && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">Overview</h2>
+                  <p className="text-sm text-muted-foreground">Track estimate activity over time</p>
+                </div>
+                <TimeRangeSelector value={chartRange} onChange={setChartRange} />
+              </div>
+              <EstimatesChart 
+                data={chartData?.data} 
+                isLoading={chartLoading}
+                error={chartError}
+                range={chartRange}
+              />
             </div>
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon">
-                <Settings className="h-5 w-5" />
-              </Button>
-              <Button variant="default">
-                <Plus className="h-4 w-4" />
-                New Estimate
-              </Button>
+          )}
+
+          {/* Page Header */}
+          <div className="relative">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-secondary/5 to-transparent rounded-2xl -z-10" />
+            <div className="flex items-start justify-between p-6 rounded-2xl border border-border/50 bg-surface/50 backdrop-blur-sm">
+              <div>
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                  Estimates
+                </h1>
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Create and manage all estimates generated for your business
+                </p>
+              </div>
+              <div className="flex items-center gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={handleExportCSV}
+                  disabled={!data?.items?.length || isLoading}
+                  className="flex items-center gap-2 border-border/60 hover:border-primary/50 hover:bg-primary/5"
+                >
+                  <Download className="h-4 w-4" />
+                  Export Excel
+                </Button>
+                <Button variant="outline" size="icon" className="border-border/60 hover:border-primary/50 hover:bg-primary/5">
+                  <Settings className="h-5 w-5" />
+                </Button>
+                <Button variant="default" className="bg-gradient-to-r from-primary to-primary-hover hover:from-primary-hover hover:to-primary shadow-lg shadow-primary/20">
+                  <Plus className="h-4 w-4" />
+                  New Estimate
+                </Button>
+              </div>
             </div>
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <SummaryCard
-              label={`${summaryMetrics.sent.count} in sent`}
+              label="Sent Estimates"
               value={summaryMetrics.sent.total}
               currency={DEFAULT_CURRENCY}
               variant="sent"
             />
             <SummaryCard
-              label={`${summaryMetrics.accepted.count} in accepted`}
+              label="Accepted"
               value={summaryMetrics.accepted.total}
               currency={DEFAULT_CURRENCY}
               variant="accepted"
             />
             <SummaryCard
-              label={`${summaryMetrics.declined.count} in declined`}
+              label="Declined"
               value={summaryMetrics.declined.total}
               currency={DEFAULT_CURRENCY}
               variant="declined"
             />
             <SummaryCard
-              label={`${summaryMetrics.invoiced.count} in invoiced`}
+              label="Invoiced"
               value={summaryMetrics.invoiced.total}
               currency={DEFAULT_CURRENCY}
               variant="invoiced"
@@ -413,8 +511,30 @@ export default function EstimatesListPage() {
               )}
             </div>
           ) : estimates.length === 0 ? (
-            <div className="rounded-lg border border-border bg-surface p-12 text-center">
-              <p className="text-muted-foreground">No estimates found</p>
+            <div className="rounded-xl border border-border/60 bg-gradient-to-br from-surface to-surface-2 p-16 text-center">
+              <div className="max-w-md mx-auto space-y-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
+                  <FileText className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">No estimates found</h3>
+                  <p className="text-sm text-muted-foreground">
+                    {search || startDate || endDate || workflowStatusFilter
+                      ? "Try adjusting your filters to see more results"
+                      : "Get started by creating your first estimate"}
+                  </p>
+                </div>
+                {!search && !startDate && !endDate && !workflowStatusFilter && (
+                  <Button 
+                    variant="default" 
+                    className="mt-4 bg-gradient-to-r from-primary to-primary-hover shadow-lg shadow-primary/20"
+                    onClick={() => {/* Handle new estimate */}}
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create First Estimate
+                  </Button>
+                )}
+              </div>
             </div>
           ) : (
             <>
@@ -426,7 +546,7 @@ export default function EstimatesListPage() {
                     <div
                       key={estimate.id}
                       onClick={() => handleRowClick(estimate.id)}
-                      className={`bg-surface rounded-lg border border-border p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99] ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                      className={`bg-surface rounded-xl border border-border/60 p-5 shadow-sm cursor-pointer transition-all duration-200 ease-standard hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5 active:scale-[0.98] ${isSelected ? 'ring-2 ring-primary/30 bg-primary/5' : ''}`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -485,22 +605,23 @@ export default function EstimatesListPage() {
                         </div>
                       </div>
                       
-                      <div className="flex items-center justify-between pt-3 border-t border-border">
+                      <div className="flex items-center justify-between pt-4 border-t border-border/60 mt-4">
                         <div>
-                          <p className="text-xs text-muted-foreground">Value</p>
-                          <p className="text-sm font-semibold text-foreground">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Value</p>
+                          <p className="text-base font-bold text-primary">
                             {estimate.total > 0
                               ? `${estimate.currency || DEFAULT_CURRENCY} ${estimate.total.toFixed(2)}`
                               : "—"}
                           </p>
                         </div>
-                        <div>
-                          <p className="text-xs text-muted-foreground">Created</p>
-                          <p className="text-sm text-foreground">
+                        <div className="text-right">
+                          <p className="text-xs font-medium text-muted-foreground mb-1">Created</p>
+                          <p className="text-sm font-medium text-foreground">
                             {estimate.createdAt
                               ? new Date(estimate.createdAt).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",
+                                  year: "numeric",
                                 })
                               : "—"}
                           </p>
@@ -512,10 +633,10 @@ export default function EstimatesListPage() {
               </div>
 
               {/* Desktop Table View */}
-              <div className="hidden lg:block bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
+              <div className="hidden lg:block bg-surface rounded-xl border border-border shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted border-b border-border">
+                    <thead className="bg-gradient-to-r from-muted/50 to-muted/30 border-b border-border sticky top-0 z-10 backdrop-blur-sm">
                       <tr>
                         <th className="px-6 py-4 text-left">
                           <Checkbox
@@ -556,7 +677,7 @@ export default function EstimatesListPage() {
                         return (
                         <tr
                           key={estimate.id}
-                          className={`cursor-pointer transition-colors hover:bg-primary/5 ${isSelected ? 'bg-primary/10' : ''}`}
+                          className={`cursor-pointer transition-all duration-200 ease-standard hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent ${isSelected ? 'bg-primary/10 ring-2 ring-primary/20' : ''}`}
                           onClick={() => handleRowClick(estimate.id)}
                         >
                           <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -640,6 +761,7 @@ export default function EstimatesListPage() {
                               onViewDetails={handleViewDetails}
                               onMoveToTrash={handleDeleteClick}
                               locationId={locationId || estimate.locationId}
+                              linkedInvoiceId={estimate.linkedInvoiceId}
                             />
                           </td>
                         </tr>
@@ -652,24 +774,29 @@ export default function EstimatesListPage() {
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="flex items-center justify-between bg-surface px-6 py-4 border-t border-border rounded-b-lg">
-                  <p className="text-sm text-muted-foreground">
-                    Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total}
+                <div className="flex items-center justify-between bg-gradient-to-r from-surface/80 to-surface/60 backdrop-blur-sm px-6 py-4 border-t border-border/60 rounded-b-xl">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Showing <span className="text-foreground font-semibold">{((page - 1) * pageSize) + 1}</span> to <span className="text-foreground font-semibold">{Math.min(page * pageSize, total)}</span> of <span className="text-foreground font-semibold">{total}</span>
                   </p>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <Button
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       disabled={page === 1}
                       variant="outline"
                       size="sm"
+                      className="border-border/60 hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50"
                     >
                       Previous
                     </Button>
+                    <span className="text-sm text-muted-foreground px-2">
+                      Page {page} of {totalPages}
+                    </span>
                     <Button
                       onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       disabled={page >= totalPages}
                       variant="outline"
                       size="sm"
+                      className="border-border/60 hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50"
                     >
                       Next
                     </Button>

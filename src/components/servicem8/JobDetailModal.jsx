@@ -1,6 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import { Badge } from "../ui/badge";
 import { Card, CardContent } from "../ui/card";
+import JobSchedulingPanel from "./JobSchedulingPanel";
 
 export default function JobDetailModal({ job, open, onClose }) {
   if (!job) return null;
@@ -172,6 +173,16 @@ export default function JobDetailModal({ job, open, onClose }) {
                 <p className="text-sm text-foreground">{job.notes}</p>
               </CardContent>
             </Card>
+          )}
+
+          {/* Scheduling Panel */}
+          {(job?.uuid || job?.job?.uuid) && (
+            <JobSchedulingPanel
+              jobUuid={job?.uuid || job?.job?.uuid}
+              onScheduled={() => {
+                // Could refresh job data here if needed
+              }}
+            />
           )}
 
           {/* Actions */}

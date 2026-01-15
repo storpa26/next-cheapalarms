@@ -24,6 +24,7 @@ import { getEstimates } from "../../lib/wp";
 import { Button } from "../../components/ui/button";
 import { toast } from "../../components/ui/use-toast";
 import { isAuthenticated, getLoginRedirect } from "../../lib/auth";
+import { getAuthContext } from "../../lib/auth/getAuthContext";
 
 export default function DashboardPage({ estimates, error }) {
   const [resending, setResending] = useState({});
@@ -169,8 +170,6 @@ export default function DashboardPage({ estimates, error }) {
 }
 
 export async function getServerSideProps(ctx) {
-  const { getAuthContext } = await import("@/lib/auth/getAuthContext");
-  const { getLoginRedirect } = await import("@/lib/auth");
   const authContext = await getAuthContext(ctx.req);
 
   // Not authenticated -> redirect to login

@@ -29,9 +29,11 @@
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "react-intersection-observer": "^10.0.0",
+    "recharts": "^3.6.0",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.4.0",
-    "xero-node": "^13.3.0"
+    "xero-node": "^13.3.0",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@playwright/test": "^1.48.0",

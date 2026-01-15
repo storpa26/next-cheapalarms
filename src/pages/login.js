@@ -3,6 +3,7 @@ import { ThemeToggle } from "../components/ui/theme-toggle";
 import { LoginBackground } from "../components/auth/LoginBackground";
 import { LoginCard } from "../components/auth/LoginCard";
 import { LoginForm } from "../components/auth/LoginForm";
+import { getAuthContext } from "../lib/auth/getAuthContext";
 
 /**
  * Login Page
@@ -33,7 +34,6 @@ export default function LoginPage() {
 }
 
 export async function getServerSideProps(ctx) {
-  const { getAuthContext } = await import("@/lib/auth/getAuthContext");
   const authContext = await getAuthContext(ctx.req);
   
   // If already authenticated, redirect to dashboard (or return URL)

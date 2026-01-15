@@ -1,4 +1,5 @@
 export { useAdminEstimates } from './use-admin-estimates';
+export { useAdminEstimatesChart } from './use-admin-estimates-chart';
 export { useAdminEstimate } from './use-admin-estimate';
 export { useAdminInvoices } from './use-admin-invoices';
 export { useAdminInvoice } from './use-admin-invoice';

@@ -7,6 +7,7 @@ import { RevisionBanner } from "../sections/RevisionBanner";
 import { WorkflowProgress } from "../sections/WorkflowProgress";
 import { BookingCard } from "../sections/BookingCard";
 import { PaymentCard } from "../sections/PaymentCard";
+import InstallationStatus from "../sections/InstallationStatus";
 
 export const OverviewView = memo(function OverviewView({ 
   estimate, 
@@ -106,6 +107,13 @@ export const OverviewView = memo(function OverviewView({
             workflow={view?.workflow}
             invoice={view?.invoice}
           />
+        </div>
+      )}
+
+      {/* Installation Status (ServiceM8 Job Status) - Show when estimate is accepted */}
+      {view?.workflow?.status === 'accepted' && estimateId && (
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <InstallationStatus estimateId={estimateId} />
         </div>
       )}
 

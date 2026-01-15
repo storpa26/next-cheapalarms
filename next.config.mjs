@@ -1,4 +1,9 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import { fileURLToPath } from "url";
+import { dirname, resolve } from "path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -13,6 +18,12 @@ const nextConfig = {
         hostname: "cdn.coverr.co",
       },
     ],
+  },
+  turbopack: {
+    resolveAlias: {
+      "@/*": resolve(__dirname, "src"),
+    },
+    resolveExtensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
   },
 };
 

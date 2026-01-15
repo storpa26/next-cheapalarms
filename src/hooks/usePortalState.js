@@ -199,13 +199,18 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   // This ensures server-side errors (like invalid invite tokens) are displayed
   const error = initialError || (estimateId ? statusError?.message : dashboardError?.message);
 
-  // Get last viewed estimate from localStorage
-  const lastViewedEstimateId = useMemo(() => {
-    if (estimateId) return estimateId;
-    if (typeof window !== "undefined") {
-      return window.localStorage.getItem("ca_last_estimate");
+  // Get last viewed estimate from localStorage (SSR-safe)
+  const [lastViewedEstimateId, setLastViewedEstimateId] = useState(estimateId || null);
+  
+  useEffect(() => {
+    if (estimateId) {
+      setLastViewedEstimateId(estimateId);
+    } else if (typeof window !== "undefined") {
+      const stored = window.localStorage.getItem("ca_last_estimate");
+      if (stored) {
+        setLastViewedEstimateId(stored);
+      }
     }
-    return null;
   }, [estimateId]);
 
   // Save estimateId to localStorage when it changes

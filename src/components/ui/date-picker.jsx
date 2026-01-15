@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react"
 import { Calendar, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "../../lib/utils"
@@ -29,28 +31,40 @@ const DatePicker = React.forwardRef(({
   value,
   defaultValue,
   onValueChange,
+  open: controlledOpen,
+  onOpenChange,
   minDate,
   maxDate,
   disabled,
   placeholder = "Select date...",
   ...props
 }, ref) => {
-  const [open, setOpen] = React.useState(false)
+  const [internalOpen, setInternalOpen] = React.useState(false)
   const [internalValue, setInternalValue] = React.useState(defaultValue || "")
   const isControlled = value !== undefined
+  const isOpenControlled = controlledOpen !== undefined
   const currentValue = isControlled ? value : internalValue
+  const open = isOpenControlled ? controlledOpen : internalOpen
 
   const handleValueChange = (newValue) => {
     if (!isControlled) {
       setInternalValue(newValue)
     }
     onValueChange?.(newValue)
-    setOpen(false)
+    if (!isOpenControlled) {
+      setInternalOpen(false)
+    } else {
+      onOpenChange?.(false)
+    }
   }
 
   const handleOpenChange = (newOpen) => {
     if (!disabled) {
-      setOpen(newOpen)
+      if (!isOpenControlled) {
+        setInternalOpen(newOpen)
+      } else {
+        onOpenChange?.(newOpen)
+      }
     }
   }
 

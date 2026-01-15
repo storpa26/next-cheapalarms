@@ -1,8 +1,17 @@
 import { useState, useEffect } from 'react';
+import { Inter } from 'next/font/google';
 import '../styles/globals.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../lib/react-query/query-client';
 import { Toaster } from '../components/ui/sonner';
+
+// Load Inter font - optimized for UI, professional, perfect for security/tech industry
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+  display: 'swap',
+  weight: ['300', '400', '500', '600', '700'],
+});
 
 // Initialize Sentry on client-side
 if (typeof window !== 'undefined') {
@@ -92,6 +101,13 @@ export default function App({ Component, pageProps }) {
   // Use useState to ensure QueryClient is only created once per app instance
   // This prevents creating a new client on every render
   const [client] = useState(() => queryClient);
+
+  // Apply font variable to html element on mount (client-side only to avoid hydration issues)
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.classList.add(inter.variable);
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={client}>

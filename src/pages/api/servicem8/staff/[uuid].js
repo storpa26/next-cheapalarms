@@ -1,4 +1,4 @@
-import { createWpProxyHandler } from "@/lib/api/wp-proxy";
+import { createWpProxyHandler } from "../../../../lib/api/wp-proxy";
 
 export default createWpProxyHandler((req) => {
   const { uuid } = req.query;

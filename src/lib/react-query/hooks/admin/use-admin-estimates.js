@@ -6,15 +6,17 @@ import { DEFAULT_PAGE_SIZE } from '../../../admin/constants';
  * Uses Next.js API route (/api/admin/estimates) which runs server-side
  * and can read httpOnly cookies for authentication.
  */
-export function useAdminEstimates({ search, status, portalStatus, workflowStatus, page = 1, pageSize = DEFAULT_PAGE_SIZE, enabled = true } = {}) {
+export function useAdminEstimates({ search, status, portalStatus, workflowStatus, startDate, endDate, page = 1, pageSize = DEFAULT_PAGE_SIZE, enabled = true } = {}) {
   return useQuery({
-    queryKey: ['admin-estimates', search, status, portalStatus, workflowStatus, page, pageSize],
+    queryKey: ['admin-estimates', search, status, portalStatus, workflowStatus, startDate, endDate, page, pageSize],
     queryFn: async () => {
       const params = new URLSearchParams();
       if (search) params.set('search', search);
       if (status) params.set('status', status);
       if (portalStatus) params.set('portalStatus', portalStatus);
       if (workflowStatus) params.set('workflowStatus', workflowStatus);
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
       params.set('page', page.toString());
       params.set('pageSize', pageSize.toString());
 

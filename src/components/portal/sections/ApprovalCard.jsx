@@ -146,7 +146,13 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           <div className="rounded-2xl border border-border bg-muted p-4">
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Estimate total</p>
             <p className="mt-2 text-3xl font-semibold text-foreground">
-              {mounted && total > 0 ? `$${total.toLocaleString("en-AU")}` : total > 0 ? `$${total}` : "—"}
+              {total > 0 ? (() => {
+                // SSR-safe currency formatting
+                const formatted = total.toFixed(2);
+                const parts = formatted.split(".");
+                const integer = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+                return `$${integer}.${parts[1]}`;
+              })() : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
               {mounted ? (hasPhotos ? "Final pricing" : "Preliminary pricing") : "Preliminary pricing"}
@@ -155,14 +161,14 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           <div className="rounded-2xl border border-border bg-muted p-4">
             <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Install window</p>
             <p className="mt-2 text-3xl font-semibold text-foreground">
-              {mounted && scheduledFor
-                ? new Date(scheduledFor).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                : scheduledFor
-                  ? new Date(scheduledFor).toISOString().split("T")[0]
-                  : "TBD"}
+              {scheduledFor ? (() => {
+                // SSR-safe date formatting
+                const date = new Date(scheduledFor);
+                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                const month = months[date.getUTCMonth()];
+                const day = date.getUTCDate();
+                return `${month} ${day}`;
+              })() : "TBD"}
             </p>
             <p className="text-xs text-muted-foreground">Tentative until approval</p>
           </div>
@@ -178,13 +184,15 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
             {acceptedAt && (
               <p className="text-xs text-success mt-1">
                 Accepted on{" "}
-                {mounted
-                  ? new Date(acceptedAt).toLocaleDateString("en-AU", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })
-                  : new Date(acceptedAt).toISOString().split("T")[0]}
+                {(() => {
+                  // SSR-safe date formatting
+                  const date = new Date(acceptedAt);
+                  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                  const month = months[date.getUTCMonth()];
+                  const day = date.getUTCDate();
+                  const year = date.getUTCFullYear();
+                  return `${day} ${month} ${year}`;
+                })()}
               </p>
             )}
           </div>

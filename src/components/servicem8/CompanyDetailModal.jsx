@@ -1,8 +1,18 @@
+"use client";
+
+import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import { Badge } from "../ui/badge";
 import { Card, CardContent } from "../ui/card";
 
 export default function CompanyDetailModal({ company, open, onClose }) {
+  const [now, setNow] = useState(null);
+
+  // Get current time on client-side only (SSR-safe)
+  useEffect(() => {
+    setNow(Date.now());
+  }, []);
+
   if (!company) return null;
 
   return (
@@ -90,17 +100,23 @@ export default function CompanyDetailModal({ company, open, onClose }) {
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Last Job:</span>
                   <span className="font-medium text-foreground">
-                    {new Date(company.lastJobDate).toLocaleDateString("en-AU", {
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    {(() => {
+                      // SSR-safe date formatting
+                      const date = new Date(company.lastJobDate);
+                      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      const month = months[date.getUTCMonth()];
+                      const day = date.getUTCDate();
+                      const year = date.getUTCFullYear();
+                      return `${day} ${month} ${year}`;
+                    })()}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Days Since Last Job:</span>
                   <span className="font-medium text-foreground">
-                    {Math.floor((Date.now() - new Date(company.lastJobDate).getTime()) / (1000 * 60 * 60 * 24))} days
+                    {now !== null
+                      ? `${Math.floor((now - new Date(company.lastJobDate).getTime()) / (1000 * 60 * 60 * 24))} days`
+                      : "—"}
                   </span>
                 </div>
               </div>
@@ -112,25 +128,35 @@ export default function CompanyDetailModal({ company, open, onClose }) {
             <CardContent className="p-4">
               <h3 className="font-semibold mb-4 text-foreground">Job History</h3>
               <div className="space-y-2">
-                {Array.from({ length: Math.min(5, company.totalJobs) }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center justify-between p-2 rounded-lg bg-background/50 text-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-muted-foreground">Job #{Math.floor(Math.random() * 5000) + 1000}</span>
-                      <Badge variant="outline" className="text-xs">
-                        {i === 0 ? "Active" : "Completed"}
-                      </Badge>
-                    </div>
-                    <span className="text-muted-foreground text-xs">
-                      {new Date(Date.now() - i * 7 * 24 * 60 * 60 * 1000).toLocaleDateString("en-AU", {
-                        month: "short",
-                        day: "numeric",
-                      })}
-                    </span>
-                  </div>
-                ))}
+                {now !== null
+                  ? Array.from({ length: Math.min(5, company.totalJobs) }).map((_, i) => {
+                      // SSR-safe: Use deterministic job number based on index
+                      const jobNumber = 1000 + (i * 137) % 4000; // Deterministic pseudo-random
+                      // SSR-safe date formatting (using client-side now value)
+                      const jobDate = new Date(now - i * 7 * 24 * 60 * 60 * 1000);
+                      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                      const month = months[jobDate.getUTCMonth()];
+                      const day = jobDate.getUTCDate();
+                      return (
+                        <div
+                          key={i}
+                          className="flex items-center justify-between p-2 rounded-lg bg-background/50 text-sm"
+                        >
+                          <div className="flex items-center gap-2">
+                            <span className="text-muted-foreground">Job #{jobNumber}</span>
+                            <Badge variant="outline" className="text-xs">
+                              {i === 0 ? "Active" : "Completed"}
+                            </Badge>
+                          </div>
+                          <span className="text-muted-foreground text-xs">
+                            {`${day} ${month}`}
+                          </span>
+                        </div>
+                      );
+                    })
+                  : (
+                    <div className="text-sm text-muted-foreground">Loading job history...</div>
+                  )}
               </div>
             </CardContent>
           </Card>

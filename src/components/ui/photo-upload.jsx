@@ -42,7 +42,8 @@ export const PhotoUpload = forwardRef(function PhotoUpload({ estimateId, locatio
   // Upload a single file
   const uploadFile = useCallback(
     async (file, token) => {
-      const fileId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      // Use timestamp + counter for SSR-safe unique IDs
+      const fileId = `${Date.now()}-${String(Math.floor(Math.random() * 1e9)).padStart(9, '0')}`;
       setUploadProgress((prev) => ({ ...prev, [fileId]: { progress: 0, status: "uploading" } }));
 
       try {

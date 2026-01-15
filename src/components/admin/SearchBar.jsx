@@ -1,6 +1,8 @@
 import { Search, Calendar } from "lucide-react";
+import { useState } from "react";
 import { Input } from "../ui/input";
 import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from "../ui/select";
+import { DatePicker, DatePickerTrigger, DatePickerContent } from "../ui/date-picker";
 
 export function SearchBar({ 
   search, 
@@ -13,27 +15,52 @@ export function SearchBar({
   onWorkflowStatusChange,
   placeholder = "Search..." 
 }) {
+  const [startDateOpen, setStartDateOpen] = useState(false);
+  const [endDateOpen, setEndDateOpen] = useState(false);
+
+  // Close the other picker when one opens
+  const handleStartDateOpenChange = (open) => {
+    setStartDateOpen(open);
+    if (open) {
+      setEndDateOpen(false);
+    }
+  };
+
+  const handleEndDateOpenChange = (open) => {
+    setEndDateOpen(open);
+    if (open) {
+      setStartDateOpen(false);
+    }
+  };
+
   return (
-    <div className="bg-surface rounded-lg border border-border p-4 shadow-sm">
+    <div className="bg-surface/80 backdrop-blur-sm rounded-xl border border-border/60 p-5 shadow-sm">
       <div className="flex flex-wrap items-center gap-4">
         {/* Date Range */}
         <div className="flex items-center gap-2">
           <Calendar className="h-4 w-4 text-muted-foreground" />
-          <Input
-            type="date"
+          <DatePicker
             value={startDate || ""}
-            onChange={(e) => onStartDateChange?.(e.target.value)}
-            className="w-auto"
+            onValueChange={(value) => onStartDateChange?.(value || "")}
+            open={startDateOpen}
+            onOpenChange={handleStartDateOpenChange}
             placeholder="Start Date"
-          />
+          >
+            <DatePickerTrigger className="w-[140px] h-10" />
+            <DatePickerContent />
+          </DatePicker>
           <span className="text-muted-foreground">to</span>
-          <Input
-            type="date"
+          <DatePicker
             value={endDate || ""}
-            onChange={(e) => onEndDateChange?.(e.target.value)}
-            className="w-auto"
+            onValueChange={(value) => onEndDateChange?.(value || "")}
+            open={endDateOpen}
+            onOpenChange={handleEndDateOpenChange}
             placeholder="End Date"
-          />
+            minDate={startDate || undefined}
+          >
+            <DatePickerTrigger className="w-[140px] h-10" />
+            <DatePickerContent />
+          </DatePicker>
         </div>
 
         {/* Workflow Status Filter */}

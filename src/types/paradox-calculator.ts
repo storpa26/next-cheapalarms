@@ -81,16 +81,12 @@ export interface UserInfo {
 
 export const CALCULATOR_STEPS = [
   { id: 1, name: 'Property', shortName: 'Type' },
-  { id: 2, name: 'Control Panel', shortName: 'Panel' },
-  { id: 3, name: 'Keypads', shortName: 'Keypads' },
-  { id: 4, name: 'Remotes', shortName: 'Remotes' },
-  { id: 5, name: 'Indoor Motion', shortName: 'Motion' },
-  { id: 6, name: 'Outdoor Motion', shortName: 'Outdoor' },
-  { id: 7, name: 'Door Contacts', shortName: 'Contacts' },
-  { id: 8, name: 'Sirens', shortName: 'Sirens' },
-  { id: 9, name: 'Smoke Detectors', shortName: 'Smoke' },
-  { id: 10, name: 'Accessories', shortName: 'Extras' },
-  { id: 11, name: 'Review Quote', shortName: 'Review' },
+  { id: 2, name: 'Control Devices', shortName: 'Control' },
+  { id: 3, name: 'Indoor Motion', shortName: 'Motion' },
+  { id: 4, name: 'Outdoor Motion', shortName: 'Outdoor' },
+  { id: 5, name: 'Entry Protection', shortName: 'Entry' },
+  { id: 6, name: 'Safety & Extras', shortName: 'Extras' },
+  { id: 7, name: 'Review Quote', shortName: 'Review' },
 ] as const;
 
 export const MAX_ZONES = 32;
