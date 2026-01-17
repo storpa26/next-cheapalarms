@@ -10,6 +10,7 @@ export function EstimateHeader({ estimate, progress, estimates, total, hasPhotos
   const needsPhotos = !hasPhotos && statusValue !== "accepted";
   const [mounted, setMounted] = useState(false);
 
+   
   useEffect(() => {
     setMounted(true);
   }, []);

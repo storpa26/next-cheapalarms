@@ -105,6 +105,7 @@ export default function EstimatesListPage() {
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
 
   // Clear selection when page, filters, or tab changes
+   
   useEffect(() => {
     setSelectedIds(new Set());
   }, [page, search, activeTab, workflowStatusFilter]);

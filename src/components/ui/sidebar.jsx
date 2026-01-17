@@ -1018,6 +1018,3 @@ function SidebarFooter({ user, enableNotifications, enableThemeToggle, variant }
   )
 }
 
-// Add ripple animation to globals.css (will be added via update)
-export { Sidebar }
-

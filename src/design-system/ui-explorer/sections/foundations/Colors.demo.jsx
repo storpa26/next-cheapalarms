@@ -22,6 +22,7 @@ export default function ColorsDemo() {
       text: getComputedStyle(root).getPropertyValue('--color-text').trim(),
       'text-muted': getComputedStyle(root).getPropertyValue('--color-text-muted').trim(),
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setComputedColors(colors)
   }, [])
   

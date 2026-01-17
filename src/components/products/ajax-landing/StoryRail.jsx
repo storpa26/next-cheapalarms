@@ -433,7 +433,7 @@ export default function StoryRail() {
             <div className="text-7xl mb-4">✅</div>
             <h3 className="text-3xl font-bold mb-4">Complete Protection in Seconds</h3>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              The Ajax Hub 2 coordinates all security devices simultaneously, delivering professional-grade protection with sub-second response times. Your home stays secure, even when you're not there.
+              The Ajax Hub 2 coordinates all security devices simultaneously, delivering professional-grade protection with sub-second response times. Your home stays secure, even when you&apos;re not there.
             </p>
           </div>
         </div>

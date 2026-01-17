@@ -40,9 +40,13 @@ const Select = React.forwardRef(({
   }
 
   const optionsMap = React.useRef(new Map())
+  // Use state to avoid accessing ref.current during render
+  const [options, setOptions] = React.useState(new Map())
 
   const registerOption = React.useCallback((value, label) => {
     optionsMap.current.set(value, label)
+    // Update state to trigger re-render when options change
+    setOptions(new Map(optionsMap.current))
   }, [])
 
   return (
@@ -51,7 +55,7 @@ const Select = React.forwardRef(({
       onValueChange: handleValueChange,
       open,
       onOpenChange: handleOpenChange,
-      options: optionsMap.current,
+      options: options,
       registerOption,
     }}>
       <div className={cn("relative", className)} ref={ref} {...props}>

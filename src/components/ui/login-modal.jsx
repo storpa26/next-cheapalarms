@@ -173,7 +173,7 @@ export function LoginModal({ open, onClose, email, estimateId, onLoginSuccess })
         <CardHeader>
           <CardTitle>You Already Have an Account</CardTitle>
           <CardDescription>
-            Please log in to view your estimate, or reset your password if you've forgotten it.
+            Please log in to view your estimate, or reset your password if you&apos;ve forgotten it.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -311,7 +311,7 @@ export function LoginModal({ open, onClose, email, estimateId, onLoginSuccess })
                       required
                     />
                     <p className="text-xs text-muted-foreground">
-                      Check your email for the reset link. Copy the "key" parameter from the URL.
+                      Check your email for the reset link. Copy the &quot;key&quot; parameter from the URL.
                     </p>
                   </div>
 

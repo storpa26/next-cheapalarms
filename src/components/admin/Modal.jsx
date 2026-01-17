@@ -7,6 +7,7 @@ export function Modal({ isOpen, onClose, title, children, showBackButton = true 
 
   // Track client-side mount to prevent hydration mismatch
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
   }, []);
 

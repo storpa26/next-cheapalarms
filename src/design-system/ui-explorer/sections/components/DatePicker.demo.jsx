@@ -7,9 +7,15 @@ export default function DatePickerDemo() {
   const [value, setValue] = React.useState("")
   const [disabled, setDisabled] = React.useState(false)
   const [hasError, setHasError] = React.useState(false)
+  const [now, setNow] = React.useState(null)
   
-  const today = new Date().toISOString().split('T')[0]
-  const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+  // Get current time on client-side only (SSR-safe)
+  React.useEffect(() => {
+    setNow(Date.now())
+  }, [])
+  
+  const today = now ? new Date(now).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
+  const nextWeek = now ? new Date(now + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]
   
   return (
     <div className="space-y-6">

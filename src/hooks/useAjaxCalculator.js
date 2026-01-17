@@ -49,6 +49,7 @@ export function useAjaxCalculator() {
     needsFourG: true,
   });
 
+   
   useEffect(() => {
     const profile = propertyProfiles.find((item) => item.id === profileId);
     if (!profile) return;

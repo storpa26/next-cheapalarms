@@ -31,6 +31,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const [rejectReason, setRejectReason] = useState("");
   const [mounted, setMounted] = useState(false);
 
+   
   useEffect(() => {
     setMounted(true);
   }, []);

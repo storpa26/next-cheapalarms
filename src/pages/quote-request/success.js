@@ -8,6 +8,7 @@ export default function QuoteRequestSuccessPage() {
   const { estimateId, locationId } = router.query;
   const [mounted, setMounted] = useState(false);
 
+   
   useEffect(() => {
     setMounted(true);
   }, []);

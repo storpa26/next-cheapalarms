@@ -31,15 +31,7 @@ export function UploadModal({
   onClose,
   onSave,
 }) {
-  // FIX: Validate product prop - return early if missing (defensive programming)
-  if (!product) {
-    // FIX: Only log in development to avoid leaking info in production
-    if (process.env.NODE_ENV === 'development') {
-      console.error('UploadModal: product prop is required');
-    }
-    return null; // Gracefully handle missing product
-  }
-  
+  // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS (React Rules of Hooks)
   // Local modal state (draft) - use optional chaining for safety
   const [photos, setPhotos] = useState(product?.photos || []);
   const [note, setNote] = useState(product?.note || '');
@@ -58,7 +50,7 @@ export function UploadModal({
   const uploadAbortControllersRef = useRef(new Map()); // Track uploads for cancellation (Map<tempId, abortFunction>)
   const progressDebounceTimersRef = useRef(new Map()); // Debounce progress updates
   const isMountedRef = useRef(true); // Track if component is mounted (prevents state updates after unmount)
-
+  
   // Helper function to create thumbnail preview (MEMORY LEAK FIX: useCallback + cleanup)
   // Note: Data URLs don't need revoking, but we track them for memory awareness
   const createThumbnail = useCallback(async (file) => {
@@ -596,6 +588,16 @@ export function UploadModal({
     // Close modal
     onClose();
   }, [onClose]);
+
+  // FIX: Validate product prop - return early if missing (defensive programming)
+  // NOTE: This must come AFTER all hooks are called
+  if (!product) {
+    // FIX: Only log in development to avoid leaking info in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('UploadModal: product prop is required');
+    }
+    return null; // Gracefully handle missing product
+  }
 
   const handleDone = async () => {
     // Photos are auto-saved after upload, just need to handle skip/note

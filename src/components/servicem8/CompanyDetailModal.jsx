@@ -11,6 +11,7 @@ export default function CompanyDetailModal({ company, open, onClose }) {
   // Get current time on client-side only (SSR-safe)
   useEffect(() => {
     setNow(Date.now());
+     
   }, []);
 
   if (!company) return null;

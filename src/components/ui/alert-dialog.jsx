@@ -67,8 +67,12 @@ export const AlertDialogContent = React.forwardRef(({
   const [mounted, setMounted] = React.useState(false);
   
   React.useEffect(() => {
+     
     setMounted(true);
-    return () => setMounted(false);
+    return () => {
+       
+      setMounted(false);
+    };
   }, []);
   
   if (!isOpen || !mounted) return null;

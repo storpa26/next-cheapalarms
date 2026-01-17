@@ -113,6 +113,7 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   const [overviewIndex, setOverviewIndex] = useState(0);
 
   // Reset overview index when estimates change
+   
   useEffect(() => {
     if (estimates.length > 0 && overviewIndex >= estimates.length) {
       setOverviewIndex(0);
@@ -202,6 +203,7 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   // Get last viewed estimate from localStorage (SSR-safe)
   const [lastViewedEstimateId, setLastViewedEstimateId] = useState(estimateId || null);
   
+   
   useEffect(() => {
     if (estimateId) {
       setLastViewedEstimateId(estimateId);

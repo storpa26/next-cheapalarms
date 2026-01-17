@@ -48,18 +48,33 @@ const DropdownMenuTrigger = React.forwardRef(
   ({ className, children, asChild = false, ...props }, ref) => {
     const { open, setOpen, setTriggerRef } = React.useContext(DropdownMenuContext);
     const internalRef = React.useRef(null);
-    const triggerRef = ref || internalRef;
+    
+    // Use callback ref to avoid accessing ref during render
+    const triggerRefCallback = React.useCallback((node) => {
+      if (ref) {
+        if (typeof ref === 'function') {
+          ref(node);
+        } else {
+          ref.current = node;
+        }
+      }
+      internalRef.current = node;
+      if (node) {
+        setTriggerRef(node);
+      }
+    }, [ref, setTriggerRef]);
 
     React.useEffect(() => {
-      if (triggerRef?.current) {
-        setTriggerRef(triggerRef.current);
+      if (internalRef.current) {
+        setTriggerRef(internalRef.current);
       }
-    }, [triggerRef, setTriggerRef]);
+    }, [setTriggerRef]);
 
     if (asChild) {
+      // eslint-disable-next-line react-hooks/refs
       return React.cloneElement(children, {
         ...props,
-        ref: triggerRef,
+        ref: triggerRefCallback,
         onClick: (e) => {
           children.props?.onClick?.(e);
           setOpen(!open);
@@ -69,7 +84,7 @@ const DropdownMenuTrigger = React.forwardRef(
 
     return (
       <button
-        ref={triggerRef}
+        ref={triggerRefCallback}
         className={cn(
           "inline-flex items-center justify-center outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           className

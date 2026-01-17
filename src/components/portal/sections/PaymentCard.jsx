@@ -278,9 +278,62 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
  * - workflow.status === "booked" AND not yet fully paid (partial payment scenario)
  */
 export function PaymentCard({ estimateId, locationId, inviteToken, payment, workflow, invoice }) {
+  // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS (React Rules of Hooks)
   const router = useRouter();
   const [shouldReload, setShouldReload] = useState(false);
   const paymentsList = Array.isArray(payment?.payments) ? payment.payments : [];
+
+  // Calculate invoice total (from invoice or fallback) - moved before early returns
+  const getInvoiceTotal = () => {
+    if (invoice) {
+      // Check for new nested structure first
+      if (invoice.ghl && invoice.ghl.total) {
+        return parseFloat(invoice.ghl.total);
+      }
+      // Fallback to old flat structure
+      if (invoice.total) {
+        return parseFloat(invoice.total);
+      }
+    }
+    // Fallback: try to get from payment data if exists
+    if (payment && payment.amount) {
+      return parseFloat(payment.amount);
+    }
+    return null;
+  };
+
+  const invoiceTotal = getInvoiceTotal();
+  const remainingBalance =
+    payment && typeof payment.remainingBalance === 'number'
+      ? payment.remainingBalance
+      : invoiceTotal !== null && payment?.amount
+        ? Math.max(0, invoiceTotal - Number(payment.amount))
+        : null;
+
+  // If partial, charge only the remaining balance
+  const payableAmount =
+    payment?.status === 'partial' && remainingBalance !== null ? remainingBalance : invoiceTotal;
+
+  const formatAmount = (amt) => {
+    if (amt === null || amt === undefined) return '—';
+    const num = Number(amt);
+    if (isNaN(num) || !isFinite(num)) return '—';
+    return `$${num.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const handlePaymentSuccess = useCallback(() => {
+    // Reload page after a short delay to show updated payment status
+    setTimeout(() => {
+      router.reload();
+    }, 1500);
+  }, [router]);
+
+  // Reload if needed
+  useEffect(() => {
+    if (shouldReload) {
+      router.reload();
+    }
+  }, [shouldReload, router]);
 
   // If already paid, show confirmation
   if (payment && payment.status === 'paid') {
@@ -362,58 +415,6 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
       </div>
     );
   }
-
-  // Calculate invoice total (from invoice or fallback)
-  const getInvoiceTotal = () => {
-    if (invoice) {
-      // Check for new nested structure first
-      if (invoice.ghl && invoice.ghl.total) {
-        return parseFloat(invoice.ghl.total);
-      }
-      // Fallback to old flat structure
-      if (invoice.total) {
-        return parseFloat(invoice.total);
-      }
-    }
-    // Fallback: try to get from payment data if exists
-    if (payment && payment.amount) {
-      return parseFloat(payment.amount);
-    }
-    return null;
-  };
-
-  const invoiceTotal = getInvoiceTotal();
-  const remainingBalance =
-    payment && typeof payment.remainingBalance === 'number'
-      ? payment.remainingBalance
-      : invoiceTotal !== null && payment?.amount
-        ? Math.max(0, invoiceTotal - Number(payment.amount))
-        : null;
-
-  // If partial, charge only the remaining balance
-  const payableAmount =
-    payment?.status === 'partial' && remainingBalance !== null ? remainingBalance : invoiceTotal;
-
-  const formatAmount = (amt) => {
-    if (amt === null || amt === undefined) return '—';
-    const num = Number(amt);
-    if (isNaN(num) || !isFinite(num)) return '—';
-    return `$${num.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
-
-  const handlePaymentSuccess = useCallback(() => {
-    // Reload page after a short delay to show updated payment status
-    setTimeout(() => {
-      router.reload();
-    }, 1500);
-  }, [router]);
-
-  // Reload if needed
-  useEffect(() => {
-    if (shouldReload) {
-      router.reload();
-    }
-  }, [shouldReload, router]);
 
   return (
     <Elements stripe={stripePromise}>

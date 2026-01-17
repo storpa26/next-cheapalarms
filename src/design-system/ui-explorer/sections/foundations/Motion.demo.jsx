@@ -7,6 +7,7 @@ export default function MotionDemo() {
   
   useEffect(() => {
     const root = document.documentElement
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMotionVars({
       fast: getComputedStyle(root).getPropertyValue('--motion-fast').trim(),
       normal: getComputedStyle(root).getPropertyValue('--motion-normal').trim(),

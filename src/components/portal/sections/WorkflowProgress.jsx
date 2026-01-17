@@ -15,6 +15,7 @@ import { useState, useEffect } from "react";
 export function WorkflowProgress({ workflow }) {
   const [mounted, setMounted] = useState(false);
 
+   
   useEffect(() => {
     setMounted(true);
   }, []);

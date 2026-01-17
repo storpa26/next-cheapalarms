@@ -47,7 +47,7 @@ export function SaveEstimateModal({
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Changes Summary */}
         <div className="rounded-lg bg-muted p-4 space-y-2 max-h-64 overflow-y-auto">
-          <p className="text-sm font-semibold text-foreground mb-2">Changes you're about to save:</p>
+          <p className="text-sm font-semibold text-foreground mb-2">Changes you&apos;re about to save:</p>
           
           {/* Quantity Changes */}
           {changedItems.length > 0 && (
@@ -149,7 +149,7 @@ export function SaveEstimateModal({
             rows={4}
           />
           <p className="text-xs text-muted-foreground mt-1">
-            This will be included in the email and shown in the customer's portal
+            This will be included in the email and shown in the customer&apos;s portal
           </p>
         </div>
 
