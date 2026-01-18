@@ -43,7 +43,16 @@ export function useXeroAuthorize() {
         } catch {
           error = { err: `HTTP ${res.status}: ${res.statusText}` };
         }
-        throw new Error(error.err || error.error || 'Failed to get Xero authorization URL');
+        // Preserve error code and details for better error handling
+        const errorMessage = error.err || error.error || 'Failed to get Xero authorization URL';
+        const apiError = new Error(errorMessage);
+        if (error.code) {
+          apiError.code = error.code;
+        }
+        if (error.error) {
+          apiError.originalError = error.error;
+        }
+        throw apiError;
       }
       return res.json();
     },

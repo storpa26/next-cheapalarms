@@ -72,6 +72,7 @@ export function EstimateDetailView({
           // Show payment form when accepted and invoice exists (not yet paid)
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <PaymentCard
+              minimumPaymentInfo={view?.minimumPaymentInfo}
               estimateId={estimateId}
               locationId={view?.locationId}
               inviteToken={view?.account?.inviteToken}
@@ -95,6 +96,7 @@ export function EstimateDetailView({
           // Show payment form for partial payments (booked but not fully paid)
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <PaymentCard
+              minimumPaymentInfo={view?.minimumPaymentInfo}
               estimateId={estimateId}
               locationId={view?.locationId}
               inviteToken={view?.account?.inviteToken}

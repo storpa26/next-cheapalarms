@@ -107,6 +107,7 @@ export const OverviewView = memo(function OverviewView({
             payment={view?.payment}
             workflow={view?.workflow}
             invoice={view?.invoice}
+            minimumPaymentInfo={view?.minimumPaymentInfo}
           />
         </div>
       )}

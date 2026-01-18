@@ -17,7 +17,7 @@ export default function AdminIntegrations() {
 
   // Xero integration hooks
   const { data: xeroStatus, isLoading: xeroStatusLoading, refetch: refetchXeroStatus } = useXeroStatus();
-  const { refetch: getXeroAuthUrl } = useXeroAuthorize();
+  const { refetch: getXeroAuthUrl, error: xeroAuthError } = useXeroAuthorize();
   const disconnectXero = useXeroDisconnect();
 
   const isXeroConnected = xeroStatus?.ok && xeroStatus?.connected;
@@ -37,15 +37,49 @@ export default function AdminIntegrations() {
   const handleConnectXero = useCallback(async () => {
     try {
       const result = await getXeroAuthUrl();
-      if (result?.data?.ok && result?.data?.authUrl) {
+      
+      // React Query refetch returns { data, error, ... } on success/error
+      if (result?.error) {
+        // Error from React Query
+        const errorMessage = result.error.message || "Failed to connect to Xero";
+        setResult({ ok: false, message: errorMessage });
+        return;
+      }
+      
+      // Check if we got a valid response
+      const response = result?.data;
+      if (response?.ok && response?.authUrl) {
         // Redirect to Xero authorization page
-        window.location.href = result.data.authUrl;
+        window.location.href = response.authUrl;
       } else {
-        throw new Error(result?.data?.err || result?.data?.error || 'Failed to get authorization URL');
+        // Handle API error response
+        const errorCode = response?.code;
+        const errorMessage = response?.err || response?.error || 'Failed to get authorization URL';
+        
+        // Provide more helpful message for configuration errors
+        if (errorCode === 'xero_not_configured') {
+          setResult({ 
+            ok: false, 
+            message: 'Xero credentials are not configured. Please configure CA_XERO_CLIENT_ID, CA_XERO_CLIENT_SECRET, and CA_XERO_REDIRECT_URI in your WordPress configuration (secrets.php or environment variables).' 
+          });
+          return;
+        }
+        setResult({ ok: false, message: errorMessage });
       }
     } catch (error) {
       console.error('Failed to get Xero auth URL:', error);
-      setResult({ ok: false, message: error.message || "Failed to connect to Xero" });
+      // Check if it's a configuration error
+      const errorCode = error?.code;
+      const errorMessage = error?.message || "Failed to connect to Xero";
+      
+      if (errorCode === 'xero_not_configured' || errorMessage.includes('not configured') || errorMessage.includes('xero_not_configured')) {
+        setResult({ 
+          ok: false, 
+          message: 'Xero credentials are not configured. Please configure CA_XERO_CLIENT_ID, CA_XERO_CLIENT_SECRET, and CA_XERO_REDIRECT_URI in your WordPress configuration (secrets.php or environment variables).' 
+        });
+      } else {
+        setResult({ ok: false, message: errorMessage });
+      }
     }
   }, [getXeroAuthUrl]);
 

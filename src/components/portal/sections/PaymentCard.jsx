@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { CreditCard, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Spinner } from "../../ui/spinner";
@@ -21,13 +21,14 @@ const stripePromise = STRIPE_PUBLISHABLE_KEY ? loadStripe(STRIPE_PUBLISHABLE_KEY
 /**
  * Payment Form Component (inside Stripe Elements)
  */
-function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, workflow }) {
+function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, workflow, isAmountValid }) {
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [error, setError] = useState(null);
   const [clientSecret, setClientSecret] = useState(null);
   const [paymentIntentId, setPaymentIntentId] = useState(null);
+  const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [stripeReady, setStripeReady] = useState(!!stripePromise);
 
   useEffect(() => {
@@ -37,20 +38,21 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
   // Guard: Only initialize if workflow is at payment step
   const shouldInitialize = workflow?.status === 'accepted' || workflow?.status === 'booked';
 
-  // Create payment intent when component mounts - ONLY if workflow is at payment step
-  useEffect(() => {
-    // Don't initialize if not at payment step
-    if (!shouldInitialize) return;
-    
-    // Don't recreate if already created, or if amount is invalid
-    if (!amount || amount <= 0 || clientSecret) return;
+  // Create payment intent function (called on form submit, not on mount)
+  const createPaymentIntent = useCallback(async () => {
+    if (!amount || amount <= 0 || !isAmountValid) {
+      setError('Please enter a valid payment amount');
+      return null;
+    }
     
     if (!stripePromise) {
       setError('Stripe is not configured. Missing publishable key.');
-      return;
+      return null;
     }
 
-    const createPaymentIntent = async () => {
+    setIsCreatingIntent(true);
+    setError(null);
+
       try {
         const nonce = await getWpNonceSafe().catch(() => '');
         const response = await fetch('/api/stripe/create-payment-intent', {
@@ -76,22 +78,32 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
 
         setClientSecret(data.clientSecret);
         setPaymentIntentId(data.paymentIntentId);
+      setIsCreatingIntent(false);
+      return data.clientSecret;
       } catch (err) {
-        setError(err.message || 'Failed to initialize payment');
+      setError(err.message || 'Failed to create payment intent');
+      setIsCreatingIntent(false);
         toast.error('Payment initialization failed', {
           description: err.message,
         });
+      return null;
       }
-    };
-
-    createPaymentIntent();
-  }, [shouldInitialize, amount, estimateId, locationId, clientSecret, workflow]);
+  }, [amount, estimateId, locationId, isAmountValid]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    if (!stripe || !elements || !clientSecret) {
+    // Create payment intent if not already created
+    let secretToUse = clientSecret;
+    if (!secretToUse) {
+      secretToUse = await createPaymentIntent();
+      if (!secretToUse) {
+        return; // Error already set in createPaymentIntent
+      }
+    }
+
+    if (!stripe || !elements || !secretToUse) {
       setError('Payment system not ready. Please wait...');
       return;
     }
@@ -109,7 +121,7 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
 
       // Confirm payment with Stripe
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
-        clientSecret,
+        secretToUse,
         {
           payment_method: {
             card: cardElement,
@@ -226,46 +238,61 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
         </div>
       )}
 
-      {!clientSecret ? (
-        <div className="mb-4 rounded-xl border border-border bg-muted p-4">
-          <div className="flex items-center gap-2">
-            <Spinner size="sm" />
-            <p className="text-sm text-muted-foreground">Initializing payment...</p>
-          </div>
-        </div>
-      ) : (
         <div className="mb-4 rounded-xl border border-border bg-muted p-4">
           <label className="text-sm font-medium text-foreground mb-2 block">
             Card Details
           </label>
+        {clientSecret ? (
+          <>
           <div className="p-3 rounded-lg border border-border bg-background">
             <CardElement options={cardElementOptions} />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             Test card: 4242 4242 4242 4242 | Any future date | Any CVC
           </p>
+          </>
+        ) : (
+          <div className="p-3 rounded-lg border border-border bg-background/50">
+            <p className="text-sm text-muted-foreground">
+              Card details will appear after you click "Pay"
+          </p>
         </div>
       )}
+      </div>
 
       <Button
         type="submit"
-        disabled={isProcessing || !clientSecret || amount === null}
+        disabled={isProcessing || isCreatingIntent || !isAmountValid || amount === null}
         size="lg"
-        className="w-full bg-gradient-to-r from-primary to-secondary text-white shadow-lg transition-all hover:shadow-xl hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+        className="w-full bg-gradient-to-r from-primary via-primary to-secondary text-white font-bold py-6 rounded-xl shadow-2xl shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none relative overflow-hidden group"
       >
-        {isProcessing ? (
-          <>
+        {isProcessing || isCreatingIntent ? (
+          <span className="relative z-10 flex items-center justify-center gap-2">
             <Spinner size="sm" className="mr-2" />
-            Processing...
-          </>
+            {isProcessing ? 'Processing...' : 'Initializing...'}
+          </span>
         ) : (
           <>
-            Complete Payment <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+            <span className="relative z-10 flex items-center justify-center gap-2">
+              {clientSecret ? 'Complete Payment' : 'Pay Now'}
+              <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+            </span>
+            <div className="absolute inset-0 bg-gradient-to-r from-white/0 via-white/20 to-white/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-700" />
           </>
         )}
       </Button>
     </form>
   );
+}
+
+/**
+ * Helper function to format amounts (moved outside component to prevent recreation on every render)
+ */
+function formatAmount(amt) {
+  if (amt === null || amt === undefined) return '—';
+  const num = Number(amt);
+  if (isNaN(num) || !isFinite(num)) return '—';
+  return `$${num.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
 /**
@@ -277,14 +304,21 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
  * - workflow.status === "accepted" AND invoice exists (not yet paid)
  * - workflow.status === "booked" AND not yet fully paid (partial payment scenario)
  */
-export function PaymentCard({ estimateId, locationId, inviteToken, payment, workflow, invoice }) {
+export function PaymentCard({ estimateId, locationId, inviteToken, payment, workflow, invoice, minimumPaymentInfo }) {
   // ALL HOOKS MUST BE CALLED BEFORE ANY EARLY RETURNS (React Rules of Hooks)
   const router = useRouter();
   const [shouldReload, setShouldReload] = useState(false);
+  const [customAmount, setCustomAmount] = useState(null);
+  const [useCustomAmount, setUseCustomAmount] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState(null); // '25', '50', '75', 'minimum', 'full', or null
   const paymentsList = Array.isArray(payment?.payments) ? payment.payments : [];
 
-  // Calculate invoice total (from invoice or fallback) - moved before early returns
-  const getInvoiceTotal = () => {
+  // Calculate invoice total (memoized for performance)
+  const invoiceTotal = useMemo(() => {
+    // Prefer minimumPaymentInfo (source of truth from backend)
+    if (minimumPaymentInfo?.invoiceTotal) {
+      return parseFloat(minimumPaymentInfo.invoiceTotal);
+    }
     if (invoice) {
       // Check for new nested structure first
       if (invoice.ghl && invoice.ghl.total) {
@@ -296,30 +330,147 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
       }
     }
     // Fallback: try to get from payment data if exists
-    if (payment && payment.amount) {
-      return parseFloat(payment.amount);
+    if (payment && payment.invoiceTotal) {
+      return parseFloat(payment.invoiceTotal);
     }
     return null;
-  };
+  }, [minimumPaymentInfo?.invoiceTotal, invoice, payment]);
+  
+  // Get remaining balance from minimumPaymentInfo (source of truth) or calculate (memoized)
+  const remainingBalance = useMemo(() => {
+    if (minimumPaymentInfo?.remainingBalance !== undefined) {
+      return parseFloat(minimumPaymentInfo.remainingBalance);
+    }
+    if (payment && typeof payment.remainingBalance === 'number') {
+      return payment.remainingBalance;
+    }
+    // FIX: Calculate even when payment.amount doesn't exist (first payment scenario)
+    // If invoiceTotal is valid, remaining balance = invoiceTotal - existing paid amount
+    if (invoiceTotal !== null) {
+      const existingPaid = payment?.amount ? Number(payment.amount) : 0;
+      return Math.max(0, invoiceTotal - existingPaid);
+    }
+    return null;
+  }, [minimumPaymentInfo?.remainingBalance, payment, invoiceTotal]);
 
-  const invoiceTotal = getInvoiceTotal();
-  const remainingBalance =
-    payment && typeof payment.remainingBalance === 'number'
-      ? payment.remainingBalance
-      : invoiceTotal !== null && payment?.amount
-        ? Math.max(0, invoiceTotal - Number(payment.amount))
-        : null;
+  // Get minimum payment from minimumPaymentInfo or calculate fallback (memoized)
+  const minimumPayment = useMemo(() => {
+    if (minimumPaymentInfo?.minimumPayment !== undefined) {
+      return parseFloat(minimumPaymentInfo.minimumPayment);
+    }
+    return null;
+  }, [minimumPaymentInfo?.minimumPayment]);
 
-  // If partial, charge only the remaining balance
-  const payableAmount =
-    payment?.status === 'partial' && remainingBalance !== null ? remainingBalance : invoiceTotal;
+  // Calculate existing paid amount (memoized)
+  const existingPaidAmount = useMemo(() => {
+    if (minimumPaymentInfo?.existingPaidAmount !== undefined) {
+      return parseFloat(minimumPaymentInfo.existingPaidAmount);
+    }
+    return payment?.amount ? parseFloat(payment.amount) : 0;
+  }, [minimumPaymentInfo?.existingPaidAmount, payment?.amount]);
 
-  const formatAmount = (amt) => {
-    if (amt === null || amt === undefined) return '—';
-    const num = Number(amt);
-    if (isNaN(num) || !isFinite(num)) return '—';
-    return `$${num.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-  };
+  // Calculate default payable amount that respects minimum requirement (memoized)
+  const defaultPayableAmount = useMemo(() => {
+    const baseAmount = payment?.status === 'partial' && remainingBalance !== null 
+      ? remainingBalance 
+      : invoiceTotal;
+    
+    // Ensure default meets minimum requirement if minimum exists
+    let result = baseAmount;
+    if (minimumPayment !== null && baseAmount !== null) {
+      result = Math.max(baseAmount, minimumPayment);
+    }
+    
+    // Defensive: Never exceed remaining balance (for partial) or invoice total (for first payment)
+    if (payment?.status === 'partial' && remainingBalance !== null) {
+      result = Math.min(result, remainingBalance);
+    } else if (invoiceTotal !== null) {
+      result = Math.min(result, invoiceTotal);
+    }
+    
+    return result;
+  }, [payment?.status, remainingBalance, invoiceTotal, minimumPayment]);
+
+  // Calculate preset amounts (memoized)
+  const preset25 = useMemo(() => remainingBalance !== null ? remainingBalance * 0.25 : null, [remainingBalance]);
+  const preset50 = useMemo(() => remainingBalance !== null ? remainingBalance * 0.50 : null, [remainingBalance]);
+  const preset75 = useMemo(() => remainingBalance !== null ? remainingBalance * 0.75 : null, [remainingBalance]);
+
+  // Check if preset amounts meet minimum (for button enable/disable) - memoized
+  const preset25Valid = useMemo(() => preset25 !== null && minimumPayment !== null && preset25 >= minimumPayment, [preset25, minimumPayment]);
+  const preset50Valid = useMemo(() => preset50 !== null && minimumPayment !== null && preset50 >= minimumPayment, [preset50, minimumPayment]);
+  const preset75Valid = useMemo(() => preset75 !== null && minimumPayment !== null && preset75 >= minimumPayment, [preset75, minimumPayment]);
+
+  // Auto-select "full" if remaining balance < minimum (only one valid option)
+  useEffect(() => {
+    if (remainingBalance !== null && minimumPayment !== null && remainingBalance < minimumPayment && remainingBalance > 0) {
+      // Only auto-select if no preset is already selected
+      if (selectedPreset === null && !useCustomAmount) {
+        setSelectedPreset('full');
+      }
+    }
+  }, [remainingBalance, minimumPayment, selectedPreset, useCustomAmount]);
+
+  // When preset is selected, use that amount (memoized)
+  const selectedAmount = useMemo(() => {
+    if (selectedPreset === '25' && preset25 !== null) return preset25;
+    if (selectedPreset === '50' && preset50 !== null) return preset50;
+    if (selectedPreset === '75' && preset75 !== null) return preset75;
+    if (selectedPreset === 'minimum' && minimumPayment !== null) return minimumPayment;
+    if (selectedPreset === 'full' && remainingBalance !== null) return remainingBalance;
+    return null;
+  }, [selectedPreset, preset25, preset50, preset75, minimumPayment, remainingBalance]);
+
+  // Use custom amount if set, preset amount if selected, otherwise use default (memoized)
+  const payableAmount = useMemo(() => {
+    if (useCustomAmount && customAmount !== null && customAmount > 0) {
+      return customAmount;
+    }
+    if (selectedAmount !== null) {
+      return selectedAmount;
+    }
+    return defaultPayableAmount;
+  }, [useCustomAmount, customAmount, selectedAmount, defaultPayableAmount]);
+
+  // Validate custom amount (including minimum payment check) - memoized
+  const customAmountError = useMemo(() => {
+    if (!useCustomAmount || customAmount === null) return null;
+    
+    if (customAmount <= 0) return 'Amount must be greater than zero';
+    if (minimumPayment !== null && customAmount < minimumPayment) {
+      return `Amount must be at least ${formatAmount(minimumPayment)}`;
+    }
+    if (remainingBalance !== null && customAmount > remainingBalance) {
+      return `Amount cannot exceed remaining balance of ${formatAmount(remainingBalance)}`;
+    }
+    if (invoiceTotal !== null && customAmount > invoiceTotal) {
+      return `Amount cannot exceed invoice total of ${formatAmount(invoiceTotal)}`;
+    }
+    return null;
+  }, [useCustomAmount, customAmount, minimumPayment, remainingBalance, invoiceTotal]);
+
+  // Handle preset button click (memoized with useCallback)
+  const handlePresetClick = useCallback((preset) => {
+    setSelectedPreset(preset);
+    setUseCustomAmount(false);
+    setCustomAmount(null);
+  }, []);
+
+  // Handle custom amount toggle (memoized with useCallback)
+  const handleCustomAmountToggle = useCallback(() => {
+    setUseCustomAmount(true);
+    setSelectedPreset(null);
+    // Pre-fill with remaining balance or minimum, whichever is higher, but never exceed remaining balance
+    const prefillAmount = remainingBalance !== null 
+      ? Math.min(
+          remainingBalance,
+          minimumPayment !== null ? Math.max(minimumPayment, remainingBalance * 0.25) : remainingBalance
+        )
+      : (invoiceTotal !== null 
+          ? Math.min(invoiceTotal, minimumPayment !== null ? Math.max(minimumPayment, invoiceTotal * 0.25) : invoiceTotal)
+          : null);
+    setCustomAmount(prefillAmount);
+  }, [remainingBalance, minimumPayment, invoiceTotal]);
 
   const handlePaymentSuccess = useCallback(() => {
     // Reload page after a short delay to show updated payment status
@@ -367,11 +518,29 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
             </div>
             {payment.paidAt && (
               <p className="text-xs text-success">
-                Paid on {new Date(payment.paidAt).toLocaleDateString('en-AU', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric',
-                })}
+                Paid on{" "}
+                {(() => {
+                  // SSR-safe date formatting
+                  const date = new Date(payment.paidAt);
+                  const months = [
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                  ];
+                  const month = months[date.getUTCMonth()];
+                  const day = date.getUTCDate();
+                  const year = date.getUTCFullYear();
+                  return `${day} ${month} ${year}`;
+                })()}
               </p>
             )}
             {payment.provider && (
@@ -405,6 +574,16 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
     return null; // Don't show payment form if fully paid
   }
 
+  // SECURITY: Don't show payment form if invoice total is invalid
+  if (invoiceTotal === null || invoiceTotal <= 0) {
+    return null; // Invalid invoice total
+  }
+
+  // SECURITY: Don't show payment form if no remaining balance
+  if (remainingBalance !== null && remainingBalance <= 0) {
+    return null; // No remaining balance to pay
+  }
+
   if (!stripePromise) {
     return (
       <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
@@ -436,21 +615,41 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
           </div>
         </div>
 
-        {payment?.status === 'partial' && (
-          <div className="mt-4 rounded-xl border border-warning/40 bg-warning/5 p-4 text-sm text-foreground">
-            <div className="flex flex-col gap-1">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Total invoice</span>
-                <span className="font-semibold">{formatAmount(invoiceTotal)}</span>
+        {/* Invoice Summary - Gorgeous Modern Design with Glassmorphism */}
+        {invoiceTotal !== null && invoiceTotal > 0 && (
+          <div className="mt-6 overflow-hidden rounded-2xl bg-white/60 backdrop-blur-md border border-white/20 shadow-xl shadow-black/5 p-6">
+            <div className="space-y-4">
+              {/* Total Invoice - Prominent */}
+              <div className="flex justify-between items-baseline pb-4 border-b-2 border-border/40">
+                <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Total Invoice</span>
+                <span className="text-3xl font-black text-foreground tracking-tight">{formatAmount(invoiceTotal)}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Paid so far</span>
-                <span className="font-semibold text-success">{formatAmount(payment.amount)}</span>
+              
+              {/* Paid / Remaining - Clean Grid Layout */}
+              <div className="grid grid-cols-2 gap-4">
+                {existingPaidAmount > 0 && (
+                  <div className="rounded-xl bg-success/10 p-4 border border-success/20 shadow-sm">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Paid so far</p>
+                    <p className="text-xl font-bold text-success">{formatAmount(existingPaidAmount)}</p>
+                  </div>
+                )}
+                {remainingBalance !== null && remainingBalance > 0 && (
+                  <div className="rounded-xl bg-warning/10 p-4 border border-warning/20 shadow-sm">
+                    <p className="text-xs font-medium text-muted-foreground mb-1">Remaining</p>
+                    <p className="text-xl font-bold text-warning">{formatAmount(remainingBalance)}</p>
+                  </div>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Remaining balance</span>
-                <span className="font-semibold text-warning">{formatAmount(remainingBalance)}</span>
-              </div>
+              
+              {/* Minimum Payment - Highlighted Badge */}
+              {minimumPayment !== null && minimumPayment > 0 && (
+                <div className="rounded-xl bg-gradient-to-r from-primary/20 via-primary/10 to-transparent p-4 border-2 border-primary/30 shadow-md">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs font-bold text-primary uppercase tracking-wide">Minimum Payment Required</span>
+                    <span className="text-lg font-black text-primary">{formatAmount(minimumPayment)}</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -465,13 +664,30 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
                     <span className="font-medium">{formatAmount(pmt.amount)}</span>
                     {pmt.paidAt && (
                       <span className="text-muted-foreground text-xs">
-                        {new Date(pmt.paidAt).toLocaleString('en-AU', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
+                        {(() => {
+                          // SSR-safe date/time formatting
+                          const date = new Date(pmt.paidAt);
+                          const months = [
+                            "Jan",
+                            "Feb",
+                            "Mar",
+                            "Apr",
+                            "May",
+                            "Jun",
+                            "Jul",
+                            "Aug",
+                            "Sep",
+                            "Oct",
+                            "Nov",
+                            "Dec",
+                          ];
+                          const month = months[date.getUTCMonth()];
+                          const day = date.getUTCDate();
+                          const year = date.getUTCFullYear();
+                          const hours = String(date.getUTCHours()).padStart(2, "0");
+                          const minutes = String(date.getUTCMinutes()).padStart(2, "0");
+                          return `${day} ${month} ${year}, ${hours}:${minutes}`;
+                        })()}
                       </span>
                     )}
                   </div>
@@ -485,17 +701,241 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
           </div>
         )}
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-border bg-muted p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Total Amount</p>
-            <p className="mt-2 text-3xl font-semibold text-foreground">
-              {formatAmount(payableAmount)}
-            </p>
+        <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl bg-white/80 backdrop-blur-sm border border-white/40 shadow-xl p-6">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground font-bold mb-4">Payment Amount</p>
+            
+            {/* Preset Payment Buttons - Modern Gradient Style */}
+            {!useCustomAmount && (
+              <div className="mt-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  {/* Pay Minimum Button - Modern Gradient Glassmorphism Style */}
+                  {minimumPayment !== null && minimumPayment > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick('minimum')}
+                      aria-label={`Pay minimum amount of ${formatAmount(minimumPayment)}`}
+                      aria-pressed={selectedPreset === 'minimum'}
+                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                        selectedPreset === 'minimum'
+                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-base font-bold">Minimum</span>
+                        <span className={`text-xs ${selectedPreset === 'minimum' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(minimumPayment)}</span>
+                      </div>
+                      {selectedPreset === 'minimum' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                      )}
+                    </button>
+                  )}
+                  {preset25Valid && preset25 !== null && (
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick('25')}
+                      aria-label={`Pay 25% which is ${formatAmount(preset25)}`}
+                      aria-pressed={selectedPreset === '25'}
+                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                        selectedPreset === '25'
+                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-base font-bold">25%</span>
+                        <span className={`text-xs ${selectedPreset === '25' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset25)}</span>
+                      </div>
+                      {selectedPreset === '25' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                      )}
+                    </button>
+                  )}
+                  {preset50Valid && preset50 !== null && (
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick('50')}
+                      aria-label={`Pay 50% which is ${formatAmount(preset50)}`}
+                      aria-pressed={selectedPreset === '50'}
+                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                        selectedPreset === '50'
+                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-base font-bold">50%</span>
+                        <span className={`text-xs ${selectedPreset === '50' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset50)}</span>
+                      </div>
+                      {selectedPreset === '50' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                      )}
+                    </button>
+                  )}
+                  {preset75Valid && preset75 !== null && (
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick('75')}
+                      aria-label={`Pay 75% which is ${formatAmount(preset75)}`}
+                      aria-pressed={selectedPreset === '75'}
+                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                        selectedPreset === '75'
+                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-base font-bold">75%</span>
+                        <span className={`text-xs ${selectedPreset === '75' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset75)}</span>
+                      </div>
+                      {selectedPreset === '75' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                      )}
+                    </button>
+                  )}
+                  {remainingBalance !== null && remainingBalance > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => handlePresetClick('full')}
+                      aria-label={`Pay full amount of ${formatAmount(remainingBalance)}`}
+                      aria-pressed={selectedPreset === 'full'}
+                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                        selectedPreset === 'full'
+                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                      }`}
+                    >
+                      <div className="flex flex-col items-center gap-1">
+                        <span className="text-base font-bold">Full</span>
+                        <span className={`text-xs ${selectedPreset === 'full' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(remainingBalance)}</span>
+                      </div>
+                      {selectedPreset === 'full' && (
+                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                      )}
+                    </button>
+                  )}
+                </div>
+                
+                {/* Custom Amount Button - Modern Outline Style */}
+                <button
+                  type="button"
+                  onClick={handleCustomAmountToggle}
+                  aria-label="Enter custom payment amount"
+                  className="w-full rounded-xl border-2 border-dashed border-border/60 bg-white/50 backdrop-blur-sm px-4 py-3.5 text-sm font-semibold text-foreground transition-all duration-200 hover:border-primary/60 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent hover:shadow-md hover:scale-[1.01]"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <span>Pay custom amount</span>
+                    <span className="text-xs text-muted-foreground">→</span>
+                  </div>
+                </button>
+
+                {/* Selected Amount Display - Gorgeous Gradient Container */}
+                {((selectedPreset || (!useCustomAmount && payableAmount !== null)) && payableAmount !== null && payableAmount > 0) && (
+                  <div className="relative mt-5 overflow-hidden rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 ring-1 ring-primary/20 shadow-lg backdrop-blur-sm">
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-primary/5" />
+                    <div className="relative text-center">
+                      <p className="text-xs font-semibold uppercase tracking-widest text-primary/70 mb-2">
+                        {selectedPreset ? 'Selected Amount' : 'Amount to Pay'}
+                      </p>
+                      <p className="text-5xl font-black bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text text-transparent">
+                        {formatAmount(payableAmount)}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Custom Amount Input - Modern Glassmorphism Style */}
+            {useCustomAmount && (
+              <div className="mt-4 space-y-4">
+                <div className="relative">
+                  <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 p-4 border-2 border-primary/30 shadow-inner backdrop-blur-sm">
+                    <span className="text-2xl font-bold text-primary">$</span>
+                    <input
+                      type="number"
+                      id="custom-amount-input"
+                      min={minimumPayment !== null ? minimumPayment.toFixed(2) : "0.01"}
+                      max={remainingBalance !== null ? remainingBalance : invoiceTotal || undefined}
+                      step="0.01"
+                      value={customAmount || ''}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setCustomAmount(isNaN(val) ? null : val);
+                      }}
+                      aria-label="Custom payment amount"
+                      aria-describedby="custom-amount-help custom-amount-error"
+                      aria-invalid={customAmountError !== null}
+                      aria-required="true"
+                      className="flex-1 text-4xl font-black text-foreground bg-transparent border-none outline-none focus:ring-0 p-0 placeholder:text-muted-foreground/30"
+                      placeholder={minimumPayment !== null ? minimumPayment.toFixed(2) : "0.00"}
+                      autoFocus
+                    />
+                  </div>
+                </div>
+                
+                {customAmountError && (
+                  <div className="rounded-xl bg-error/10 border border-error/30 p-3 animate-in fade-in">
+                    <p id="custom-amount-error" className="text-xs text-error font-semibold" role="alert">
+                      ⚠️ {customAmountError}
+                    </p>
+                  </div>
+                )}
+                
+                {minimumPayment !== null && (
+                  <div className="flex items-center justify-between rounded-lg bg-muted/50 px-3 py-2 text-xs backdrop-blur-sm">
+                    <span className="text-muted-foreground">Minimum: <span className="font-semibold text-foreground">{formatAmount(minimumPayment)}</span></span>
+                    <span className="text-muted-foreground">Max: <span className="font-semibold text-foreground">{formatAmount(remainingBalance || invoiceTotal || 0)}</span></span>
+                  </div>
+                )}
+                
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseCustomAmount(false);
+                      setCustomAmount(null);
+                      setSelectedPreset(null);
+                    }}
+                    className="text-sm text-muted-foreground hover:text-foreground font-medium underline transition-colors"
+                  >
+                    ← Use presets
+                  </button>
+                  {remainingBalance !== null && remainingBalance > 0 && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <button
+                        type="button"
+                        onClick={() => setCustomAmount(remainingBalance)}
+                        className="text-sm text-primary hover:underline font-semibold transition-colors"
+                      >
+                        Pay full amount ({formatAmount(remainingBalance)})
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="rounded-2xl border border-border bg-muted p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Payment Method</p>
-            <p className="mt-2 text-lg font-semibold text-foreground">Credit Card</p>
-            <p className="text-xs text-muted-foreground">Secure payment via Stripe</p>
+          <div className="rounded-2xl bg-gradient-to-br from-muted/50 via-muted/30 to-transparent border border-white/40 shadow-lg p-6">
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground font-bold mb-4">Payment Method</p>
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <div className="rounded-lg bg-gradient-to-br from-primary/20 to-primary/10 p-3 ring-1 ring-primary/20 shadow-sm">
+                  <CreditCard className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-lg font-bold text-foreground">Credit Card</p>
+                  <p className="text-xs text-muted-foreground">Secure via Stripe</p>
+                </div>
+              </div>
+              <div className="pt-3 mt-3 border-t border-border/40">
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  🔒 All payments are encrypted. Your card details are never stored on our servers.
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -506,6 +946,12 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
           amount={payableAmount}
           workflow={workflow}
           onSuccess={handlePaymentSuccess}
+          isAmountValid={
+            !customAmountError && 
+            payableAmount !== null && 
+            payableAmount > 0 && 
+            (minimumPayment === null || payableAmount >= minimumPayment)
+          }
         />
       </div>
     </Elements>

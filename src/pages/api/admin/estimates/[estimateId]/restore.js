@@ -1,4 +1,4 @@
-import { createWpProxyHandler } from "../../../../lib/api/wp-proxy";
+import { createWpProxyHandler } from "../../../../../lib/api/wp-proxy";
 
 /**
  * Next.js API route that proxies restore estimate requests to WordPress.

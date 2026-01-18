@@ -130,7 +130,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <div className="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer</p>
             <p className="mt-1 font-medium text-foreground">{contact.name || "N/A"}</p>
@@ -144,24 +144,37 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
             <p className="mt-1 font-medium text-foreground">
               {invoice.issueDate ? new Date(invoice.issueDate).toLocaleDateString() : "N/A"}
             </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">
-              {invoice.currency || DEFAULT_CURRENCY} {invoice.total?.toFixed(2) || "0.00"}
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Amount Due</p>
-            <p className={`mt-1 text-xl font-semibold ${
-              invoice.amountDue === 0 ? 'text-success' : 'text-foreground'
-            }`}>
-              {invoice.currency || DEFAULT_CURRENCY} {invoice.amountDue?.toFixed(2) || "0.00"}
-            </p>
             {invoice.dueDate && (
               <p className="mt-1 text-xs text-muted-foreground">
                 Due: {new Date(invoice.dueDate).toLocaleDateString()}
               </p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Invoice Total</p>
+            <p className="mt-1 text-2xl font-bold text-foreground">
+              {invoice.currency || DEFAULT_CURRENCY} {invoice.total?.toFixed(2) || "0.00"}
+            </p>
+            {payments.length > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {payments.length} payment{payments.length !== 1 ? 's' : ''} recorded
+              </p>
+            )}
+          </div>
+          <div>
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">Remaining Balance</p>
+            <p className={`mt-1 text-2xl font-bold ${
+              invoice.amountDue === 0 ? 'text-success' : 
+              invoice.amountDue > 0 && invoice.dueDate && new Date(invoice.dueDate) < new Date() ? 'text-error' :
+              'text-warning'
+            }`}>
+              {invoice.currency || DEFAULT_CURRENCY} {invoice.amountDue?.toFixed(2) || "0.00"}
+            </p>
+            {invoice.amountDue === 0 && (
+              <p className="mt-1 text-xs text-success">Fully paid</p>
+            )}
+            {invoice.amountDue > 0 && invoice.dueDate && new Date(invoice.dueDate) < new Date() && (
+              <p className="mt-1 text-xs text-error">Overdue</p>
             )}
           </div>
         </div>
@@ -280,27 +293,117 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
             )}
           </div>
 
-          {/* Payments */}
-          {payments.length > 0 && (
-            <div className="rounded-xl border border-border/60 bg-card p-6">
-              <h2 className="mb-4 text-lg font-semibold text-foreground">Payment History</h2>
-              <div className="space-y-2">
-                {payments.map((payment, idx) => (
-                  <div key={payment.id || idx} className="flex items-center justify-between border-b border-border/60 pb-2">
+          {/* Payment History */}
+          <div className="rounded-xl border border-border/60 bg-card p-6">
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Payment History</h2>
+              {payments.length > 0 && (
+                <Badge variant="secondary" className="text-xs">
+                  {payments.length} payment{payments.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
+            </div>
+            {payments.length === 0 ? (
+              <div className="rounded-lg border border-border/60 bg-muted/30 p-4 text-center">
+                <p className="text-sm text-muted-foreground">No payments recorded yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {payments.map((payment, idx) => {
+                  const paymentDate = payment.date || payment.paidAt;
+                  const isRefunded = payment.refunded === true;
+                  const paymentProvider = payment.provider || payment.method || 'Unknown';
+                  
+                  return (
+                    <div 
+                      key={payment.id || payment.transactionId || idx} 
+                      className={`rounded-lg border p-4 transition ${
+                        isRefunded 
+                          ? 'border-error/30 bg-error-bg/30' 
+                          : 'border-border/60 bg-muted/30'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-foreground">
+                              {invoice.currency || DEFAULT_CURRENCY} {payment.amount?.toFixed(2) || "0.00"}
+                            </p>
+                            {isRefunded && (
+                              <Badge variant="destructive" className="text-xs">
+                                Refunded
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+                            <span className="capitalize">{paymentProvider}</span>
+                            {paymentDate && (
+                              <span>
+                                {new Date(paymentDate).toLocaleString('en-AU', {
+                                  year: 'numeric',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                })}
+                              </span>
+                            )}
+                            {payment.transactionId && (
+                              <span className="font-mono text-xs">
+                                {payment.transactionId.length > 20 
+                                  ? `${payment.transactionId.substring(0, 20)}...` 
+                                  : payment.transactionId}
+                              </span>
+                            )}
+                          </div>
+                          {isRefunded && payment.refundAmount && (
+                            <p className="mt-1 text-xs text-error">
+                              Refunded: {invoice.currency || DEFAULT_CURRENCY} {payment.refundAmount?.toFixed(2) || "0.00"}
+                              {payment.refundedAt && (
+                                <span className="ml-2">
+                                  on {new Date(payment.refundedAt).toLocaleDateString()}
+                                </span>
+                              )}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-4">
+                          {isRefunded ? (
+                            <XCircle className="h-5 w-5 text-error" />
+                          ) : (
+                            <CheckCircle2 className="h-5 w-5 text-success" />
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+                {/* Payment Summary */}
+                <div className="mt-4 rounded-lg border-2 border-border/60 bg-card p-4">
+                  <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="font-medium text-foreground">{payment.method || "Payment"}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {payment.date ? new Date(payment.date).toLocaleDateString() : ""}
+                      <p className="text-muted-foreground">Total Paid</p>
+                      <p className="mt-1 text-lg font-semibold text-success">
+                        {invoice.currency || DEFAULT_CURRENCY} {(
+                          payments
+                            .filter(p => !p.refunded)
+                            .reduce((sum, p) => sum + (parseFloat(p.amount) || 0), 0)
+                        ).toFixed(2)}
                       </p>
                     </div>
-                    <p className="font-semibold text-foreground">
-                      {invoice.currency || DEFAULT_CURRENCY} {payment.amount?.toFixed(2) || "0.00"}
-                    </p>
+                    <div>
+                      <p className="text-muted-foreground">Remaining Balance</p>
+                      <p className={`mt-1 text-lg font-semibold ${
+                        invoice.amountDue === 0 ? 'text-success' : 'text-foreground'
+                      }`}>
+                        {invoice.currency || DEFAULT_CURRENCY} {invoice.amountDue?.toFixed(2) || "0.00"}
+                      </p>
+                    </div>
                   </div>
-                ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Sidebar (Right 30%) */}
@@ -335,18 +438,32 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                 {sendInvoiceMutation.isPending ? "Sending..." : "Send Invoice"}
               </button>
               
+              {/* Xero Sync Status */}
               <div className="pt-2 border-t border-border/60">
-                <div className="flex items-center gap-2 mb-2">
-                  {isXeroConnected ? (
-                    <>
-                      <CheckCircle2 className="h-3 w-3 text-success" />
-                      <span className="text-xs text-muted-foreground">Xero Connected</span>
-                    </>
-                  ) : (
-                    <>
-                      <XCircle className="h-3 w-3 text-muted-foreground" />
-                      <span className="text-xs text-muted-foreground">Xero Not Connected</span>
-                    </>
+                <div className="mb-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-foreground">Xero Sync Status</span>
+                    {isXeroConnected ? (
+                      <Badge variant="success" className="text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Connected
+                      </Badge>
+                    ) : (
+                      <Badge variant="secondary" className="text-xs">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Not Connected
+                      </Badge>
+                    )}
+                  </div>
+                  {invoice.xeroInvoiceId && (
+                    <p className="text-xs text-muted-foreground">
+                      Xero Invoice ID: <span className="font-mono">{invoice.xeroInvoiceId}</span>
+                    </p>
+                  )}
+                  {invoice.xeroInvoiceNumber && (
+                    <p className="text-xs text-muted-foreground">
+                      Xero Invoice #: <span className="font-semibold">{invoice.xeroInvoiceNumber}</span>
+                    </p>
                   )}
                 </div>
                 <button
@@ -357,7 +474,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                   {syncToXeroMutation.isPending ? "Syncing..." : "Sync to Xero"}
                 </button>
                 {!isXeroConnected && (
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="mt-2 text-xs text-muted-foreground text-center">
                     <Link href="/admin/integrations" className="text-primary hover:underline">
                       Connect Xero
                     </Link> to sync invoices

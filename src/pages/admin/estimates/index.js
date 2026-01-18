@@ -58,8 +58,8 @@ export default function EstimatesListPage() {
   const estimateIdFromQuery = router.query.estimateId;
   const selectedEstimateId = estimateIdFromQuery || null;
 
-  // Map tab to portal status filter
-  const portalStatusFilter = activeTab === "all" || activeTab === "trash" ? "" : activeTab;
+  // Map tab to portal status filter (exclude "invoiced" as it's client-side filtered)
+  const portalStatusFilter = activeTab === "all" || activeTab === "trash" || activeTab === "invoiced" ? "" : activeTab;
 
   // Fetch active estimates (only when not in trash tab)
   const { data, isLoading, error, refetch } = useAdminEstimates({
@@ -100,8 +100,20 @@ export default function EstimatesListPage() {
     refetch();
   }, [queryClient, refetch]);
 
-  const estimates = useMemo(() => data?.items ?? [], [data?.items]);
-  const total = data?.total ?? 0;
+  // Filter estimates based on active tab
+  const filteredEstimates = useMemo(() => {
+    const allEstimates = data?.items ?? [];
+    
+    // Client-side filter for "invoiced" tab (based on linkedInvoiceId, not portalStatus)
+    if (activeTab === "invoiced") {
+      return allEstimates.filter(e => e.linkedInvoiceId);
+    }
+    
+    return allEstimates;
+  }, [data?.items, activeTab]);
+  
+  const estimates = filteredEstimates;
+  const total = activeTab === "invoiced" ? estimates.length : (data?.total ?? 0);
   const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
 
   // Clear selection when page, filters, or tab changes
@@ -283,6 +295,7 @@ export default function EstimatesListPage() {
     { value: "sent", label: "Sent" },
     { value: "accepted", label: "Accepted" },
     { value: "rejected", label: "Rejected" },
+    { value: "invoiced", label: "Invoiced" },
     { 
       value: "trash", 
       label: "Trash",
@@ -334,6 +347,7 @@ export default function EstimatesListPage() {
       sent: "bg-warning-bg text-warning border-warning/30",
       accepted: "bg-success-bg text-success border-success/30",
       rejected: "bg-error-bg text-error border-error/30",
+      invoiced: "bg-info-bg text-info border-info/30",
     };
     return classes[status] || "bg-muted text-muted-foreground border-border";
   };
@@ -568,7 +582,17 @@ export default function EstimatesListPage() {
                             </p>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {estimate.linkedInvoiceId && (
+                            <span
+                              className={`
+                                inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                                ${getStatusBadgeClass("invoiced")}
+                              `}
+                            >
+                              Invoiced
+                            </span>
+                          )}
                           <span
                             className={`
                               inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
@@ -736,14 +760,26 @@ export default function EstimatesListPage() {
                               : "—"}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`
-                                inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
-                                ${getStatusBadgeClass(estimate.portalStatus || "sent")}
-                              `}
-                            >
-                              {estimate.portalStatus || "sent"}
-                            </span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {estimate.linkedInvoiceId && (
+                                <span
+                                  className={`
+                                    inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                                    ${getStatusBadgeClass("invoiced")}
+                                  `}
+                                >
+                                  Invoiced
+                                </span>
+                              )}
+                              <span
+                                className={`
+                                  inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                                  ${getStatusBadgeClass(estimate.portalStatus || "sent")}
+                                `}
+                              >
+                                {estimate.portalStatus || "sent"}
+                              </span>
+                            </div>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span

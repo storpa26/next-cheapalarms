@@ -1,6 +1,18 @@
-import { ArrowRight, Shield, Sparkles, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
+import {
+  ArrowRight,
+  Shield,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
+  AlertCircle,
+} from "lucide-react";
 import { useState, useEffect } from "react";
-import { useAcceptEstimate, useRejectEstimate, useRetryInvoice, useRequestReview } from "../../../lib/react-query/hooks";
+import {
+  useAcceptEstimate,
+  useRejectEstimate,
+  useRetryInvoice,
+  useRequestReview,
+} from "../../../lib/react-query/hooks";
 import { computeUIState } from "../../../lib/portal/status-computer";
 import { Spinner } from "../../ui/spinner";
 import { Button } from "../../ui/button";
@@ -18,7 +30,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const isRejected = quoteStatus === "rejected";
   const acceptedAt = view?.quote?.acceptedAt;
   const isGuestMode = view?.isGuestMode ?? false;
-  
+
   // Use status computer to get UI state
   const uiState = computeUIState(view);
   const canRequestReview = uiState.canRequestReview;
@@ -31,7 +43,6 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const [rejectReason, setRejectReason] = useState("");
   const [mounted, setMounted] = useState(false);
 
-   
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -41,7 +52,11 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const retryInvoiceMutation = useRetryInvoice();
   const requestReviewMutation = useRequestReview();
 
-  const isProcessing = acceptMutation.isPending || rejectMutation.isPending || retryInvoiceMutation.isPending || requestReviewMutation.isPending;
+  const isProcessing =
+    acceptMutation.isPending ||
+    rejectMutation.isPending ||
+    retryInvoiceMutation.isPending ||
+    requestReviewMutation.isPending;
 
   const handleAccept = async () => {
     if (!hasPhotos) {
@@ -57,16 +72,18 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       return;
     }
     try {
-      const result = await acceptMutation.mutateAsync({ 
-        estimateId, 
+      const result = await acceptMutation.mutateAsync({
+        estimateId,
         locationId: locationId || undefined,
-        inviteToken: view?.account?.inviteToken
+        inviteToken: view?.account?.inviteToken,
       });
       setShowPhotoWarning(false);
       // Success - the mutation will automatically refetch and update the UI
     } catch (error) {
       // Error is handled by React Query's onError callback
-      toast.error(error.message || "Failed to accept estimate. Please try again.");
+      toast.error(
+        error.message || "Failed to accept estimate. Please try again."
+      );
     }
   };
 
@@ -77,11 +94,11 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const handleConfirmReject = async () => {
     if (!estimateId || !locationId) return;
     try {
-      await rejectMutation.mutateAsync({ 
-        estimateId, 
-        locationId, 
+      await rejectMutation.mutateAsync({
+        estimateId,
+        locationId,
         reason: rejectReason,
-        inviteToken: view?.account?.inviteToken
+        inviteToken: view?.account?.inviteToken,
       });
       setShowRejectConfirm(false);
       setRejectReason("");
@@ -93,10 +110,10 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const handleRetryInvoice = async () => {
     if (!estimateId || !locationId) return;
     try {
-      await retryInvoiceMutation.mutateAsync({ 
-        estimateId, 
+      await retryInvoiceMutation.mutateAsync({
+        estimateId,
         locationId,
-        inviteToken: view?.account?.inviteToken 
+        inviteToken: view?.account?.inviteToken,
       });
     } catch (error) {
       // Error is already handled by the mutation hook
@@ -109,15 +126,17 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       return;
     }
     try {
-      await requestReviewMutation.mutateAsync({ 
-        estimateId, 
+      await requestReviewMutation.mutateAsync({
+        estimateId,
         locationId: locationId || undefined,
-        inviteToken: view?.account?.inviteToken
+        inviteToken: view?.account?.inviteToken,
       });
       // Success - the mutation will automatically refetch and update the UI
     } catch (error) {
       // Error is handled by React Query's onError callback
-      toast.error(error.message || "Failed to request review. Please try again.");
+      toast.error(
+        error.message || "Failed to request review. Please try again."
+      );
     }
   };
 
@@ -126,16 +145,23 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)]">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Approval & payment</p>
-            <h3 className="mt-2 text-2xl font-semibold text-foreground">Finalize estimate</h3>
-            <p className="text-sm text-muted-foreground" suppressHydrationWarning>
-              {mounted && statusMessage 
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
+              Approval & payment
+            </p>
+            <h3 className="mt-2 text-2xl font-semibold text-foreground">
+              Finalize estimate
+            </h3>
+            <p
+              className="text-sm text-muted-foreground"
+              suppressHydrationWarning
+            >
+              {mounted && statusMessage
                 ? statusMessage
                 : isAccepted
-                  ? "Your estimate has been accepted"
-                  : isRejected
-                    ? "This estimate has been rejected"
-                    : "Estimate sent - ready for review"}
+                ? "Your estimate has been accepted"
+                : isRejected
+                ? "This estimate has been rejected"
+                : "Estimate sent - ready for review"}
             </p>
           </div>
           <div className="rounded-full bg-secondary/15 p-4">
@@ -145,42 +171,74 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
 
         <div className="mt-5 grid gap-4 md:grid-cols-2">
           <div className="rounded-2xl border border-border bg-muted p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Estimate total</p>
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
+              Estimate total
+            </p>
             <p className="mt-2 text-3xl font-semibold text-foreground">
-              {total > 0 ? (() => {
-                // SSR-safe currency formatting
-                const formatted = total.toFixed(2);
-                const parts = formatted.split(".");
-                const integer = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-                return `$${integer}.${parts[1]}`;
-              })() : "—"}
+              {total > 0
+                ? (() => {
+                    // SSR-safe currency formatting
+                    const formatted = total.toFixed(2);
+                    const parts = formatted.split(".");
+                    const integer = parts[0].replace(
+                      /\B(?=(\d{3})+(?!\d))/g,
+                      ","
+                    );
+                    return `$${integer}.${parts[1]}`;
+                  })()
+                : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {mounted ? (hasPhotos ? "Final pricing" : "Preliminary pricing") : "Preliminary pricing"}
+              {mounted
+                ? hasPhotos
+                  ? "Final pricing"
+                  : "Preliminary pricing"
+                : "Preliminary pricing"}
             </p>
           </div>
           <div className="rounded-2xl border border-border bg-muted p-4">
-            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Install window</p>
-            <p className="mt-2 text-3xl font-semibold text-foreground">
-              {scheduledFor ? (() => {
-                // SSR-safe date formatting
-                const date = new Date(scheduledFor);
-                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                const month = months[date.getUTCMonth()];
-                const day = date.getUTCDate();
-                return `${month} ${day}`;
-              })() : "TBD"}
+            <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
+              Install window
             </p>
-            <p className="text-xs text-muted-foreground">Tentative until approval</p>
+            <p className="mt-2 text-3xl font-semibold text-foreground">
+              {scheduledFor
+                ? (() => {
+                    // SSR-safe date formatting
+                    const date = new Date(scheduledFor);
+                    const months = [
+                      "Jan",
+                      "Feb",
+                      "Mar",
+                      "Apr",
+                      "May",
+                      "Jun",
+                      "Jul",
+                      "Aug",
+                      "Sep",
+                      "Oct",
+                      "Nov",
+                      "Dec",
+                    ];
+                    const month = months[date.getUTCMonth()];
+                    const day = date.getUTCDate();
+                    return `${month} ${day}`;
+                  })()
+                : "TBD"}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              Tentative until approval
+            </p>
           </div>
         </div>
 
-        {/* Status Display */}
-        {isAccepted && (
+        {/* Status Display - Only render after mount to prevent hydration mismatch */}
+        {mounted && isAccepted && (
           <div className="mt-5 rounded-2xl bg-success-bg border border-success/30 p-4">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-success" />
-              <p className="text-sm font-semibold text-success">✓ Estimate Accepted</p>
+              <p className="text-sm font-semibold text-success">
+                ✓ Estimate Accepted
+              </p>
             </div>
             {acceptedAt && (
               <p className="text-xs text-success mt-1">
@@ -188,7 +246,20 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                 {(() => {
                   // SSR-safe date formatting
                   const date = new Date(acceptedAt);
-                  const months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                  const months = [
+                    "January",
+                    "February",
+                    "March",
+                    "April",
+                    "May",
+                    "June",
+                    "July",
+                    "August",
+                    "September",
+                    "October",
+                    "November",
+                    "December",
+                  ];
                   const month = months[date.getUTCMonth()];
                   const day = date.getUTCDate();
                   const year = date.getUTCFullYear();
@@ -199,11 +270,13 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           </div>
         )}
 
-        {invoice && (
+        {mounted && invoice && (
           <div className="mt-4 rounded-2xl border border-border bg-surface p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Invoice</p>
+                <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">
+                  Invoice
+                </p>
                 <p className="mt-1 text-sm font-semibold text-foreground">
                   {invoice.number || invoice.id || "Pending number"}
                 </p>
@@ -226,11 +299,13 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           </div>
         )}
 
-        {isRejected && (
+        {mounted && isRejected && (
           <div className="mt-5 rounded-2xl bg-error-bg border border-error/30 p-4">
             <div className="flex items-center gap-2">
               <XCircle className="h-5 w-5 text-error" />
-              <p className="text-sm font-semibold text-error">✗ Estimate Rejected</p>
+              <p className="text-sm font-semibold text-error">
+                ✗ Estimate Rejected
+              </p>
             </div>
             <p className="text-xs text-error mt-1">
               If you have questions, please contact support.
@@ -239,12 +314,14 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
         )}
 
         {/* Invoice Error - Show retry option */}
-        {isAccepted && invoiceError && (
+        {mounted && isAccepted && invoiceError && (
           <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
             <div className="flex items-start gap-3">
               <AlertCircle className="h-5 w-5 text-amber-600 mt-0.5 shrink-0" />
               <div className="flex-1">
-                <p className="text-sm font-semibold text-warning">Invoice Creation Failed</p>
+                <p className="text-sm font-semibold text-warning">
+                  Invoice Creation Failed
+                </p>
                 <p className="mt-1 text-xs text-warning">{invoiceError}</p>
                 <Button
                   type="button"
@@ -260,8 +337,8 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           </div>
         )}
 
-        {/* Action Buttons */}
-        {!isAccepted && !isRejected && (
+        {/* Action Buttons - Only render after mount to prevent hydration mismatch */}
+        {mounted && !isAccepted && !isRejected && (
           <div className="mt-5 space-y-3" suppressHydrationWarning>
             {isGuestMode ? (
               <div className="rounded-2xl border-2 border-border bg-muted px-4 py-4 text-center">
@@ -293,7 +370,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                     )}
                   </Button>
                 )}
-                
+
                 {/* Accept Button - Only show when acceptance is enabled */}
                 {canAccept && (
                   <Button
@@ -316,7 +393,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                     )}
                   </Button>
                 )}
-                
+
                 {/* Reject Button - Show when estimate can be rejected (use status computer logic) */}
                 {uiState.canReject && (
                   <Button
@@ -349,47 +426,51 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
           </div>
         )}
 
-        {/* Status Messages */}
-        {displayStatus === 'UNDER_REVIEW' && (
+        {/* Status Messages - Only render after mount to prevent hydration mismatch */}
+        {mounted && displayStatus === "UNDER_REVIEW" && (
           <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/10 p-3">
             <div className="flex items-start gap-2">
               <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" />
               <p className="text-xs text-primary">
-                Your review request is being processed. Admin will review and notify you when acceptance is enabled.
+                Your review request is being processed. Admin will review and
+                notify you when acceptance is enabled.
               </p>
             </div>
           </div>
         )}
-        
-        {displayStatus === 'PHOTOS_UNDER_REVIEW' && (
+
+        {mounted && displayStatus === "PHOTOS_UNDER_REVIEW" && (
           <div className="mt-4 rounded-2xl border border-primary/30 bg-primary/10 p-3">
             <div className="flex items-start gap-2">
               <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" />
               <p className="text-xs text-primary">
-                Your photos have been submitted. We're reviewing them and will notify you when ready.
+                Your photos have been submitted. We're reviewing them and will
+                notify you when ready.
               </p>
             </div>
           </div>
         )}
-        
-        {displayStatus === 'CHANGES_REQUESTED' && (
+
+        {mounted && displayStatus === "CHANGES_REQUESTED" && (
           <div className="mt-4 rounded-2xl border border-warning/30 bg-warning-bg p-3">
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
               <p className="text-xs text-warning">
-                We've reviewed your photos and need some changes or additional photos. Please resubmit.
+                We've reviewed your photos and need some changes or additional
+                photos. Please resubmit.
               </p>
             </div>
           </div>
         )}
-        
+
         {/* Info message when estimate sent but no photos uploaded */}
-        {displayStatus === 'ESTIMATE_SENT' && !hasPhotos && (
+        {mounted && displayStatus === "ESTIMATE_SENT" && !hasPhotos && (
           <div className="mt-4 rounded-2xl border border-warning/30 bg-warning-bg p-3">
             <div className="flex items-start gap-2">
               <AlertCircle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
               <p className="text-xs text-warning">
-                Consider uploading photos before requesting review. Your estimate cost may reduce once we review your property photos.
+                Consider uploading photos before requesting review. Your
+                estimate cost may reduce once we review your property photos.
               </p>
             </div>
           </div>
@@ -405,10 +486,13 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                 <AlertCircle className="h-5 w-5 text-warning" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground">No Photos Uploaded</h3>
+                <h3 className="text-lg font-semibold text-foreground">
+                  No Photos Uploaded
+                </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  You haven't uploaded photos yet. Your estimate cost may reduce once we review your property photos.
-                  Do you want to proceed with acceptance anyway?
+                  You haven't uploaded photos yet. Your estimate cost may reduce
+                  once we review your property photos. Do you want to proceed
+                  with acceptance anyway?
                 </p>
               </div>
             </div>
@@ -459,9 +543,12 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                 <XCircle className="h-5 w-5 text-error" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-foreground">Reject Estimate?</h3>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Reject Estimate?
+                </h3>
                 <p className="mt-2 text-sm text-muted-foreground">
-                  Are you sure you want to reject this estimate? This action cannot be undone.
+                  Are you sure you want to reject this estimate? This action
+                  cannot be undone.
                 </p>
               </div>
             </div>

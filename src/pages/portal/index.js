@@ -14,9 +14,9 @@ import { Spinner } from "../../components/ui/spinner";
 import { WorkflowProgressSkeleton, CardSkeleton } from "../../components/ui/skeleton";
 import { getAuthContext } from "../../lib/auth/getAuthContext";
 import { getLoginRedirect } from "../../lib/auth";
-import { usePortalState } from "@/hooks/usePortalState";
-import { ExpiredInviteMessage } from "@/components/portal/ExpiredInviteMessage";
-import { Button } from "@/components/ui/button";
+import { usePortalState } from "../../hooks/usePortalState";
+import { ExpiredInviteMessage } from "../../components/portal/ExpiredInviteMessage";
+import { Button } from "../../components/ui/button";
 
 export default function PortalPage({ initialStatus, initialError, initialEstimateId, initialEstimates }) {
   const router = useRouter();
