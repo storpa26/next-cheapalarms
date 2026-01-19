@@ -16,25 +16,37 @@ function getWpJsonBase() {
 }
 
 export async function getAuthContext(req) {
+  // TEMPORARY: Diagnostic logging for customer redirect loop
+  const isDev = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview';
+  
+  if (isDev) {
+    console.log('[getAuthContext] Called - has cookies:', !!req?.headers?.cookie);
+    if (req?.headers?.cookie) {
+      console.log('[getAuthContext] Cookie contains ca_jwt:', req.headers.cookie.includes('ca_jwt='));
+    }
+  }
+
   if (!req?.headers?.cookie) {
-    console.log('[getAuthContext] No cookies in request');
+    if (isDev) {
+      console.log('[getAuthContext] No cookies in request');
+    }
     return null;
   }
 
   const wpBase = getWpJsonBase();
-  console.log('[getAuthContext] WordPress base:', wpBase);
+  
+  if (isDev) {
+    console.log('[getAuthContext] WordPress base:', wpBase);
+  }
 
   // Check if cookie contains the token
   const hasToken = req.headers.cookie.includes('ca_jwt=');
   if (!hasToken) {
-    console.log('[getAuthContext] No ca_jwt cookie found');
+    if (isDev) {
+      console.log('[getAuthContext] No ca_jwt cookie found in request');
+    }
     return null;
   }
-
-  // Extract ca_jwt cookie for logging (first 50 chars only)
-  const cookieMatch = req.headers.cookie.match(/ca_jwt=([^;]+)/);
-  const tokenPreview = cookieMatch ? cookieMatch[1].substring(0, 50) + '...' : 'not found';
-  console.log('[getAuthContext] Token preview:', tokenPreview);
 
   try {
     // Add timeout to prevent hanging (10 seconds)
@@ -48,8 +60,10 @@ export async function getAuthContext(req) {
       const caJwtCookie = cookies.find(c => c.startsWith('ca_jwt='));
       const cookieHeader = caJwtCookie || req.headers.cookie;
 
-      console.log('[getAuthContext] Making request to:', `${wpBase}/ca/v1/auth/me`);
-      console.log('[getAuthContext] Cookie header length:', cookieHeader.length);
+      if (isDev) {
+        console.log('[getAuthContext] Making request to:', `${wpBase}/ca/v1/auth/me`);
+        console.log('[getAuthContext] Cookie header length:', cookieHeader.length);
+      }
 
       response = await fetch(`${wpBase}/ca/v1/auth/me`, {
         method: 'GET',
@@ -71,27 +85,41 @@ export async function getAuthContext(req) {
     }
     clearTimeout(timeoutId);
 
-    console.log('[getAuthContext] Response status:', response.status);
+    if (isDev) {
+      console.log('[getAuthContext] Response status:', response.status);
+    }
 
     if (response.status === 401) {
       const errorText = await response.text().catch(() => 'Unable to read error');
-      console.error('[getAuthContext] WordPress returned 401');
-      console.error('[getAuthContext] Error response:', errorText.substring(0, 500));
+      console.error('[getAuthContext] WordPress returned 401:', errorText.substring(0, 500));
       return null;
     }
     if (!response.ok) {
       const text = await response.text().catch(() => 'Unable to read error');
-      console.error('[getAuthContext] WP error', response.status, response.statusText, text.substring(0, 200));
+      console.error('[getAuthContext] WordPress error', response.status, response.statusText, text.substring(0, 200));
       return null;
     }
 
-    const data = await response.json();
+    let data;
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      console.error('[getAuthContext] Failed to parse JSON response:', jsonError.message);
+      const text = await response.text().catch(() => 'Unable to read response');
+      console.error('[getAuthContext] Response text:', text.substring(0, 500));
+      return null;
+    }
+    
     if (!data?.ok) {
-      console.error('[getAuthContext] WordPress response not ok', data);
+      console.error('[getAuthContext] WordPress response not ok:', JSON.stringify(data, null, 2));
       return null;
     }
-
-    console.log('[getAuthContext] Authentication successful, user ID:', data.id);
+    
+    if (isDev) {
+      console.log('[getAuthContext] Authentication successful - User ID:', data.id, 'isAdmin:', data.is_admin, 'isCustomer:', data.is_customer);
+      console.log('[getAuthContext] Full response:', JSON.stringify(data, null, 2));
+    }
+    
     return {
       id: data.id,
       email: data.email,
