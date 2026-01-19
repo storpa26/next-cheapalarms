@@ -2,9 +2,9 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useState } from "react";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { EstimateDetailContent } from "@/components/admin/EstimateDetailContent";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
+import { EstimateDetailContent } from "../../../components/admin/EstimateDetailContent";
 
 export default function EstimateDetailPage() {
   const router = useRouter();

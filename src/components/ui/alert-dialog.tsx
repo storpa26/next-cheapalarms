@@ -3,17 +3,28 @@ import { createPortal } from "react-dom";
 import { cn } from "../../lib/utils";
 import { Button } from "./button";
 
-const AlertDialogContext = React.createContext({
+interface AlertDialogContextValue {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+}
+
+const AlertDialogContext = React.createContext<AlertDialogContextValue>({
   isOpen: false,
   setIsOpen: () => {},
 });
 
-export function AlertDialog({ children, open, onOpenChange }) {
+interface AlertDialogProps {
+  children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function AlertDialog({ children, open, onOpenChange }: AlertDialogProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const isControlled = open !== undefined;
   const computedOpen = isControlled ? !!open : internalOpen;
 
-  const handleOpenChange = React.useCallback((newOpen) => {
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
     if (!isControlled) {
       setInternalOpen(newOpen);
     }
@@ -40,15 +51,20 @@ export function AlertDialog({ children, open, onOpenChange }) {
   );
 }
 
-export function AlertDialogTrigger({ children, asChild, ...props }) {
+interface AlertDialogTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode;
+  asChild?: boolean;
+}
+
+export function AlertDialogTrigger({ children, asChild, ...props }: AlertDialogTriggerProps) {
   const { setIsOpen } = React.useContext(AlertDialogContext);
   
   const handleClick = () => {
     setIsOpen(true);
   };
   
-  if (asChild) {
-    return React.cloneElement(children, { onClick: handleClick, ...props });
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, { onClick: handleClick, ...props } as any);
   }
   
   return (
@@ -58,7 +74,12 @@ export function AlertDialogTrigger({ children, asChild, ...props }) {
   );
 }
 
-export const AlertDialogContent = React.forwardRef(({ 
+interface AlertDialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export const AlertDialogContent = React.forwardRef<HTMLDivElement, AlertDialogContentProps>(({ 
   className = '', 
   children, 
   ...props 
@@ -67,10 +88,8 @@ export const AlertDialogContent = React.forwardRef(({
   const [mounted, setMounted] = React.useState(false);
   
   React.useEffect(() => {
-     
     setMounted(true);
     return () => {
-       
       setMounted(false);
     };
   }, []);
@@ -105,7 +124,11 @@ export const AlertDialogContent = React.forwardRef(({
 
 AlertDialogContent.displayName = 'AlertDialogContent';
 
-export function AlertDialogHeader({ className = '', ...props }) {
+interface AlertDialogHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+}
+
+export function AlertDialogHeader({ className = '', ...props }: AlertDialogHeaderProps) {
   return (
     <div
       className={cn("flex flex-col space-y-2 text-center sm:text-left mb-4", className)}
@@ -114,7 +137,11 @@ export function AlertDialogHeader({ className = '', ...props }) {
   );
 }
 
-export const AlertDialogTitle = React.forwardRef(({ className = '', ...props }, ref) => (
+interface AlertDialogTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+  className?: string;
+}
+
+export const AlertDialogTitle = React.forwardRef<HTMLHeadingElement, AlertDialogTitleProps>(({ className = '', ...props }, ref) => (
   <h2
     ref={ref}
     className={cn("text-lg font-semibold", className)}
@@ -124,7 +151,11 @@ export const AlertDialogTitle = React.forwardRef(({ className = '', ...props }, 
 
 AlertDialogTitle.displayName = 'AlertDialogTitle';
 
-export const AlertDialogDescription = React.forwardRef(({ className = '', ...props }, ref) => (
+interface AlertDialogDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {
+  className?: string;
+}
+
+export const AlertDialogDescription = React.forwardRef<HTMLParagraphElement, AlertDialogDescriptionProps>(({ className = '', ...props }, ref) => (
   <p
     ref={ref}
     className={cn("text-sm text-muted-foreground", className)}
@@ -134,7 +165,11 @@ export const AlertDialogDescription = React.forwardRef(({ className = '', ...pro
 
 AlertDialogDescription.displayName = 'AlertDialogDescription';
 
-export function AlertDialogFooter({ className = '', ...props }) {
+interface AlertDialogFooterProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+}
+
+export function AlertDialogFooter({ className = '', ...props }: AlertDialogFooterProps) {
   return (
     <div
       className={cn("flex flex-col-reverse sm:flex-row sm:justify-end sm:space-x-2 mt-6", className)}
@@ -143,10 +178,16 @@ export function AlertDialogFooter({ className = '', ...props }) {
   );
 }
 
-export function AlertDialogAction({ className = '', children, onClick, ...props }) {
+interface AlertDialogActionProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  className?: string;
+  children: React.ReactNode;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}
+
+export function AlertDialogAction({ className = '', children, onClick, ...props }: AlertDialogActionProps) {
   const { setIsOpen } = React.useContext(AlertDialogContext);
   
-  const handleClick = (e) => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     setIsOpen(false);
     if (onClick) onClick(e);
   };
@@ -158,10 +199,16 @@ export function AlertDialogAction({ className = '', children, onClick, ...props 
   );
 }
 
-export function AlertDialogCancel({ className = '', children, onClick, ...props }) {
+interface AlertDialogCancelProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  className?: string;
+  children: React.ReactNode;
+  onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void;
+}
+
+export function AlertDialogCancel({ className = '', children, onClick, ...props }: AlertDialogCancelProps) {
   const { setIsOpen } = React.useContext(AlertDialogContext);
   
-  const handleClick = (e) => {
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
     setIsOpen(false);
     if (onClick) onClick(e);
   };
@@ -172,6 +219,3 @@ export function AlertDialogCancel({ className = '', children, onClick, ...props 
     </Button>
   );
 }
-
-
-

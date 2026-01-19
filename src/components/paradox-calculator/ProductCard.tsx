@@ -183,6 +183,7 @@ const ProductCard = ({
                   >
                     <Button 
                       onClick={handleAdd}
+                      variant="secondary"
                       size="sm"
                       className="w-full bg-secondary hover:bg-secondary/90 shadow-md hover:shadow-lg shadow-secondary/20 transition-all duration-200"
                     >

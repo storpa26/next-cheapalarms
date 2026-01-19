@@ -125,6 +125,7 @@ const QuoteSummary = ({
                     <Button 
                       onClick={onBack}
                       variant="outline"
+                      size="default"
                       className="gap-1 border-2 hover:border-primary/50 transition-all"
                     >
                       <ChevronLeft className="w-4 h-4" />

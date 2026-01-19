@@ -2,16 +2,34 @@ import * as React from "react"
 import { ChevronDown } from "lucide-react"
 import { cn } from "../../lib/utils"
 
-const SelectContext = React.createContext({
+interface SelectContextValue {
+  value: string | null
+  onValueChange: (value: string) => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  options: Map<string, string>
+  registerOption: (value: string, label: string) => void
+}
+
+const SelectContext = React.createContext<SelectContextValue>({
   value: null,
   onValueChange: () => {},
   open: false,
   onOpenChange: () => {},
-  options: new Map(), // value -> label mapping
+  options: new Map(),
   registerOption: () => {},
 })
 
-const Select = React.forwardRef(({ 
+interface SelectProps extends React.HTMLAttributes<HTMLDivElement> {
+  value?: string
+  defaultValue?: string
+  onValueChange?: (value: string) => void
+  disabled?: boolean
+  className?: string
+  children: React.ReactNode
+}
+
+const Select = React.forwardRef<HTMLDivElement, SelectProps>(({ 
   className, 
   children, 
   value,
@@ -25,7 +43,7 @@ const Select = React.forwardRef(({
   const isControlled = value !== undefined
   const currentValue = isControlled ? value : internalValue
   
-  const handleValueChange = (newValue) => {
+  const handleValueChange = (newValue: string) => {
     if (!isControlled) {
       setInternalValue(newValue)
     }
@@ -33,19 +51,17 @@ const Select = React.forwardRef(({
     setOpen(false)
   }
 
-  const handleOpenChange = (newOpen) => {
+  const handleOpenChange = (newOpen: boolean) => {
     if (!disabled) {
       setOpen(newOpen)
     }
   }
 
-  const optionsMap = React.useRef(new Map())
-  // Use state to avoid accessing ref.current during render
-  const [options, setOptions] = React.useState(new Map())
+  const optionsMap = React.useRef(new Map<string, string>())
+  const [options, setOptions] = React.useState(new Map<string, string>())
 
-  const registerOption = React.useCallback((value, label) => {
+  const registerOption = React.useCallback((value: string, label: string) => {
     optionsMap.current.set(value, label)
-    // Update state to trigger re-render when options change
     setOptions(new Map(optionsMap.current))
   }, [])
 
@@ -66,7 +82,14 @@ const Select = React.forwardRef(({
 })
 Select.displayName = "Select"
 
-const SelectTrigger = React.forwardRef(({ 
+interface SelectTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  className?: string
+  children?: React.ReactNode
+  placeholder?: string
+  "aria-invalid"?: boolean
+}
+
+const SelectTrigger = React.forwardRef<HTMLButtonElement, SelectTriggerProps>(({ 
   className, 
   children,
   placeholder = "Select an option...",
@@ -74,10 +97,10 @@ const SelectTrigger = React.forwardRef(({
   ...props 
 }, ref) => {
   const { open, onOpenChange, value } = React.useContext(SelectContext)
-  const triggerRef = React.useRef(null)
-  const combinedRef = React.useRef(null)
+  const triggerRef = React.useRef<HTMLButtonElement>(null)
+  const combinedRef = React.useRef<HTMLButtonElement | null>(null)
   
-  React.useImperativeHandle(ref, () => combinedRef.current)
+  React.useImperativeHandle(ref, () => combinedRef.current!)
   React.useEffect(() => {
     combinedRef.current = triggerRef.current
   }, [])
@@ -86,7 +109,7 @@ const SelectTrigger = React.forwardRef(({
     onOpenChange(!open)
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
       onOpenChange(!open)
@@ -108,7 +131,6 @@ const SelectTrigger = React.forwardRef(({
       className={cn(
         "flex h-9 w-full items-center justify-between rounded-md border bg-surface px-3 py-1 text-sm shadow-sm transition-all duration-normal ease-standard",
         "focus-visible:outline-none",
-        // Gradient border on focus - using brand colors
         "relative overflow-hidden",
         "before:absolute before:inset-0 before:rounded-md before:p-[1px]",
         open 
@@ -116,11 +138,8 @@ const SelectTrigger = React.forwardRef(({
           : "before:bg-transparent",
         "before:transition-all before:duration-normal before:ease-standard",
         "after:absolute after:inset-[1px] after:rounded-[calc(0.375rem-1px)] after:bg-surface",
-        // Focus ring
         open && "ring-2 ring-ring ring-offset-2",
-        // Disabled state
         "disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:before:bg-transparent",
-        // Error state
         ariaInvalid && "before:bg-gradient-to-r before:from-error before:to-error",
         className
       )}
@@ -138,7 +157,6 @@ const SelectTrigger = React.forwardRef(({
           "h-4 w-4 transition-transform duration-normal ease-standard relative z-10",
           "text-foreground/60",
           open && "rotate-180",
-          // Gradient chevron on open
           open && "text-primary"
         )}
         style={open ? {
@@ -153,17 +171,23 @@ const SelectTrigger = React.forwardRef(({
 })
 SelectTrigger.displayName = "SelectTrigger"
 
-const SelectContent = React.forwardRef(({ 
+interface SelectContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string
+  children: React.ReactNode
+  position?: "bottom" | "top"
+}
+
+const SelectContent = React.forwardRef<HTMLDivElement, SelectContentProps>(({ 
   className, 
   children,
   position = "bottom",
   ...props 
 }, ref) => {
   const { open, onOpenChange } = React.useContext(SelectContext)
-  const contentRef = React.useRef(null)
-  const combinedRef = React.useRef(null)
+  const contentRef = React.useRef<HTMLDivElement>(null)
+  const combinedRef = React.useRef<HTMLDivElement | null>(null)
   
-  React.useImperativeHandle(ref, () => combinedRef.current)
+  React.useImperativeHandle(ref, () => combinedRef.current!)
   React.useEffect(() => {
     combinedRef.current = contentRef.current
   }, [])
@@ -171,17 +195,16 @@ const SelectContent = React.forwardRef(({
   React.useEffect(() => {
     if (!open) return
 
-    const handleClickOutside = (e) => {
-      if (contentRef.current && !contentRef.current.contains(e.target)) {
-        // Check if click is on trigger
-        const trigger = e.target.closest('[role="combobox"]')
+    const handleClickOutside = (e: MouseEvent) => {
+      if (contentRef.current && !contentRef.current.contains(e.target as Node)) {
+        const trigger = (e.target as Element).closest('[role="combobox"]')
         if (!trigger) {
           onOpenChange(false)
         }
       }
     }
 
-    const handleEscape = (e) => {
+    const handleEscape = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         onOpenChange(false)
       }
@@ -226,7 +249,14 @@ const SelectContent = React.forwardRef(({
 })
 SelectContent.displayName = "SelectContent"
 
-const SelectItem = React.forwardRef(({ 
+interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string
+  children: React.ReactNode
+  value: string
+  disabled?: boolean
+}
+
+const SelectItem = React.forwardRef<HTMLDivElement, SelectItemProps>(({ 
   className, 
   children,
   value,
@@ -236,7 +266,6 @@ const SelectItem = React.forwardRef(({
   const { value: selectedValue, onValueChange, registerOption } = React.useContext(SelectContext)
   const isSelected = selectedValue === value
 
-  // Register this option so SelectValue can find its label
   React.useEffect(() => {
     if (value !== undefined && children) {
       registerOption(value, typeof children === 'string' ? children : String(children))
@@ -249,7 +278,7 @@ const SelectItem = React.forwardRef(({
     }
   }
 
-  const handleKeyDown = (e) => {
+  const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault()
       if (!disabled) {
@@ -268,13 +297,9 @@ const SelectItem = React.forwardRef(({
       tabIndex={disabled ? -1 : 0}
       className={cn(
         "relative flex cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-colors duration-fast ease-standard",
-        // Selected state with brand gradient (always visible, even on hover)
         isSelected && "bg-gradient-to-r from-primary to-secondary text-primary-foreground font-medium",
-        // Hover state with brand gradient (only when NOT selected)
         !isSelected && "hover:bg-gradient-to-r hover:from-primary/10 hover:to-secondary/10",
-        // Focus state (only when NOT selected)
         !isSelected && "focus:bg-state-hover-bg",
-        // Disabled state
         disabled && "opacity-50 cursor-not-allowed pointer-events-none",
         className
       )}
@@ -289,15 +314,18 @@ const SelectItem = React.forwardRef(({
 })
 SelectItem.displayName = "SelectItem"
 
-const SelectValue = ({ placeholder, children, ...props }) => {
+interface SelectValueProps extends React.HTMLAttributes<HTMLSpanElement> {
+  placeholder?: string
+  children?: React.ReactNode
+}
+
+const SelectValue = ({ placeholder, children, ...props }: SelectValueProps) => {
   const { value, options } = React.useContext(SelectContext)
   
-  // If children provided, use it (for custom rendering)
   if (children) {
     return <span {...props}>{children}</span>
   }
   
-  // Otherwise, try to find the label from registered options
   const label = value ? options.get(value) : null
   
   return <span {...props}>{label || value || placeholder}</span>

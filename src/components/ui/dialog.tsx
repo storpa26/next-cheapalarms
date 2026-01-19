@@ -3,17 +3,28 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "../../lib/utils";
 
-const DialogContext = React.createContext({
+interface DialogContextValue {
+  isOpen: boolean;
+  setIsOpen: (open: boolean) => void;
+}
+
+const DialogContext = React.createContext<DialogContextValue>({
   isOpen: false,
   setIsOpen: () => {},
 });
 
-export function Dialog({ children, open, onOpenChange }) {
+interface DialogProps {
+  children: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}
+
+export function Dialog({ children, open, onOpenChange }: DialogProps) {
   const [internalOpen, setInternalOpen] = React.useState(false);
   const isControlled = open !== undefined;
   const computedOpen = isControlled ? !!open : internalOpen;
 
-  const handleOpenChange = React.useCallback((newOpen) => {
+  const handleOpenChange = React.useCallback((newOpen: boolean) => {
     if (!isControlled) {
       setInternalOpen(newOpen);
     }
@@ -40,15 +51,20 @@ export function Dialog({ children, open, onOpenChange }) {
   );
 }
 
-export function DialogTrigger({ children, asChild, ...props }) {
+interface DialogTriggerProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  children: React.ReactNode;
+  asChild?: boolean;
+}
+
+export function DialogTrigger({ children, asChild, ...props }: DialogTriggerProps) {
   const { setIsOpen } = React.useContext(DialogContext);
   
   const handleClick = () => {
     setIsOpen(true);
   };
   
-  if (asChild) {
-    return React.cloneElement(children, { onClick: handleClick, ...props });
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(children, { onClick: handleClick, ...props } as any);
   }
   
   return (
@@ -58,7 +74,12 @@ export function DialogTrigger({ children, asChild, ...props }) {
   );
 }
 
-export const DialogContent = React.forwardRef(({ 
+interface DialogContentProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+  children: React.ReactNode;
+}
+
+export const DialogContent = React.forwardRef<HTMLDivElement, DialogContentProps>(({ 
   className = '', 
   children, 
   ...props 
@@ -67,10 +88,8 @@ export const DialogContent = React.forwardRef(({
   const [mounted, setMounted] = React.useState(false);
   
   React.useEffect(() => {
-     
     setMounted(true);
     return () => {
-       
       setMounted(false);
     };
   }, []);
@@ -89,10 +108,10 @@ export const DialogContent = React.forwardRef(({
     >
       <div
         ref={ref}
-      className={cn(
-        "bg-elevated text-foreground relative rounded-xl border border-border shadow-elevated max-w-4xl w-full",
-        className
-      )}
+        className={cn(
+          "bg-elevated text-foreground relative rounded-xl border border-border shadow-elevated max-w-4xl w-full",
+          className
+        )}
         style={{ 
           maxHeight: '90vh', 
           display: 'flex', 
@@ -121,7 +140,11 @@ export const DialogContent = React.forwardRef(({
 
 DialogContent.displayName = 'DialogContent';
 
-export function DialogHeader({ className = '', ...props }) {
+interface DialogHeaderProps extends React.HTMLAttributes<HTMLDivElement> {
+  className?: string;
+}
+
+export function DialogHeader({ className = '', ...props }: DialogHeaderProps) {
   return (
     <div
       className={cn("flex flex-col space-y-1.5 p-6 pb-4", className)}
@@ -130,7 +153,11 @@ export function DialogHeader({ className = '', ...props }) {
   );
 }
 
-export const DialogTitle = React.forwardRef(({ className = '', ...props }, ref) => (
+interface DialogTitleProps extends React.HTMLAttributes<HTMLHeadingElement> {
+  className?: string;
+}
+
+export const DialogTitle = React.forwardRef<HTMLHeadingElement, DialogTitleProps>(({ className = '', ...props }, ref) => (
   <h2
     ref={ref}
     className={cn("text-2xl font-bold leading-none tracking-tight", className)}
@@ -140,7 +167,11 @@ export const DialogTitle = React.forwardRef(({ className = '', ...props }, ref) 
 
 DialogTitle.displayName = 'DialogTitle';
 
-export const DialogDescription = React.forwardRef(({ className = '', ...props }, ref) => (
+interface DialogDescriptionProps extends React.HTMLAttributes<HTMLParagraphElement> {
+  className?: string;
+}
+
+export const DialogDescription = React.forwardRef<HTMLParagraphElement, DialogDescriptionProps>(({ className = '', ...props }, ref) => (
   <p
     ref={ref}
     className={cn("text-sm text-muted-foreground", className)}
@@ -149,4 +180,3 @@ export const DialogDescription = React.forwardRef(({ className = '', ...props },
 ));
 
 DialogDescription.displayName = 'DialogDescription';
-

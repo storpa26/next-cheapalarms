@@ -2,9 +2,9 @@ import Head from "next/head";
 import { useRouter } from "next/router";
 import Link from "next/link";
 import { useState } from "react";
-import AdminLayout from "@/components/admin/layout/AdminLayout";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
-import { InvoiceDetailContent } from "@/components/admin/InvoiceDetailContent";
+import AdminLayout from "../../../components/admin/layout/AdminLayout";
+import { requireAdmin } from "../../../lib/auth/requireAdmin";
+import { InvoiceDetailContent } from "../../../components/admin/InvoiceDetailContent";
 
 export default function InvoiceDetailPage() {
   const router = useRouter();

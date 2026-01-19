@@ -1,10 +1,20 @@
 import * as React from "react"
-import { Circle } from "lucide-react"
 import { cn } from "../../lib/utils"
 
-const RadioGroupContext = React.createContext({})
+interface RadioGroupContextValue {
+  value: string
+  onValueChange?: (value: string) => void
+}
 
-const RadioGroup = React.forwardRef(({ className, value, onValueChange, ...props }, ref) => {
+const RadioGroupContext = React.createContext<RadioGroupContextValue>({ value: "" })
+
+interface RadioGroupProps extends React.HTMLAttributes<HTMLDivElement> {
+  value?: string
+  onValueChange?: (value: string) => void
+  className?: string
+}
+
+const RadioGroup = React.forwardRef<HTMLDivElement, RadioGroupProps>(({ className, value, onValueChange, children, ...props }, ref) => {
   const [internalValue, setInternalValue] = React.useState(value || "")
   const isControlled = value !== undefined
   const currentValue = isControlled ? value : internalValue
@@ -32,13 +42,20 @@ const RadioGroup = React.forwardRef(({ className, value, onValueChange, ...props
         className={cn("grid gap-2", className)}
         role="radiogroup"
         {...props}
-      />
+      >
+        {children}
+      </div>
     </RadioGroupContext.Provider>
   )
 })
 RadioGroup.displayName = "RadioGroup"
 
-const RadioGroupItem = React.forwardRef(({ className, value, id, ...props }, ref) => {
+interface RadioGroupItemProps extends React.InputHTMLAttributes<HTMLInputElement> {
+  value: string
+  className?: string
+}
+
+const RadioGroupItem = React.forwardRef<HTMLInputElement, RadioGroupItemProps>(({ className, value, id, ...props }, ref) => {
   const context = React.useContext(RadioGroupContext)
   const isChecked = context.value === value
 
