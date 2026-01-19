@@ -31,7 +31,7 @@ export default function InstallationStatus({ estimateId }) {
       
       try {
         // First, get the job UUID from estimate ID (this reads from WordPress meta, not ServiceM8)
-        const linkRes = await fetch(`/api/servicem8/jobs/links?estimateId=${encodeURIComponent(estimateId)}`);
+        const linkRes = await fetch(`/api/servicem8/jobs/link?estimateId=${encodeURIComponent(estimateId)}`);
         if (!linkRes.ok) {
           // No job linked yet - this is fine
           setLoading(false);
@@ -99,7 +99,7 @@ export default function InstallationStatus({ estimateId }) {
         // Re-fetch job status
         const fetchJobStatus = async () => {
           try {
-            const linkRes = await fetch(`/api/servicem8/jobs/links?estimateId=${encodeURIComponent(estimateId)}`);
+            const linkRes = await fetch(`/api/servicem8/jobs/link?estimateId=${encodeURIComponent(estimateId)}`);
             if (!linkRes.ok) return;
             const linkData = await linkRes.json();
             if (!linkData.ok || !linkData.link?.jobUuid) return;

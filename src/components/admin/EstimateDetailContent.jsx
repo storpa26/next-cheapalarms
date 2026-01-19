@@ -34,6 +34,7 @@ import { ChangeSummary } from "./ChangeSummary";
 import { SaveEstimateModal } from "./SaveEstimateModal";
 import { WorkflowStatusCard } from "./WorkflowStatusCard";
 import { DeleteDialog } from "./DeleteDialog";
+import JobDetailModal from "../servicem8/JobDetailModal";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 
@@ -70,6 +71,13 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const [deleteEstimateDialogOpen, setDeleteEstimateDialogOpen] = useState(false);
   const [deleteScope, setDeleteScope] = useState('both');
   
+  // ServiceM8 state
+  const [jobLink, setJobLink] = useState(null);
+  const [jobData, setJobData] = useState(null);
+  const [loadingJobLink, setLoadingJobLink] = useState(false);
+  const [creatingJob, setCreatingJob] = useState(false);
+  const [jobModalOpen, setJobModalOpen] = useState(false);
+  
   // Fetch photos to determine which items have photos
   const { data: photosData } = useEstimatePhotos({
     estimateId: estimateId || undefined,
@@ -90,6 +98,41 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     
     return counts;
   }, [photosData]);
+
+  // Fetch ServiceM8 job link
+  useEffect(() => {
+    if (!estimateId) return;
+    
+    const fetchJobLink = async () => {
+      setLoadingJobLink(true);
+      try {
+        const res = await fetch(`/api/servicem8/jobs/link?estimateId=${encodeURIComponent(estimateId)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.ok && data.link) {
+            setJobLink(data.link);
+            
+            // Fetch job details if jobUuid exists
+            if (data.link.jobUuid) {
+              const jobRes = await fetch(`/api/servicem8/jobs/${data.link.jobUuid}`);
+              if (jobRes.ok) {
+                const jobData = await jobRes.json();
+                if (jobData.ok) {
+                  setJobData(jobData.job);
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching job link:", err);
+      } finally {
+        setLoadingJobLink(false);
+      }
+    };
+    
+    fetchJobLink();
+  }, [estimateId]);
 
   // Warn before leaving page with unsaved changes
   useEffect(() => {
@@ -345,6 +388,87 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       const errorMessage = parseWpFetchError(err);
       toast.error(errorMessage || "Failed to create invoice");
     }
+  };
+
+  const handleCreateServiceM8Job = async () => {
+    if (!estimateId) {
+      toast.error("Estimate ID is required");
+      return;
+    }
+    
+    // Try to get locationId from multiple sources, but let backend resolve if missing
+    const effectiveLocationId = locationId || estimate?.locationId || estimate?.altId || estimate?.location_id || null;
+    
+    setCreatingJob(true);
+    try {
+      const res = await fetch("/api/servicem8/jobs/create-from-estimate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          estimateId,
+          ...(effectiveLocationId ? { locationId: effectiveLocationId } : {}),
+        }),
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok || !data.ok) {
+        throw new Error(data.error || "Failed to create ServiceM8 job");
+      }
+      
+      toast.success(data.alreadyExists ? "Job already exists" : "ServiceM8 job created successfully");
+      
+      // Refresh job link and data
+      if (data.jobUuid) {
+        const linkRes = await fetch(`/api/servicem8/jobs/link?estimateId=${encodeURIComponent(estimateId)}`);
+        if (linkRes.ok) {
+          const linkData = await linkRes.json();
+          if (linkData.ok && linkData.link) {
+            setJobLink(linkData.link);
+            
+            const jobRes = await fetch(`/api/servicem8/jobs/${data.jobUuid}`);
+            if (jobRes.ok) {
+              const jobData = await jobRes.json();
+              if (jobData.ok) {
+                setJobData(jobData.job);
+              }
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Error creating ServiceM8 job:", err);
+      toast.error(err.message || "Failed to create ServiceM8 job");
+    } finally {
+      setCreatingJob(false);
+    }
+  };
+
+  const handleViewServiceM8Job = async () => {
+    const jobUuid = jobLink?.jobUuid || jobData?.uuid;
+    if (!jobUuid) {
+      toast.error("Job UUID not found");
+      return;
+    }
+    
+    // Fetch latest job data if not already loaded or if different UUID
+    if (!jobData || jobData.uuid !== jobUuid) {
+      try {
+        const jobRes = await fetch(`/api/servicem8/jobs/${jobUuid}`);
+        if (jobRes.ok) {
+          const jobDataRes = await jobRes.json();
+          if (jobDataRes.ok) {
+            setJobData(jobDataRes.job);
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching job data:", err);
+        toast.error("Failed to load job details");
+        return;
+      }
+    }
+    
+    setJobModalOpen(true);
   };
 
   const handleSendEstimate = async () => {
@@ -826,6 +950,44 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
             </div>
           )}
 
+          {/* Linked ServiceM8 Job */}
+          {loadingJobLink ? (
+            <div className="rounded-xl border border-border/60 bg-card p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">ServiceM8 Job</h3>
+              <div className="text-sm text-muted-foreground">Loading...</div>
+            </div>
+          ) : jobLink && jobData ? (
+            <div className="rounded-xl border border-border/60 bg-card p-4">
+              <h3 className="mb-3 text-sm font-semibold text-foreground">Linked ServiceM8 Job</h3>
+              <div className="space-y-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Job Number:</span>{" "}
+                  <span className="font-medium text-foreground">{jobData?.job_number || jobData?.jobNumber || 'N/A'}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Status:</span>{" "}
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-medium ${
+                      jobData?.status === "Completed" ? "bg-green-500/10 text-green-600 border-green-500/20" :
+                      jobData?.status === "In Progress" ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
+                      jobData?.status === "Scheduled" ? "bg-purple-500/10 text-purple-600 border-purple-500/20" :
+                      "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                    }`}
+                  >
+                    {jobData?.status || jobData?.job_status || "Unknown"}
+                  </Badge>
+                </div>
+                {jobData?.assigned_to_staff_name && (
+                  <div>
+                    <span className="text-muted-foreground">Assigned To:</span>{" "}
+                    <span className="font-medium text-foreground">{jobData.assigned_to_staff_name}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : null}
+
           {/* Actions */}
           <div className="rounded-xl border border-border/60 bg-card p-4">
             <h3 className="mb-3 text-sm font-semibold text-foreground">Actions</h3>
@@ -917,6 +1079,45 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   {createInvoiceMutation.isPending ? "Creating..." : "Create Invoice"}
                 </Button>
               )}
+              
+              {/* ServiceM8 Actions */}
+              <div className="pt-2 border-t border-border/60 space-y-2">
+                {!jobLink ? (
+                  <Button
+                    onClick={handleCreateServiceM8Job}
+                    disabled={creatingJob || !estimateId || isLoading || !estimate}
+                    variant="outline"
+                    className="w-full border-blue-500 text-blue-700 hover:bg-blue-50"
+                  >
+                    {creatingJob ? (
+                      <>
+                        <Spinner size="sm" />
+                        Creating Job...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Create ServiceM8 Job
+                      </>
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleViewServiceM8Job}
+                    disabled={!jobLink?.jobUuid}
+                    variant="outline"
+                    className="w-full border-blue-500 text-blue-700 hover:bg-blue-50"
+                  >
+                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    View/Manage ServiceM8 Job
+                  </Button>
+                )}
+              </div>
               <div className="pt-2 border-t border-border/60">
                 <Button
                   onClick={() => setDeleteEstimateDialogOpen(true)}
@@ -1012,6 +1213,28 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         scope={deleteScope}
         onScopeChange={setDeleteScope}
       />
+
+      {/* ServiceM8 Job Detail Modal */}
+      {jobData && (
+        <JobDetailModal
+          job={jobData}
+          open={jobModalOpen}
+          onClose={() => {
+            setJobModalOpen(false);
+            // Optionally refresh job data when closing
+            if (jobLink?.jobUuid) {
+              fetch(`/api/servicem8/jobs/${jobLink.jobUuid}`)
+                .then(res => res.json())
+                .then(data => {
+                  if (data.ok) {
+                    setJobData(data.job);
+                  }
+                })
+                .catch(err => console.error("Error refreshing job:", err));
+            }
+          }}
+        />
+      )}
     </div>
   );
 }

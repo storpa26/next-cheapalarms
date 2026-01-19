@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { CreditCard, CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Spinner } from "../../ui/spinner";
@@ -30,10 +30,16 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
   const [paymentIntentId, setPaymentIntentId] = useState(null);
   const [isCreatingIntent, setIsCreatingIntent] = useState(false);
   const [stripeReady, setStripeReady] = useState(!!stripePromise);
+  const [cardElementReady, setCardElementReady] = useState(false);
+  // FIXED: Use ref to maintain stable CardElement reference across re-renders
+  const cardElementRef = useRef(null);
 
   useEffect(() => {
     setStripeReady(!!stripePromise);
   }, []);
+
+  // Note: cardElementReady is kept for potential UI feedback, but we don't rely on it for button disable
+  // The handleSubmit function already checks if CardElement exists before proceeding
 
   // Guard: Only initialize if workflow is at payment step
   const shouldInitialize = workflow?.status === 'accepted' || workflow?.status === 'booked';
@@ -53,78 +59,95 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
     setIsCreatingIntent(true);
     setError(null);
 
-      try {
-        const nonce = await getWpNonceSafe().catch(() => '');
-        const response = await fetch('/api/stripe/create-payment-intent', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
-          credentials: 'include',
-          body: JSON.stringify({
-            amount,
-            currency: 'aud',
-            estimateId, // SECURITY: Required for server-side amount validation
-            metadata: {
-              estimateId,
-              locationId,
-            },
-          }),
-        });
+    try {
+      const nonce = await getWpNonceSafe().catch(() => '');
+      const response = await fetch('/api/stripe/create-payment-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
+        credentials: 'include',
+        body: JSON.stringify({
+          amount,
+          currency: 'aud',
+          estimateId, // SECURITY: Required for server-side amount validation
+          metadata: {
+            estimateId,
+            locationId,
+          },
+        }),
+      });
 
-        const data = await response.json();
+      const data = await response.json();
 
-        if (!response.ok || !data.ok) {
-          throw new Error(data.error || data.err || 'Failed to create payment intent');
-        }
+      if (!response.ok || !data.ok) {
+        throw new Error(data.error || data.err || 'Failed to create payment intent');
+      }
 
-        setClientSecret(data.clientSecret);
-        setPaymentIntentId(data.paymentIntentId);
+      // Reset cardElementReady when new payment intent is created
+      setCardElementReady(false);
+      setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.paymentIntentId);
+      
       setIsCreatingIntent(false);
       return data.clientSecret;
-      } catch (err) {
+    } catch (err) {
       setError(err.message || 'Failed to create payment intent');
       setIsCreatingIntent(false);
-        toast.error('Payment initialization failed', {
-          description: err.message,
-        });
+      toast.error('Payment initialization failed', {
+        description: err.message,
+      });
       return null;
-      }
+    }
   }, [amount, estimateId, locationId, isAmountValid]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
 
-    // Create payment intent if not already created
-    let secretToUse = clientSecret;
-    if (!secretToUse) {
-      secretToUse = await createPaymentIntent();
-      if (!secretToUse) {
-        return; // Error already set in createPaymentIntent
-      }
+    // Guard: prevent duplicate clicks
+    if (isProcessing || isCreatingIntent) {
+      return;
     }
 
-    if (!stripe || !elements || !secretToUse) {
+    if (!stripe || !elements) {
       setError('Payment system not ready. Please wait...');
       return;
     }
 
-    setIsProcessing(true);
-
     try {
-      const cardElement = elements.getElement(CardElement);
+      setIsProcessing(true);
 
-      if (!cardElement) {
-        setError('Card element not ready. Please wait...');
-        setIsProcessing(false);
+      // Phase 1: Create payment intent if not already created
+      if (!clientSecret) {
+        const newClientSecret = await createPaymentIntent();
+        if (!newClientSecret) {
+          // Error already set in createPaymentIntent
+          return;
+        }
+        // Return immediately after creating intent - CardElement will mount on next render
+        // User will click "Complete Payment" button to proceed
+        return;
+      }
+
+      // Phase 2: Confirm payment (clientSecret exists)
+      // Gate: CardElement must be ready
+      if (!cardElementReady) {
+        setError('Card element not ready. Please wait a moment and try again.');
+        return;
+      }
+
+      // Get fresh CardElement reference right before use
+      const card = elements.getElement(CardElement);
+      if (!card) {
+        setError('Card element not ready. Please wait a moment and try again.');
         return;
       }
 
       // Confirm payment with Stripe
       const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
-        secretToUse,
+        clientSecret,
         {
           payment_method: {
-            card: cardElement,
+            card: card,
           },
         }
       );
@@ -245,7 +268,27 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
         {clientSecret ? (
           <>
           <div className="p-3 rounded-lg border border-border bg-background">
-            <CardElement options={cardElementOptions} />
+            <CardElement 
+              options={cardElementOptions}
+              onReady={() => {
+                // Store element reference in ref when ready (for potential future use)
+                const element = elements.getElement(CardElement);
+                if (element) {
+                  cardElementRef.current = element;
+                }
+                setCardElementReady(true);
+              }}
+              onChange={(e) => {
+                // Update ref if element is available in onChange event
+                if (e.element) {
+                  cardElementRef.current = e.element;
+                }
+                // CardElement is interactive - ensure ready state is set
+                if (e.complete && !cardElementReady) {
+                  setCardElementReady(true);
+                }
+              }}
+            />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
             Test card: 4242 4242 4242 4242 | Any future date | Any CVC
@@ -262,7 +305,7 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
 
       <Button
         type="submit"
-        disabled={isProcessing || isCreatingIntent || !isAmountValid || amount === null}
+        disabled={isProcessing || isCreatingIntent || !isAmountValid || amount === null || !stripe || !elements || (clientSecret && !cardElementReady)}
         size="lg"
         className="w-full bg-gradient-to-r from-primary via-primary to-secondary text-white font-bold py-6 rounded-xl shadow-2xl shadow-primary/30 hover:shadow-primary/40 transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:shadow-none relative overflow-hidden group"
       >
@@ -361,6 +404,12 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
     return null;
   }, [minimumPaymentInfo?.minimumPayment]);
 
+  // Check if this is a subsequent payment (after first partial payment)
+  // Second payment MUST be full remaining balance - no partial options allowed
+  const requiresFullPayment = useMemo(() => {
+    return minimumPaymentInfo?.requiresFullPayment === true || minimumPaymentInfo?.isSubsequentPayment === true;
+  }, [minimumPaymentInfo?.requiresFullPayment, minimumPaymentInfo?.isSubsequentPayment]);
+
   // Calculate existing paid amount (memoized)
   const existingPaidAmount = useMemo(() => {
     if (minimumPaymentInfo?.existingPaidAmount !== undefined) {
@@ -401,15 +450,20 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
   const preset50Valid = useMemo(() => preset50 !== null && minimumPayment !== null && preset50 >= minimumPayment, [preset50, minimumPayment]);
   const preset75Valid = useMemo(() => preset75 !== null && minimumPayment !== null && preset75 >= minimumPayment, [preset75, minimumPayment]);
 
-  // Auto-select "full" if remaining balance < minimum (only one valid option)
+  // Auto-select "full" if remaining balance < minimum OR if this is a subsequent payment (only one valid option)
   useEffect(() => {
-    if (remainingBalance !== null && minimumPayment !== null && remainingBalance < minimumPayment && remainingBalance > 0) {
-      // Only auto-select if no preset is already selected
+    if (requiresFullPayment && remainingBalance !== null && remainingBalance > 0) {
+      // Auto-select full payment for subsequent payments (second payment must be full)
+      if (selectedPreset === null && !useCustomAmount) {
+        setSelectedPreset('full');
+      }
+    } else if (remainingBalance !== null && minimumPayment !== null && remainingBalance < minimumPayment && remainingBalance > 0) {
+      // Auto-select full if remaining balance < minimum (first payment edge case)
       if (selectedPreset === null && !useCustomAmount) {
         setSelectedPreset('full');
       }
     }
-  }, [remainingBalance, minimumPayment, selectedPreset, useCustomAmount]);
+  }, [remainingBalance, minimumPayment, selectedPreset, useCustomAmount, requiresFullPayment]);
 
   // When preset is selected, use that amount (memoized)
   const selectedAmount = useMemo(() => {
@@ -422,7 +476,13 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
   }, [selectedPreset, preset25, preset50, preset75, minimumPayment, remainingBalance]);
 
   // Use custom amount if set, preset amount if selected, otherwise use default (memoized)
+  // For subsequent payments, always use remaining balance (full payment required)
   const payableAmount = useMemo(() => {
+    // If subsequent payment, must be full remaining balance
+    if (requiresFullPayment && remainingBalance !== null) {
+      return remainingBalance;
+    }
+    
     if (useCustomAmount && customAmount !== null && customAmount > 0) {
       return customAmount;
     }
@@ -430,16 +490,26 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
       return selectedAmount;
     }
     return defaultPayableAmount;
-  }, [useCustomAmount, customAmount, selectedAmount, defaultPayableAmount]);
+  }, [useCustomAmount, customAmount, selectedAmount, defaultPayableAmount, requiresFullPayment, remainingBalance]);
 
   // Validate custom amount (including minimum payment check) - memoized
   const customAmountError = useMemo(() => {
     if (!useCustomAmount || customAmount === null) return null;
     
     if (customAmount <= 0) return 'Amount must be greater than zero';
-    if (minimumPayment !== null && customAmount < minimumPayment) {
-      return `Amount must be at least ${formatAmount(minimumPayment)}`;
+    
+    // If this is a subsequent payment, must be full remaining balance
+    if (requiresFullPayment) {
+      if (remainingBalance !== null && Math.abs(customAmount - remainingBalance) > 0.01) {
+        return `Second payment must be the full remaining balance of ${formatAmount(remainingBalance)}`;
+      }
+    } else {
+      // First payment: check minimum payment
+      if (minimumPayment !== null && customAmount < minimumPayment) {
+        return `Amount must be at least ${formatAmount(minimumPayment)}`;
+      }
     }
+    
     if (remainingBalance !== null && customAmount > remainingBalance) {
       return `Amount cannot exceed remaining balance of ${formatAmount(remainingBalance)}`;
     }
@@ -447,7 +517,7 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
       return `Amount cannot exceed invoice total of ${formatAmount(invoiceTotal)}`;
     }
     return null;
-  }, [useCustomAmount, customAmount, minimumPayment, remainingBalance, invoiceTotal]);
+  }, [useCustomAmount, customAmount, minimumPayment, remainingBalance, invoiceTotal, requiresFullPayment]);
 
   // Handle preset button click (memoized with useCallback)
   const handlePresetClick = useCallback((preset) => {
@@ -596,7 +666,7 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
   }
 
   return (
-    <Elements stripe={stripePromise}>
+    <Elements stripe={stripePromise} key="payment-elements">
       <div className="rounded-[28px] border border-border bg-surface p-5 shadow-[0_25px_60px_rgba(15,23,42,0.08)] animate-in fade-in duration-300">
         <div className="flex items-center justify-between">
           <div>
@@ -708,127 +778,153 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
             {/* Preset Payment Buttons - Modern Gradient Style */}
             {!useCustomAmount && (
               <div className="mt-4 space-y-3">
-                <div className="grid grid-cols-2 gap-3">
-                  {/* Pay Minimum Button - Modern Gradient Glassmorphism Style */}
-                  {minimumPayment !== null && minimumPayment > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handlePresetClick('minimum')}
-                      aria-label={`Pay minimum amount of ${formatAmount(minimumPayment)}`}
-                      aria-pressed={selectedPreset === 'minimum'}
-                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
-                        selectedPreset === 'minimum'
-                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
-                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-base font-bold">Minimum</span>
-                        <span className={`text-xs ${selectedPreset === 'minimum' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(minimumPayment)}</span>
-                      </div>
-                      {selectedPreset === 'minimum' && (
+                {/* If this is a subsequent payment (second payment after partial), only show Full button */}
+                {requiresFullPayment ? (
+                  <div className="rounded-xl border-2 border-primary/30 bg-primary/5 p-4">
+                    <p className="text-xs font-semibold text-primary mb-3 text-center">
+                      Final Payment Required - Full Amount
+                    </p>
+                    {remainingBalance !== null && remainingBalance > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handlePresetClick('full')}
+                        aria-label={`Pay full remaining amount of ${formatAmount(remainingBalance)}`}
+                        aria-pressed={selectedPreset === 'full'}
+                        className="w-full relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50"
+                      >
+                        <div className="flex flex-col items-center gap-1">
+                          <span className="text-base font-bold">Pay Full Amount</span>
+                          <span className="text-xs opacity-90">{formatAmount(remainingBalance)}</span>
+                        </div>
                         <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                      )}
-                    </button>
-                  )}
-                  {preset25Valid && preset25 !== null && (
-                    <button
-                      type="button"
-                      onClick={() => handlePresetClick('25')}
-                      aria-label={`Pay 25% which is ${formatAmount(preset25)}`}
-                      aria-pressed={selectedPreset === '25'}
-                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
-                        selectedPreset === '25'
-                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
-                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-base font-bold">25%</span>
-                        <span className={`text-xs ${selectedPreset === '25' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset25)}</span>
-                      </div>
-                      {selectedPreset === '25' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                      )}
-                    </button>
-                  )}
-                  {preset50Valid && preset50 !== null && (
-                    <button
-                      type="button"
-                      onClick={() => handlePresetClick('50')}
-                      aria-label={`Pay 50% which is ${formatAmount(preset50)}`}
-                      aria-pressed={selectedPreset === '50'}
-                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
-                        selectedPreset === '50'
-                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
-                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-base font-bold">50%</span>
-                        <span className={`text-xs ${selectedPreset === '50' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset50)}</span>
-                      </div>
-                      {selectedPreset === '50' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                      )}
-                    </button>
-                  )}
-                  {preset75Valid && preset75 !== null && (
-                    <button
-                      type="button"
-                      onClick={() => handlePresetClick('75')}
-                      aria-label={`Pay 75% which is ${formatAmount(preset75)}`}
-                      aria-pressed={selectedPreset === '75'}
-                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
-                        selectedPreset === '75'
-                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
-                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-base font-bold">75%</span>
-                        <span className={`text-xs ${selectedPreset === '75' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset75)}</span>
-                      </div>
-                      {selectedPreset === '75' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                      )}
-                    </button>
-                  )}
-                  {remainingBalance !== null && remainingBalance > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => handlePresetClick('full')}
-                      aria-label={`Pay full amount of ${formatAmount(remainingBalance)}`}
-                      aria-pressed={selectedPreset === 'full'}
-                      className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
-                        selectedPreset === 'full'
-                          ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
-                          : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
-                      }`}
-                    >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-base font-bold">Full</span>
-                        <span className={`text-xs ${selectedPreset === 'full' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(remainingBalance)}</span>
-                      </div>
-                      {selectedPreset === 'full' && (
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
-                      )}
-                    </button>
-                  )}
-                </div>
-                
-                {/* Custom Amount Button - Modern Outline Style */}
-                <button
-                  type="button"
-                  onClick={handleCustomAmountToggle}
-                  aria-label="Enter custom payment amount"
-                  className="w-full rounded-xl border-2 border-dashed border-border/60 bg-white/50 backdrop-blur-sm px-4 py-3.5 text-sm font-semibold text-foreground transition-all duration-200 hover:border-primary/60 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent hover:shadow-md hover:scale-[1.01]"
-                >
-                  <div className="flex items-center justify-center gap-2">
-                    <span>Pay custom amount</span>
-                    <span className="text-xs text-muted-foreground">→</span>
+                      </button>
+                    )}
                   </div>
-                </button>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* Pay Minimum Button - Modern Gradient Glassmorphism Style */}
+                      {minimumPayment !== null && minimumPayment > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handlePresetClick('minimum')}
+                          aria-label={`Pay minimum amount of ${formatAmount(minimumPayment)}`}
+                          aria-pressed={selectedPreset === 'minimum'}
+                          className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                            selectedPreset === 'minimum'
+                              ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                              : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-base font-bold">Minimum</span>
+                            <span className={`text-xs ${selectedPreset === 'minimum' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(minimumPayment)}</span>
+                          </div>
+                          {selectedPreset === 'minimum' && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                          )}
+                        </button>
+                      )}
+                      {preset25Valid && preset25 !== null && (
+                        <button
+                          type="button"
+                          onClick={() => handlePresetClick('25')}
+                          aria-label={`Pay 25% which is ${formatAmount(preset25)}`}
+                          aria-pressed={selectedPreset === '25'}
+                          className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                            selectedPreset === '25'
+                              ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                              : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-base font-bold">25%</span>
+                            <span className={`text-xs ${selectedPreset === '25' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset25)}</span>
+                          </div>
+                          {selectedPreset === '25' && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                          )}
+                        </button>
+                      )}
+                      {preset50Valid && preset50 !== null && (
+                        <button
+                          type="button"
+                          onClick={() => handlePresetClick('50')}
+                          aria-label={`Pay 50% which is ${formatAmount(preset50)}`}
+                          aria-pressed={selectedPreset === '50'}
+                          className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                            selectedPreset === '50'
+                              ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                              : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-base font-bold">50%</span>
+                            <span className={`text-xs ${selectedPreset === '50' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset50)}</span>
+                          </div>
+                          {selectedPreset === '50' && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                          )}
+                        </button>
+                      )}
+                      {preset75Valid && preset75 !== null && (
+                        <button
+                          type="button"
+                          onClick={() => handlePresetClick('75')}
+                          aria-label={`Pay 75% which is ${formatAmount(preset75)}`}
+                          aria-pressed={selectedPreset === '75'}
+                          className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                            selectedPreset === '75'
+                              ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                              : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-base font-bold">75%</span>
+                            <span className={`text-xs ${selectedPreset === '75' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(preset75)}</span>
+                          </div>
+                          {selectedPreset === '75' && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                          )}
+                        </button>
+                      )}
+                      {remainingBalance !== null && remainingBalance > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handlePresetClick('full')}
+                          aria-label={`Pay full amount of ${formatAmount(remainingBalance)}`}
+                          aria-pressed={selectedPreset === 'full'}
+                          className={`relative overflow-hidden rounded-xl px-4 py-4 text-sm font-semibold transition-all duration-200 ${
+                            selectedPreset === 'full'
+                              ? 'bg-gradient-to-br from-primary via-primary to-primary/90 text-white shadow-xl shadow-primary/30 scale-[1.02] ring-2 ring-primary/50'
+                              : 'bg-white/80 backdrop-blur-sm border border-border/60 text-foreground hover:border-primary/40 hover:bg-gradient-to-br hover:from-primary/5 hover:to-transparent hover:shadow-md'
+                          }`}
+                        >
+                          <div className="flex flex-col items-center gap-1">
+                            <span className="text-base font-bold">Full</span>
+                            <span className={`text-xs ${selectedPreset === 'full' ? 'opacity-90' : 'text-muted-foreground'}`}>{formatAmount(remainingBalance)}</span>
+                          </div>
+                          {selectedPreset === 'full' && (
+                            <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    
+                    {/* Custom Amount Button - Modern Outline Style */}
+                    <button
+                      type="button"
+                      onClick={handleCustomAmountToggle}
+                      aria-label="Enter custom payment amount"
+                      className="w-full rounded-xl border-2 border-dashed border-border/60 bg-white/50 backdrop-blur-sm px-4 py-3.5 text-sm font-semibold text-foreground transition-all duration-200 hover:border-primary/60 hover:bg-gradient-to-r hover:from-primary/5 hover:to-transparent hover:shadow-md hover:scale-[1.01]"
+                    >
+                      <div className="flex items-center justify-center gap-2">
+                        <span>Pay custom amount</span>
+                        <span className="text-xs text-muted-foreground">→</span>
+                      </div>
+                    </button>
+                  </>
+                )}
 
                 {/* Selected Amount Display - Gorgeous Gradient Container */}
                 {((selectedPreset || (!useCustomAmount && payableAmount !== null)) && payableAmount !== null && payableAmount > 0) && (
@@ -848,7 +944,8 @@ export function PaymentCard({ estimateId, locationId, inviteToken, payment, work
             )}
 
             {/* Custom Amount Input - Modern Glassmorphism Style */}
-            {useCustomAmount && (
+            {/* Hide custom amount input if subsequent payment requires full payment */}
+            {useCustomAmount && !requiresFullPayment && (
               <div className="mt-4 space-y-4">
                 <div className="relative">
                   <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 p-4 border-2 border-primary/30 shadow-inner backdrop-blur-sm">
