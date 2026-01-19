@@ -59,7 +59,12 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
       toast.success("Invoice sent successfully");
       refetch();
     } catch (err) {
-      toast.error(err.message || "Failed to send invoice");
+      // Show detailed error message
+      const errorMessage = err.message || "Failed to send invoice";
+      toast.error(errorMessage, {
+        duration: 5000, // Show for 5 seconds
+      });
+      console.error("Send invoice error:", err);
     }
   };
 
@@ -468,16 +473,21 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                 </div>
                 <button
                   onClick={handleSyncToXero}
-                  disabled={syncToXeroMutation.isPending || !isXeroConnected}
+                  disabled={syncToXeroMutation.isPending || !isXeroConnected || !!invoice.xeroInvoiceId}
                   className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {syncToXeroMutation.isPending ? "Syncing..." : "Sync to Xero"}
+                  {syncToXeroMutation.isPending ? "Syncing..." : invoice.xeroInvoiceId ? "Already Synced" : "Sync to Xero"}
                 </button>
                 {!isXeroConnected && (
                   <p className="mt-2 text-xs text-muted-foreground text-center">
                     <Link href="/admin/integrations" className="text-primary hover:underline">
                       Connect Xero
                     </Link> to sync invoices
+                  </p>
+                )}
+                {isXeroConnected && invoice.xeroInvoiceId && (
+                  <p className="mt-2 text-xs text-success text-center">
+                    ✓ Invoice is synced to Xero
                   </p>
                 )}
               </div>

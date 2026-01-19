@@ -492,8 +492,8 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
   const handleCompleteReview = async () => {
     try {
       await completeReviewMutation.mutateAsync({ estimateId, locationId });
-      toast.success("Review completed! Acceptance has been enabled for the customer.");
-      // Note: No refetch needed - mutation already invalidates queries
+      // Note: Toast is handled in the mutation hook's onSuccess handler
+      // No refetch needed - mutation already invalidates queries
     } catch (err) {
       const errorMessage = parseWpFetchError(err);
       toast.error(errorMessage || "Failed to complete review");

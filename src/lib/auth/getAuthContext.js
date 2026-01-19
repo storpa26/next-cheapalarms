@@ -4,32 +4,37 @@
  */
 
 function getWpJsonBase() {
-  const base = process.env.WP_JSON_BASE;
+  const base =
+    process.env.WP_JSON_BASE ||
+    process.env.NEXT_PUBLIC_WP_URL; // fallback
+
   if (base) return base;
   if (process.env.NODE_ENV === 'development') {
     return 'http://localhost:10013/wp-json';
   }
-  throw new Error('WP_JSON_BASE environment variable is not set');
+  throw new Error('WP JSON base URL is not set');
 }
 
 export async function getAuthContext(req) {
   if (!req?.headers?.cookie) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[getAuthContext] No cookies in request');
-    }
+    console.log('[getAuthContext] No cookies in request');
     return null;
   }
 
   const wpBase = getWpJsonBase();
+  console.log('[getAuthContext] WordPress base:', wpBase);
 
   // Check if cookie contains the token
   const hasToken = req.headers.cookie.includes('ca_jwt=');
   if (!hasToken) {
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[getAuthContext] No ca_jwt cookie found');
-    }
+    console.log('[getAuthContext] No ca_jwt cookie found');
     return null;
   }
+
+  // Extract ca_jwt cookie for logging (first 50 chars only)
+  const cookieMatch = req.headers.cookie.match(/ca_jwt=([^;]+)/);
+  const tokenPreview = cookieMatch ? cookieMatch[1].substring(0, 50) + '...' : 'not found';
+  console.log('[getAuthContext] Token preview:', tokenPreview);
 
   try {
     // Add timeout to prevent hanging (10 seconds)
@@ -38,51 +43,55 @@ export async function getAuthContext(req) {
 
     let response;
     try {
+      // FIX: Extract only ca_jwt cookie to ensure clean format
+      const cookies = req.headers.cookie.split(';').map(c => c.trim());
+      const caJwtCookie = cookies.find(c => c.startsWith('ca_jwt='));
+      const cookieHeader = caJwtCookie || req.headers.cookie;
+
+      console.log('[getAuthContext] Making request to:', `${wpBase}/ca/v1/auth/me`);
+      console.log('[getAuthContext] Cookie header length:', cookieHeader.length);
+
       response = await fetch(`${wpBase}/ca/v1/auth/me`, {
         method: 'GET',
         headers: {
-          Cookie: req.headers.cookie || '',
+          Cookie: cookieHeader,
+          'User-Agent': 'Next.js-SSR',
         },
         cache: 'no-store',
         signal: controller.signal,
       });
     } catch (fetchError) {
       clearTimeout(timeoutId);
+      console.error('[getAuthContext] Fetch error:', fetchError.message);
       if (fetchError.name === 'AbortError') {
-        if (process.env.NODE_ENV === 'development') {
-          console.error('[getAuthContext] Request timed out to', wpBase);
-        }
+        console.error('[getAuthContext] Request timed out to', wpBase);
         return null;
-      }
-      if (process.env.NODE_ENV === 'development') {
-        console.error('[getAuthContext] Fetch error', fetchError.message);
       }
       throw fetchError;
     }
     clearTimeout(timeoutId);
 
+    console.log('[getAuthContext] Response status:', response.status);
+
     if (response.status === 401) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[getAuthContext] WordPress returned 401 (not authenticated)');
-      }
+      const errorText = await response.text().catch(() => 'Unable to read error');
+      console.error('[getAuthContext] WordPress returned 401');
+      console.error('[getAuthContext] Error response:', errorText.substring(0, 500));
       return null;
     }
     if (!response.ok) {
-      if (process.env.NODE_ENV === 'development') {
-        const text = await response.text().catch(() => 'Unable to read error');
-        console.error('[getAuthContext] WP error', response.status, response.statusText, text.substring(0, 200));
-      }
+      const text = await response.text().catch(() => 'Unable to read error');
+      console.error('[getAuthContext] WP error', response.status, response.statusText, text.substring(0, 200));
       return null;
     }
 
     const data = await response.json();
     if (!data?.ok) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[getAuthContext] WordPress response not ok', data);
-      }
+      console.error('[getAuthContext] WordPress response not ok', data);
       return null;
     }
 
+    console.log('[getAuthContext] Authentication successful, user ID:', data.id);
     return {
       id: data.id,
       email: data.email,
@@ -93,9 +102,7 @@ export async function getAuthContext(req) {
       isCustomer: data.is_customer === true,
     };
   } catch (err) {
-    if (process.env.NODE_ENV === 'development') {
-      console.error('[getAuthContext] Exception', err?.message || err);
-    }
+    console.error('[getAuthContext] Exception', err?.message || err);
     return null;
   }
 }
