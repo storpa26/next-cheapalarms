@@ -25,6 +25,55 @@ const eslintConfig = defineConfig([
     },
   },
   {
+    // Client-side code restrictions - prevent direct WordPress API calls
+    files: [
+      "src/components/**/*.{js,jsx,ts,tsx}",
+      "src/hooks/**/*.{js,jsx,ts,tsx}",
+      "src/lib/react-query/**/*.{js,jsx,ts,tsx}",
+      "src/pages/**/*.{js,jsx,ts,tsx}",
+    ],
+    ignores: [
+      "src/pages/api/**", // API routes can use wp.server.js
+      "src/lib/admin/**", // Admin library files may need server utilities
+      "src/lib/api/**", // API utilities can use server files
+      "src/lib/auth/**", // Auth utilities may need server files
+    ],
+    rules: {
+      // Prevent importing server-only WordPress utilities in client code
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["**/wp.server", "**/wp.server.js"],
+              message: "wp.server.js is server-only. Use apiFetch() from lib/api/apiFetch.js for client-side API calls.",
+            },
+            {
+              group: ["**/lib/wp"],
+              message: "Do not import from lib/wp.js in client code. Use apiFetch() from lib/api/apiFetch.js instead. wp.js only exports TOKEN_COOKIE constant.",
+            },
+          ],
+        },
+      ],
+      // Prevent direct WordPress API URL usage
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "Literal[value=/staging\\.cheapalarms\\.com\\.au/]",
+          message: "Do not hardcode WordPress URLs. Use Next.js API routes (/api/*) instead.",
+        },
+        {
+          selector: "Literal[value=/wp-json\\/ca\\/v1/]",
+          message: "Do not call WordPress REST API directly. Use Next.js API routes (/api/*) instead.",
+        },
+        {
+          selector: "VariableDeclarator[id.name=/WP_API_BASE|NEXT_PUBLIC_WP_URL/] > Literal[value=/wp-json/]",
+          message: "Do not use WP_API_BASE or NEXT_PUBLIC_WP_URL for direct API calls. Use Next.js API routes (/api/*) instead.",
+        },
+      ],
+    },
+  },
+  {
     // Rules for JSX/TSX files
     files: ["**/*.{js,jsx,ts,tsx}"],
     rules: {

@@ -3,7 +3,7 @@
  * Handles WordPress users and GHL contacts
  */
 
-import { WP_API_BASE } from "../../wp";
+import { WP_API_BASE } from "../../wp.server";
 import { buildAuthHeaders } from "../utils/request-utils";
 
 /**

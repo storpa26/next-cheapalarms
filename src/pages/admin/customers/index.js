@@ -7,7 +7,8 @@ import { Input } from "../../../components/ui/input";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../../../components/ui/tabs";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
-import { getWordPressUsers, getGHLContacts, matchContactsToUsers, getStatusBadge } from "../../../lib/admin/services/customers-data";
+// Only import pure functions at top level (safe for client bundling)
+import { matchContactsToUsers, getStatusBadge } from "../../../lib/admin/services/customers-data";
 import { toast } from "../../../components/ui/use-toast";
 import { isAuthError, isPermissionError } from "../../../lib/admin/utils/error-handler";
 import { useWordPressUsers, useGHLContacts } from "../../../lib/react-query/hooks";
@@ -620,6 +621,10 @@ export default function AdminCustomers({ initialWpUsers, initialGhlContacts, err
 }
 
 export async function getServerSideProps(ctx) {
+  // Import server-only functions here (server-side only) to prevent client bundling
+  // Use dynamic import for ES modules
+  const { getWordPressUsers, getGHLContacts } = await import("../../../lib/admin/services/customers-data");
+  
   const authCheck = await requireAdmin(ctx, { notFound: true });
   if (authCheck.notFound || authCheck.redirect) {
     return authCheck;

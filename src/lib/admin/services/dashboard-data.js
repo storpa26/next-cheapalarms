@@ -3,7 +3,7 @@
  * Handles fetching and processing dashboard statistics
  */
 
-import { wpFetch, WP_API_BASE } from "../../wp";
+import { wpFetch, WP_API_BASE } from "../../wp.server";
 import { cookieHeader, buildAuthHeaders } from "../utils/request-utils";
 import { formatTimeAgo } from "../utils/time-utils";
 

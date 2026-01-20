@@ -2,11 +2,10 @@ import { proxyToWordPress } from "../../../lib/api/wp-proxy";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, err: "Method not allowed" });
+    return res.status(405).json({ ok: false, error: "Method not allowed" });
   }
 
-  return proxyToWordPress(req, res, "/ca/v1/portal/confirm-payment", {
+  return proxyToWordPress(req, res, "/ca/v1/stripe/check-payment-intent-status", {
     method: "POST",
   });
 }
-

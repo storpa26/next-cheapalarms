@@ -11,8 +11,12 @@ import { useState, useEffect } from "react";
  * 4. Book (after payment)
  * 
  * NEW WORKFLOW ORDER: Payment comes BEFORE booking
+ * 
+ * CRITICAL: Must consider payment.status, not just workflow.status
+ * - If payment.status === 'partial', stay on step 3 (Payment) even if workflow.status === 'booked'
+ * - Invoice status from GHL can be misleading, so payment.status is the source of truth
  */
-export function WorkflowProgress({ workflow }) {
+export function WorkflowProgress({ workflow, payment, invoice }) {
   const [mounted, setMounted] = useState(false);
 
    
@@ -29,7 +33,20 @@ export function WorkflowProgress({ workflow }) {
 
   // Map internal workflow status to external step (4 steps total)
   // NEW: accepted maps to step 3 (Payment), not step 2
-  const getExternalStep = (workflowStatus) => {
+  const getExternalStep = (workflowStatus, paymentStatus) => {
+    // CRITICAL: If payment is partial, stay on Payment step (3) even if workflow is 'booked'
+    // This handles the case where partial payment sets workflow.status to 'booked'
+    // but payment is not yet complete, so we should still show Payment step
+    if (paymentStatus === 'partial') {
+      return 3; // Stay on Payment step
+    }
+    
+    // If payment is fully paid, move to Book step (4)
+    if (paymentStatus === 'paid') {
+      return 4; // Move to Book step
+    }
+
+    // Otherwise, use workflow status to determine step
     switch (workflowStatus) {
       case 'requested': return 1;
       // Review states (before acceptance) map to step 2
@@ -39,7 +56,8 @@ export function WorkflowProgress({ workflow }) {
       case 'rejected': return 2;
       // Accepted estimates move to step 3 (Payment) - payment comes before booking
       case 'accepted': return 3;
-      // Booked (after payment) maps to step 4
+      // Booked (after payment) maps to step 4 - but only if payment is fully paid
+      // If payment is partial, we already returned 3 above
       case 'booked': return 4;
       // Paid/completed maps to step 4 (final step)
       case 'paid': case 'completed': return 4;
@@ -47,7 +65,10 @@ export function WorkflowProgress({ workflow }) {
     }
   };
 
-  const currentStep = getExternalStep(status);
+  // Get payment status - use payment.status as source of truth (overrides invoice.status from GHL)
+  const paymentStatus = payment?.status || null;
+  
+  const currentStep = getExternalStep(status, paymentStatus);
   
   const steps = [
     { label: 'Request', step: 1 },

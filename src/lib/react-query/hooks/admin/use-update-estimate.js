@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { wpFetch } from '../../../wp';
+import { apiFetch } from '../../../api/apiFetch';
 import { DEFAULT_CURRENCY } from '../../../admin/constants';
 
 /**
@@ -108,11 +108,10 @@ export function useUpdateEstimate() {
         payload.revisionData = revisionData;
       }
 
-      // PUT to WordPress bridge (which updates GHL)
-      return wpFetch('/ca/v1/estimate/update', {
+      // PUT to Next.js API route (which proxies to WordPress)
+      return apiFetch('/api/admin/estimate/update', {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: payload,
       });
     },
     onSuccess: (data, variables) => {

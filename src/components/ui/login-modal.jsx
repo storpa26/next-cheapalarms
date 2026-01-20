@@ -148,10 +148,7 @@ export function LoginModal({ open, onClose, email, estimateId, onLoginSuccess })
         throw new Error(json.err || json.error || "Failed to reset password");
       }
 
-      // Store token if provided
-      if (json.token) {
-        document.cookie = `${TOKEN_COOKIE}=${json.token}; path=/; max-age=${json.expiresIn || 3600}; SameSite=Lax`;
-      }
+      // Token is set as httpOnly cookie by the server - no need to set client-side cookie
 
       // Success! Close modal and redirect
       if (onLoginSuccess) {

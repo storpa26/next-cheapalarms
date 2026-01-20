@@ -3,6 +3,8 @@
  * WordPress is the sole source of truth (Next.js never decodes JWT)
  */
 
+import { AUTH_TIMEOUT } from "../api/constants";
+
 function getWpJsonBase() {
   const base =
     process.env.WP_JSON_BASE ||
@@ -49,9 +51,9 @@ export async function getAuthContext(req) {
   }
 
   try {
-    // Add timeout to prevent hanging (10 seconds)
+    // Add timeout to prevent hanging (using AUTH_TIMEOUT constant)
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), AUTH_TIMEOUT);
 
     let response;
     try {

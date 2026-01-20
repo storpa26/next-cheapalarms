@@ -1,17 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
-import { getPortalStatus } from '../../wp';
+import { apiFetch } from '../../api/apiFetch';
 
 /**
  * React Query hook for fetching portal status
  * Automatically handles caching, deduplication, and refetching
+ * Uses Next.js API route instead of direct WordPress calls
  */
 export function usePortalStatus({ estimateId, locationId, inviteToken, enabled = true, initialData }) {
   return useQuery({
     queryKey: ['portal-status', estimateId, locationId, inviteToken],
-    queryFn: () => getPortalStatus(
-      { estimateId, locationId, inviteToken },
-      { credentials: 'include' }
-    ),
+    queryFn: () => apiFetch('/api/portal/status', {
+      params: {
+        estimateId,
+        locationId,
+        inviteToken,
+      },
+    }),
     enabled: enabled && !!estimateId,
     initialData,
     // Use SSR data when available, otherwise cache for 2-5 minutes

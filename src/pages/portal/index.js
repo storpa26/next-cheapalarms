@@ -1,6 +1,5 @@
 import Head from "next/head";
 import { useRouter } from "next/router";
-import { getPortalStatus, getPortalDashboard } from "../../lib/wp";
 import { cookieHeader } from "../../components/portal/utils/portal-utils";
 import { PortalSidebar } from "../../components/portal/layout/PortalSidebar";
 import { OverviewView } from "../../components/portal/views/OverviewView";
@@ -236,6 +235,10 @@ export default function PortalPage({ initialStatus, initialError, initialEstimat
 }
 
 export async function getServerSideProps({ query, req }) {
+  // Import wpFetch here (server-side only) to prevent client bundling
+  // Use dynamic import for ES modules
+  const { wpFetch } = await import("../../lib/wp.server");
+  
   const estimateId = Array.isArray(query.estimateId) ? query.estimateId[0] : query.estimateId;
   const inviteToken = Array.isArray(query.inviteToken) ? query.inviteToken[0] : query.inviteToken;
 
@@ -255,7 +258,7 @@ export async function getServerSideProps({ query, req }) {
 
     // User is authenticated, fetch dashboard
     try {
-      const dashboard = await getPortalDashboard({
+      const dashboard = await wpFetch('/ca/v1/portal/dashboard', {
         headers: cookieHeader(req),
       });
       if (dashboard.ok && Array.isArray(dashboard.estimates)) {
@@ -310,15 +313,13 @@ export async function getServerSideProps({ query, req }) {
   }
 
   try {
-    const status = await getPortalStatus(
-      {
-        estimateId,
-        inviteToken,
-      },
-      {
-        headers: cookieHeader(req),
-      }
-    );
+    const params = new URLSearchParams();
+    params.set('estimateId', estimateId);
+    if (inviteToken) params.set('inviteToken', inviteToken);
+    
+    const status = await wpFetch(`/ca/v1/portal/status?${params.toString()}`, {
+      headers: cookieHeader(req),
+    });
     return {
       props: {
         initialStatus: status,

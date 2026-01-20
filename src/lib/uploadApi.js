@@ -6,8 +6,8 @@
 import imageCompression from 'browser-image-compression';
 import PQueue from 'p-queue';
 
-// Get WordPress API base from environment
-const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || 'http://localhost:10013/wp-json';
+// NOTE: Do not use WP_API_BASE for direct WordPress calls from browser
+// All upload requests should go through Next.js API routes
 
 // Upload configuration constants
 const UPLOAD_CONFIG = {
@@ -59,7 +59,8 @@ export async function startUploadSession(estimateId, locationId) {
   cleanupExpiredSessions();
 
   try {
-    const response = await fetch(`${WP_API_BASE}/ca/v1/upload/start`, {
+    // Use Next.js API route instead of direct WordPress call
+    const response = await fetch('/api/upload/start', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -247,8 +248,8 @@ function _uploadFileInternal(file, metadata, onProgress, uploadId = null, estima
       reject(new Error('Upload timeout'));
     });
 
-    // Configure and send
-    xhr.open('POST', `${WP_API_BASE}/ca/v1/upload`);
+    // Configure and send to Next.js API route (which proxies to WordPress)
+    xhr.open('POST', `/api/upload/file?token=${encodeURIComponent(session.token)}`);
     xhr.timeout = UPLOAD_CONFIG.timeout;
     xhr.withCredentials = true; // Include cookies
     
@@ -488,7 +489,8 @@ export function getActiveUploadCount() {
  */
 export async function storePhotosMetadata(estimateId, locationId, uploads) {
   try {
-    const response = await fetch(`${WP_API_BASE}/ca/v1/estimate/photos`, {
+    // Use Next.js API route instead of direct WordPress call
+    const response = await fetch('/api/estimate/photos', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

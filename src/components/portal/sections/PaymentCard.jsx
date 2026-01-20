@@ -38,6 +38,15 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
     setStripeReady(!!stripePromise);
   }, []);
 
+  // CRITICAL FIX: Clear payment intent state when amount or estimateId changes
+  // This prevents reusing old PaymentIntents for different amounts or estimates
+  useEffect(() => {
+    setClientSecret(null);
+    setPaymentIntentId(null);
+    setCardElementReady(false);
+    setError(null);
+  }, [amount, estimateId]);
+
   // Note: cardElementReady is kept for potential UI feedback, but we don't rely on it for button disable
   // The handleSubmit function already checks if CardElement exists before proceeding
 
@@ -129,6 +138,102 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
       }
 
       // Phase 2: Confirm payment (clientSecret exists)
+      // CRITICAL FIX: Check PaymentIntent status BEFORE confirming via backend to prevent reusing succeeded PaymentIntents
+      // Use backend endpoint for reliable status check (backend has direct Stripe API access)
+      if (clientSecret && paymentIntentId) {
+        try {
+          const nonce = await getWpNonceSafe().catch(() => '');
+          const statusResponse = await fetch('/api/stripe/check-payment-intent-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': nonce || '' },
+            credentials: 'include',
+            body: JSON.stringify({ paymentIntentId }),
+          });
+          
+          // CRITICAL: Check HTTP response status before parsing JSON
+          if (!statusResponse.ok) {
+            // Try to parse error response for better error information
+            let errorData = null;
+            try {
+              errorData = await statusResponse.json();
+            } catch (e) {
+              // Response is not JSON, ignore
+            }
+            
+            // If PaymentIntent not found (404), clear state and let user create new one
+            if (statusResponse.status === 404) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('PaymentIntent not found, clearing state', { paymentIntentId });
+              }
+              setClientSecret(null);
+              setPaymentIntentId(null);
+              setCardElementReady(false);
+              setError('Payment session expired. Please create a new payment.');
+              setIsProcessing(false);
+              return;
+            }
+            
+            // For other HTTP errors, proceed to confirmation (error handling will catch it)
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('Status check HTTP error, proceeding with confirmation', {
+                status: statusResponse.status,
+                error: errorData,
+              });
+            }
+            // Continue to confirmation - error handling will catch if PaymentIntent is invalid
+          } else {
+            // HTTP success - parse JSON and check status
+            const statusData = await statusResponse.json();
+            
+            // If status check succeeds and PaymentIntent is already succeeded, handle it gracefully
+            if (statusData.ok && statusData.status === 'succeeded') {
+              // PaymentIntent already succeeded - clear state and refresh
+              setClientSecret(null);
+              setPaymentIntentId(null);
+              setCardElementReady(false);
+              
+              toast.info('Payment already processed', {
+                description: 'This payment has already been completed. Refreshing...',
+                duration: 2000,
+              });
+              
+              // Reload to refresh view data
+              setTimeout(() => window.location.reload(), 2000);
+              setIsProcessing(false);
+              return;
+            }
+            
+            // If status check succeeds but PaymentIntent is in an invalid state, handle it
+            if (statusData.ok && statusData.status === 'canceled') {
+              // PaymentIntent was canceled - clear state and show error
+              setClientSecret(null);
+              setPaymentIntentId(null);
+              setCardElementReady(false);
+              
+              setError('This payment was canceled. Please create a new payment.');
+              setIsProcessing(false);
+              return;
+            }
+            
+            // If status check succeeds but returns error (ok: false), proceed with confirmation
+            // This handles cases where PaymentIntent doesn't exist or other backend errors
+            // Error handling will catch if PaymentIntent is invalid
+            if (!statusData.ok) {
+              if (process.env.NODE_ENV === 'development') {
+                console.warn('Status check returned error, proceeding with confirmation', statusData);
+              }
+              // Continue to confirmation - error handling will catch if PaymentIntent is invalid
+            }
+            // Otherwise, status is valid (processing, requires_action, etc.) - proceed with confirmation
+          }
+        } catch (statusError) {
+          // Network error or JSON parse error - proceed with confirmation, error handling will catch it
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('Failed to check PaymentIntent status, proceeding with confirmation', statusError);
+          }
+        }
+      }
+
       // Gate: CardElement must be ready
       if (!cardElementReady) {
         setError('Card element not ready. Please wait a moment and try again.');
@@ -177,15 +282,27 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
           setClientSecret(null);
           setPaymentIntentId(null);
           setCardElementReady(false);
+          setError(null);
+          
+          // CRITICAL FIX: Prevent race conditions - check if already creating intent
+          if (isCreatingIntent) {
+            setIsProcessing(false);
+            return; // Already creating new intent, prevent duplicate attempts
+          }
           
           // Use toast.promise for better UX - single toast with loading/success/error states
           // Wrap createPaymentIntent to throw on failure (required for toast.promise)
           const recoveryPromise = (async () => {
-            const newClientSecret = await createPaymentIntent();
-            if (!newClientSecret) {
-              throw new Error('Failed to create new payment intent');
+            setIsCreatingIntent(true); // Prevent multiple recovery attempts
+            try {
+              const newClientSecret = await createPaymentIntent();
+              if (!newClientSecret) {
+                throw new Error('Failed to create new payment intent');
+              }
+              return newClientSecret;
+            } finally {
+              setIsCreatingIntent(false);
             }
-            return newClientSecret;
           })();
           
           // Show toast with promise states
@@ -397,10 +514,14 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
 
       toast.success('Payment processed!', {
         description: `Your payment of $${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been confirmed.`,
-        duration: 3000,
+        duration: 2000,
       });
 
-      onSuccess();
+      // CRITICAL FIX: Reload page to refresh view data and ensure clean state
+      // This prevents reusing old PaymentIntents and ensures UI shows updated payment status
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
     } catch (err) {
       const errorMessage = err.message || 'Failed to process payment. Please try again.';
       setError(errorMessage);

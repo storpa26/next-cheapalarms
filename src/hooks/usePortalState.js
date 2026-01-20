@@ -4,7 +4,7 @@ import { useQueries } from "@tanstack/react-query";
 import { usePortalStatus, usePortalDashboard, useEstimate } from "../lib/react-query/hooks";
 import { normaliseStatus } from "../components/portal/utils/status-normalizer";
 import { formatAddress } from "../components/portal/utils/portal-utils";
-import { getEstimateDetails } from "../lib/wp";
+import { apiFetch } from "../lib/api/apiFetch";
 import { DEFAULT_CURRENCY } from "../lib/admin/constants";
 
 /**
@@ -137,11 +137,29 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   const estimateDetailsQueries = useQueries({
     queries: estimatesToFetch.map((est) => ({
       queryKey: ['estimate-details', est.estimateId],
-      queryFn: () => getEstimateDetails({
-        estimateId: est.estimateId,
-        locationId: est.locationId,
-        inviteToken: inviteToken || undefined,
-      }),
+      queryFn: async () => {
+        // Fetch both status and estimate data in parallel using Next.js API routes
+        const params = {
+          estimateId: est.estimateId,
+          locationId: est.locationId,
+          inviteToken: inviteToken || undefined,
+        };
+        
+        const [status, estimate] = await Promise.all([
+          apiFetch('/api/portal/status', { params }),
+          apiFetch('/api/estimate', { params }).catch(() => null),
+        ]);
+
+        // Merge the data (same format as original getEstimateDetails)
+        return {
+          ...status,
+          // Add estimate line items and pricing if available
+          items: estimate?.items || [],
+          subtotal: estimate?.subtotal || 0,
+          taxTotal: estimate?.taxTotal || 0,
+          total: estimate?.total || status?.quote?.total || 0,
+        };
+      },
       staleTime: 5 * 60 * 1000, // Cache for 5 minutes
       gcTime: 10 * 60 * 1000,
       refetchOnMount: false,

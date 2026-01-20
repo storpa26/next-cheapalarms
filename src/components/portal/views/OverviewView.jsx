@@ -83,7 +83,11 @@ export const OverviewView = memo(function OverviewView({
 
       {/* Workflow Progress */}
       {view?.workflow && (
-        <WorkflowProgress workflow={view.workflow} />
+        <WorkflowProgress 
+          workflow={view.workflow} 
+          payment={view?.payment}
+          invoice={view?.invoice}
+        />
       )}
 
       {/* Booking/Payment Cards - Compact versions for overview */}
@@ -111,13 +115,25 @@ export const OverviewView = memo(function OverviewView({
         const isNotFullyPaid = !view?.payment || view?.payment?.status !== 'paid';
         
         // Check if there's a remaining balance
+        // FIX C: Improved fallback chain with defensive logic
         // Use minimumPaymentInfo.remainingBalance as source of truth (from backend)
-        // Fallback to payment.remainingBalance if minimumPaymentInfo not available
-        const remainingBalance = view?.minimumPaymentInfo?.remainingBalance ?? view?.payment?.remainingBalance;
+        // Fallback to payment.remainingBalance, then calculate from invoice/payment if needed
+        // Handle both nested (ghl.total) and flat (total) invoice structures
+        const invoiceTotal = view?.invoice?.ghl?.total ?? view?.invoice?.total ?? 0;
+        const paymentAmount = view?.payment?.amount ?? 0;
+        const remainingBalance = 
+          view?.minimumPaymentInfo?.remainingBalance ?? 
+          view?.payment?.remainingBalance ?? 
+          (invoiceTotal > 0 || paymentAmount > 0
+            ? Math.max(0, invoiceTotal - paymentAmount) 
+            : null);
+        
+        // FIX C: Partial payment always shows payment UI (contract guarantee)
+        // This prevents UI from disappearing when remainingBalance calculation fails
         const hasRemainingBalance = 
-          !view?.payment || // No payment object = full balance remaining
-          (remainingBalance !== null && remainingBalance !== undefined && remainingBalance > 0) ||
-          view?.payment?.status === 'partial'; // Partial payment always has remaining balance
+          view?.payment?.status === 'partial' || // Partial payment always has remaining balance
+          (typeof remainingBalance === 'number' && remainingBalance > 0) ||
+          !view?.payment; // No payment object = full balance remaining
         
         return isPaymentEligible && hasInvoice && isNotFullyPaid && hasRemainingBalance && estimateId;
       })() ? (
@@ -132,7 +148,11 @@ export const OverviewView = memo(function OverviewView({
             minimumPaymentInfo={view?.minimumPaymentInfo}
           />
         </div>
-      ) : view?.workflow?.status === 'accepted' && view?.payment?.status === 'paid' && !view?.booking && estimateId ? (
+      ) : (view?.workflow?.status === 'accepted' || view?.workflow?.status === 'booked') && 
+           view?.payment?.status === 'paid' && 
+           !view?.booking && 
+           estimateId ? (
+        // FIXED: Allow both 'accepted' and 'booked' workflow status (booked can occur from partial payment)
         <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
           <BookingCard
             estimateId={estimateId}

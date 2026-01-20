@@ -1,14 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
-import { getPortalDashboard } from '../../wp';
+import { apiFetch } from '../../api/apiFetch';
 
 /**
  * React Query hook for fetching portal dashboard data
  * Automatically handles caching, deduplication, and refetching
+ * Uses Next.js API route instead of direct WordPress calls
  */
 export function usePortalDashboard({ enabled = true, initialData } = {}) {
   return useQuery({
     queryKey: ['portal-dashboard'],
-    queryFn: () => getPortalDashboard({ credentials: 'include' }),
+    queryFn: () => apiFetch('/api/portal/dashboard'),
     enabled,
     initialData,
     // Set staleTime to Infinity when we have SSR data to prevent ANY refetches

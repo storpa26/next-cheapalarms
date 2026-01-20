@@ -1,5 +1,7 @@
 import { serialize } from "cookie";
-import { authenticate, TOKEN_COOKIE } from "../../../lib/wp";
+import { authenticate } from "../../../lib/wp.server";
+import { TOKEN_COOKIE } from "../../../lib/wp";
+import { API_TIMEOUT } from "../../../lib/api/constants";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -16,9 +18,9 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Add timeout to prevent hanging (15 seconds)
+    // Add timeout to prevent hanging (using API_TIMEOUT constant)
     const timeoutPromise = new Promise((_, reject) => {
-      setTimeout(() => reject(new Error("Login request timed out. Please check your connection and try again.")), 15000);
+      setTimeout(() => reject(new Error("Login request timed out. Please check your connection and try again.")), API_TIMEOUT);
     });
 
     const result = await Promise.race([
@@ -38,7 +40,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       ok: true,
-      token: result.token,
+      // Token is already set as httpOnly cookie - do not expose in response body
       user: result.user,
       expiresAt: result.expires_at,
     });

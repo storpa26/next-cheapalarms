@@ -1,4 +1,5 @@
-import { resendPortalInvite } from "../../../lib/wp";
+import { resendPortalInvite } from "../../../lib/wp.server";
+import { createWpHeaders } from "../../../lib/api/wp-proxy";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -14,7 +15,11 @@ export default async function handler(req, res) {
   }
 
   try {
-    const result = await resendPortalInvite({ estimateId, locationId });
+    // Use createWpHeaders for consistent JWT token extraction and cookie handling
+    const headers = createWpHeaders(req);
+    const result = await resendPortalInvite({ estimateId, locationId }, {
+      headers,
+    });
     return res.status(200).json({ ok: true, result });
   } catch (error) {
     return res.status(500).json({

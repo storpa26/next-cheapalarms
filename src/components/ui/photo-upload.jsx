@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, forwardRef, useImperativeHandle } from "react";
 import { Button } from "./button";
 import { Progress } from "./progress";
-import { WP_API_BASE } from "../../lib/wp";
+// Removed WP_API_BASE import - all uploads now go through Next.js API routes
 
 export const PhotoUpload = forwardRef(function PhotoUpload({ estimateId, locationId, onUploadComplete, onError }, ref) {
   const [uploading, setUploading] = useState(false);
@@ -94,10 +94,9 @@ export const PhotoUpload = forwardRef(function PhotoUpload({ estimateId, locatio
             reject(new Error("Network error during upload"));
           });
 
-          // Upload directly to WordPress to avoid multipart parsing issues in Next.js proxy
-          // This ensures PHP receives the multipart request and populates $_FILES correctly
-          const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE || 'http://localhost:10013/wp-json';
-          xhr.open("POST", `${wpBase}/ca/v1/upload?token=${encodeURIComponent(token)}`);
+          // Upload through Next.js API route (which proxies to WordPress)
+          // The proxy handles multipart/form-data correctly
+          xhr.open("POST", `/api/upload/file?token=${encodeURIComponent(token)}`);
           xhr.send(formData);
         });
       } catch (error) {
