@@ -143,7 +143,7 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
       }
 
       // Confirm payment with Stripe
-      const { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
+      let { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
         clientSecret,
         {
           payment_method: {
@@ -152,12 +152,172 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
         }
       );
 
+      // Handle Stripe errors with specific error codes
       if (stripeError) {
-        throw new Error(stripeError.message || 'Payment failed');
+        // Check if error is due to PaymentIntent already being succeeded
+        if (stripeError.code === 'payment_intent_unexpected_state' || 
+            stripeError.message?.toLowerCase().includes('already succeeded')) {
+          // Log the error for debugging and production monitoring
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('PaymentIntent already succeeded, creating new one', {
+              paymentIntentId,
+              error: stripeError.message,
+              estimateId,
+            });
+          }
+          // TODO: In production, integrate with error tracking service (e.g., Sentry)
+          // This helps track how often this recovery flow is triggered
+          // Example: Sentry.captureMessage('PaymentIntent recovery: already succeeded', {
+          //   level: 'warning',
+          //   tags: { payment_intent_id: paymentIntentId, estimate_id: estimateId },
+          //   extra: { error_message: stripeError.message }
+          // });
+          
+          // Clear state and create new payment intent for remaining balance
+          setClientSecret(null);
+          setPaymentIntentId(null);
+          setCardElementReady(false);
+          
+          // Use toast.promise for better UX - single toast with loading/success/error states
+          // Wrap createPaymentIntent to throw on failure (required for toast.promise)
+          const recoveryPromise = (async () => {
+            const newClientSecret = await createPaymentIntent();
+            if (!newClientSecret) {
+              throw new Error('Failed to create new payment intent');
+            }
+            return newClientSecret;
+          })();
+          
+          // Show toast with promise states
+          toast.promise(recoveryPromise, {
+            loading: 'Previous payment detected. Creating new payment for remaining balance...',
+            success: () => {
+              // Clear any previous error messages
+              setError(null);
+              return 'New payment ready. Please complete the payment for the remaining balance.';
+            },
+            error: (err) => {
+              setError('Failed to create new payment. Please try again.');
+              return err?.message || 'Failed to create new payment. Please try again.';
+            },
+          });
+          
+          // Wait for promise to resolve
+          try {
+            await recoveryPromise;
+            setIsProcessing(false); // Reset processing state after successful recovery
+            return; // User will click "Complete Payment" again with new intent
+          } catch (err) {
+            // Error already handled by toast.promise
+            setIsProcessing(false); // Reset processing state on error
+            return;
+          }
+        }
+        
+        // Handle specific Stripe error codes with user-friendly messages
+        let errorMessage = 'Payment failed';
+        if (stripeError.code === 'card_declined') {
+          errorMessage = 'Your card was declined. Please try a different payment method.';
+        } else if (stripeError.code === 'insufficient_funds') {
+          errorMessage = 'Insufficient funds. Please use a different card or contact your bank.';
+        } else if (stripeError.code === 'expired_card') {
+          errorMessage = 'Your card has expired. Please use a different card.';
+        } else if (stripeError.code === 'incorrect_cvc') {
+          errorMessage = 'Your card\'s security code is incorrect. Please check and try again.';
+        } else if (stripeError.code === 'incorrect_number') {
+          errorMessage = 'Your card number is incorrect. Please check and try again.';
+        } else if (stripeError.code === 'processing_error') {
+          errorMessage = 'An error occurred while processing your card. Please try again.';
+        } else if (stripeError.code === 'authentication_required') {
+          errorMessage = 'Your card requires authentication. Please complete the verification.';
+        } else if (stripeError.message) {
+          errorMessage = stripeError.message;
+        }
+        
+        // Log error for production monitoring (consider integrating with error tracking service)
+        if (process.env.NODE_ENV === 'production') {
+          // TODO: Integrate with error tracking service (e.g., Sentry, LogRocket)
+          // Example: Sentry.captureException(new Error(errorMessage), { 
+          //   tags: { stripe_error_code: stripeError.code },
+          //   extra: { paymentIntentId, estimateId }
+          // });
+        }
+        
+        throw new Error(errorMessage);
       }
 
-      if (paymentIntent.status !== 'succeeded') {
-        throw new Error('Payment was not successful');
+      // Handle PaymentIntent status - CRITICAL: Support 3D Secure and processing states
+      if (!paymentIntent) {
+        throw new Error('Payment confirmation failed. Please try again.');
+      }
+
+      // Handle 3D Secure / requires_action (SCA compliance)
+      if (paymentIntent.status === 'requires_action') {
+        // Payment requires additional authentication (3D Secure)
+        // Check if next_action is available
+        if (paymentIntent.next_action) {
+          toast.info('Authentication required', {
+            description: 'Please complete the verification on your card.',
+            duration: 5000,
+          });
+          
+          // Use handleCardAction to complete 3D Secure authentication
+          // The clientSecret contains the payment_intent_client_secret which handleCardAction needs
+          const { error: actionError, paymentIntent: updatedIntent } = await stripe.handleCardAction(
+            clientSecret
+          );
+          
+          if (actionError) {
+            throw new Error(actionError.message || 'Authentication failed. Please try again.');
+          }
+          
+          // Check the updated status after authentication
+          if (updatedIntent.status === 'succeeded') {
+            // Authentication succeeded, payment is complete
+            // Continue with backend verification below
+            toast.success('Authentication complete', {
+              description: 'Payment confirmed successfully.',
+              duration: 3000,
+            });
+          } else if (updatedIntent.status === 'processing') {
+            // Payment is processing after authentication
+            toast.info('Payment processing', {
+              description: 'Authentication complete. Processing payment...',
+              duration: 5000,
+            });
+            // Continue with backend verification - webhook will handle final confirmation
+          } else if (updatedIntent.status === 'requires_action') {
+            // Still requires action - unexpected, but handle gracefully
+            throw new Error('Authentication incomplete. Please try again.');
+          } else {
+            // Unexpected status after authentication
+            throw new Error(`Unexpected status after authentication: ${updatedIntent.status}. Please try again.`);
+          }
+          
+          // Update paymentIntent reference for continued processing
+          paymentIntent = updatedIntent;
+        } else {
+          // No next_action available - this shouldn't happen with requires_action status
+          throw new Error('Authentication required but no action available. Please try again.');
+        }
+      }
+
+      // Handle processing status (payment is being processed asynchronously)
+      // This is a valid intermediate state - webhook will handle final confirmation
+      const isProcessing = paymentIntent.status === 'processing';
+      if (isProcessing) {
+        toast.info('Payment processing', {
+          description: 'Your payment is being processed. Final confirmation will arrive shortly via webhook.',
+          duration: 6000,
+        });
+        // Continue with backend verification - webhook will handle final confirmation
+        // Note: Backend will record the payment as processing, and webhook will update to succeeded when complete
+      }
+
+      // Only throw error for non-successful, non-processing statuses
+      // Both 'succeeded' and 'processing' are valid states to proceed with backend verification
+      if (paymentIntent.status !== 'succeeded' && paymentIntent.status !== 'processing') {
+        throw new Error(`Payment status: ${paymentIntent.status}. Payment was not successful.`);
       }
 
       // Verify payment intent on backend
@@ -174,7 +334,25 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
       const verifyData = await verifyResponse.json();
 
       if (!verifyResponse.ok || !verifyData.ok) {
-        throw new Error(verifyData.error || verifyData.err || 'Payment verification failed');
+        // Handle specific backend status responses
+        const statusCode = verifyResponse.status;
+        const errorCode = verifyData.error?.code || verifyData.err?.code;
+        
+        if (statusCode === 202 || errorCode === 'payment_processing') {
+          // Payment is processing - this is acceptable, webhook will handle final confirmation
+          // Still proceed with payment confirmation in our system
+          // The backend will handle the processing state appropriately
+          toast.info('Payment processing', {
+            description: 'Your payment is being processed. You will receive confirmation shortly.',
+            duration: 5000,
+          });
+          // Continue to payment confirmation - processing is a valid intermediate state
+        } else if (statusCode === 402 || errorCode === 'payment_requires_action') {
+          // Payment requires action (3D Secure)
+          throw new Error('Payment requires authentication. Please complete the verification and try again.');
+        } else {
+          throw new Error(verifyData.error?.message || verifyData.err?.message || verifyData.error || verifyData.err || 'Payment verification failed');
+        }
       }
 
       // Get nonce for CSRF protection (payment confirmation)
@@ -212,7 +390,11 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
         throw new Error(confirmData.error || confirmData.err || 'Failed to confirm payment');
       }
 
-      // Success!
+      // Success! Clear payment intent state to prevent reuse
+      setClientSecret(null);
+      setPaymentIntentId(null);
+      setCardElementReady(false);
+
       toast.success('Payment processed!', {
         description: `Your payment of $${amount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} has been confirmed.`,
         duration: 3000,

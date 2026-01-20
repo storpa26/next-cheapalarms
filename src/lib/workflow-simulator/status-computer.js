@@ -61,7 +61,8 @@ export function getDisplayStatus(portalMeta) {
     if (invoice?.status === 'paid') {
       return 'PAID';
     }
-    if (invoice?.status === 'part_paid') {
+    // Updated to use 'partial' instead of 'part_paid' for consistency with production
+    if (invoice?.status === 'partial' || invoice?.status === 'part_paid') {
       return 'PART_PAID';
     }
     if (invoice?.status === 'created' || invoice?.id) {
@@ -151,10 +152,10 @@ export function computeUIState(portalMeta) {
       (photos.submission_status !== 'submitted' || (photos.reviewed && !quote.acceptance_enabled)) && 
       !isAccepted && !isRejected,
     canAccept: workflow.status === 'ready_to_accept' && quote.acceptance_enabled && !isAccepted && !isRejected,
-    canPay: invoice?.id && (invoice?.status === 'created' || invoice?.status === 'part_paid') && (invoice?.balance || 0) > 0 && (workflow.status === 'accepted' || quote.status === 'accepted'),
+    canPay: invoice?.id && (invoice?.status === 'created' || invoice?.status === 'partial' || invoice?.status === 'part_paid') && (invoice?.balance || 0) > 0 && (workflow.status === 'accepted' || quote.status === 'accepted'),
     
     // Visibility flags
-    invoiceVisible: !!invoice?.id || invoice?.status === 'created' || invoice?.status === 'part_paid' || invoice?.status === 'paid',
+    invoiceVisible: !!invoice?.id || invoice?.status === 'created' || invoice?.status === 'partial' || invoice?.status === 'part_paid' || invoice?.status === 'paid',
     acceptButtonVisible: quote.acceptance_enabled && !isAccepted && !isRejected,
     
     // Reasons (for debugging)

@@ -156,7 +156,7 @@ export function NextStepCard({ portalMeta, onAction, uiState }) {
           variant: 'success',
         };
       }
-      if (invoice.status === 'part_paid') {
+      if (invoice.status === 'partial' || invoice.status === 'part_paid') {
         return {
           title: 'Partial Payment',
           message: `Invoice partially paid. Remaining balance: $${invoice.balance}.`,

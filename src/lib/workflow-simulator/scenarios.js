@@ -249,7 +249,7 @@ export const scenarios = {
       invoice: {
         id: 'inv-123',
         number: 'INV-456',
-        status: 'part_paid',
+        status: 'partial', // Updated to use 'partial' for consistency with production
         total: 650,
         paid: 200,
         balance: 450,

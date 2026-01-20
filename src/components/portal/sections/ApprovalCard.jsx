@@ -25,6 +25,7 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
   const total = view?.quote?.total || 0;
   const scheduledFor = view?.installation?.scheduledFor;
   const invoice = view?.invoice;
+  const payment = view?.payment; // Payment data - source of truth for payment status
   const invoiceError = view?.invoiceError; // Invoice creation error from API
   const isAccepted = quoteStatus === "accepted";
   const isRejected = quoteStatus === "rejected";
@@ -158,10 +159,10 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
               {mounted && statusMessage
                 ? statusMessage
                 : isAccepted
-                ? "Your estimate has been accepted"
-                : isRejected
-                ? "This estimate has been rejected"
-                : "Estimate sent - ready for review"}
+                  ? "Your estimate has been accepted"
+                  : isRejected
+                    ? "This estimate has been rejected"
+                    : "Estimate sent - ready for review"}
             </p>
           </div>
           <div className="rounded-full bg-secondary/15 p-4">
@@ -177,15 +178,15 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
             <p className="mt-2 text-3xl font-semibold text-foreground">
               {total > 0
                 ? (() => {
-                    // SSR-safe currency formatting
-                    const formatted = total.toFixed(2);
-                    const parts = formatted.split(".");
-                    const integer = parts[0].replace(
-                      /\B(?=(\d{3})+(?!\d))/g,
-                      ","
-                    );
-                    return `$${integer}.${parts[1]}`;
-                  })()
+                  // SSR-safe currency formatting
+                  const formatted = total.toFixed(2);
+                  const parts = formatted.split(".");
+                  const integer = parts[0].replace(
+                    /\B(?=(\d{3})+(?!\d))/g,
+                    ","
+                  );
+                  return `$${integer}.${parts[1]}`;
+                })()
                 : "—"}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -203,26 +204,26 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
             <p className="mt-2 text-3xl font-semibold text-foreground">
               {scheduledFor
                 ? (() => {
-                    // SSR-safe date formatting
-                    const date = new Date(scheduledFor);
-                    const months = [
-                      "Jan",
-                      "Feb",
-                      "Mar",
-                      "Apr",
-                      "May",
-                      "Jun",
-                      "Jul",
-                      "Aug",
-                      "Sep",
-                      "Oct",
-                      "Nov",
-                      "Dec",
-                    ];
-                    const month = months[date.getUTCMonth()];
-                    const day = date.getUTCDate();
-                    return `${month} ${day}`;
-                  })()
+                  // SSR-safe date formatting
+                  const date = new Date(scheduledFor);
+                  const months = [
+                    "Jan",
+                    "Feb",
+                    "Mar",
+                    "Apr",
+                    "May",
+                    "Jun",
+                    "Jul",
+                    "Aug",
+                    "Sep",
+                    "Oct",
+                    "Nov",
+                    "Dec",
+                  ];
+                  const month = months[date.getUTCMonth()];
+                  const day = date.getUTCDate();
+                  return `${month} ${day}`;
+                })()
                 : "TBD"}
             </p>
             <p className="text-xs text-muted-foreground">
@@ -281,7 +282,19 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
                   {invoice.number || invoice.id || "Pending number"}
                 </p>
                 <p className="text-xs text-muted-foreground capitalize">
-                  Status: {invoice.status || "pending"}
+                  Status: {(() => {
+                    // Use payment.status as source of truth (calculated from actual payments)
+                    // Fallback to invoice.status if payment data not available
+                    if (payment?.status === 'paid') {
+                      return 'Paid';
+                    } else if (payment?.status === 'partial') {
+                      return 'Partially Paid';
+                    } else if (invoice?.status) {
+                      // Fallback to invoice status from GHL
+                      return invoice.status.charAt(0).toUpperCase() + invoice.status.slice(1);
+                    }
+                    return 'Pending';
+                  })()}
                 </p>
               </div>
               {invoice.url && (

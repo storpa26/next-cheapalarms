@@ -68,8 +68,41 @@ export function EstimateDetailView({
         <div suppressHydrationWarning>
           {mounted ? (
             <>
-        {view?.workflow?.status === 'accepted' && view?.invoice && view?.payment?.status !== 'paid' ? (
-          // Show payment form when accepted and invoice exists (not yet paid)
+        {/* Show payment form when:
+            1. Workflow is in payment-eligible state (accepted or booked)
+            2. Invoice exists
+            3. Payment is NOT fully paid
+            4. There's a remaining balance OR no payment made yet
+        */}
+        {(() => {
+          // Check if workflow is in payment-eligible state
+          // Note: 'booked' can occur from booking action OR from partial payment
+          // 'paid' workflow status only occurs when FULLY paid, so we don't check for it
+          const workflowStatus = view?.workflow?.status;
+          const isPaymentEligible = 
+            workflowStatus === 'accepted' || 
+            workflowStatus === 'booked';
+          
+          // Check if invoice exists
+          const hasInvoice = view?.invoice && (view?.invoice.id || view?.invoice.number);
+          
+          // Check if payment is NOT fully paid
+          // If payment object doesn't exist, it's not fully paid
+          // Payment.status is the source of truth - if it's not 'paid', then it's not fully paid
+          const isNotFullyPaid = !view?.payment || view?.payment?.status !== 'paid';
+          
+          // Check if there's a remaining balance
+          // Use minimumPaymentInfo.remainingBalance as source of truth (from backend)
+          // Fallback to payment.remainingBalance if minimumPaymentInfo not available
+          const remainingBalance = view?.minimumPaymentInfo?.remainingBalance ?? view?.payment?.remainingBalance;
+          const hasRemainingBalance = 
+            !view?.payment || // No payment object = full balance remaining
+            (remainingBalance !== null && remainingBalance !== undefined && remainingBalance > 0) ||
+            view?.payment?.status === 'partial'; // Partial payment always has remaining balance
+          
+          return isPaymentEligible && hasInvoice && isNotFullyPaid && hasRemainingBalance;
+        })() ? (
+          // Show payment form when all conditions are met
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
             <PaymentCard
               minimumPaymentInfo={view?.minimumPaymentInfo}
@@ -90,19 +123,6 @@ export function EstimateDetailView({
               inviteToken={view?.account?.inviteToken}
               booking={view?.booking}
               workflow={view?.workflow}
-            />
-          </div>
-        ) : view?.workflow?.status === 'booked' && view?.payment?.status === 'partial' ? (
-          // Show payment form for partial payments (booked but not fully paid)
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <PaymentCard
-              minimumPaymentInfo={view?.minimumPaymentInfo}
-              estimateId={estimateId}
-              locationId={view?.locationId}
-              inviteToken={view?.account?.inviteToken}
-              payment={view?.payment}
-              workflow={view?.workflow}
-              invoice={view?.invoice}
             />
           </div>
         ) : (

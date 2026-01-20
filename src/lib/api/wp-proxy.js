@@ -18,8 +18,32 @@ export function getWpBase() {
  * Create headers for WordPress API request
  */
 export function createWpHeaders(req) {
-  const cookies = parseCookie(req.headers.cookie || "");
-  const token = cookies.ca_jwt || null;
+  // FIX: Always forward the raw cookie header, even if parsing fails
+  // This ensures WordPress can parse cookies even if Next.js parsing has issues
+  // This fixes intermittent 401 errors where cookies aren't available on first request
+  const rawCookieHeader = req.headers.cookie || "";
+  
+  // Try to parse cookies for Authorization header
+  let token = null;
+  try {
+    const cookies = parseCookie(rawCookieHeader);
+    token = cookies.ca_jwt || null;
+  } catch (parseError) {
+    // Parsing failed - try manual extraction as fallback
+    // This handles edge cases where parseCookie fails but cookie exists
+    if (rawCookieHeader.includes('ca_jwt=')) {
+      const match = rawCookieHeader.match(/ca_jwt=([^;]+)/);
+      if (match && match[1]) {
+        try {
+          token = decodeURIComponent(match[1].trim());
+        } catch (decodeError) {
+          // If decode fails, try without decoding (might already be decoded)
+          token = match[1].trim();
+        }
+      }
+    }
+  }
+  
   const authHeader = token ? { Authorization: `Bearer ${token}` } : {};
   const devHeader = process.env.NODE_ENV === "development" ? { "X-CA-Dev": "1" } : {};
   const nonceHeader = req.headers["x-wp-nonce"]
@@ -28,7 +52,10 @@ export function createWpHeaders(req) {
 
   return {
     "Content-Type": "application/json",
-    Cookie: req.headers.cookie ?? "",
+    // FIX: Always forward raw cookie header, even if empty
+    // WordPress can parse it even if Next.js couldn't
+    // This ensures cookies are available on WordPress side even if Next.js parsing failed
+    Cookie: rawCookieHeader,
     ...authHeader,
     ...devHeader,
     ...nonceHeader,
