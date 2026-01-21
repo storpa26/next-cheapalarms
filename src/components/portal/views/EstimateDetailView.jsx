@@ -5,6 +5,7 @@ import { ApprovalCard } from "../sections/ApprovalCard";
 import { WorkflowProgress } from "../sections/WorkflowProgress";
 import { BookingCard } from "../sections/BookingCard";
 import { PaymentCard } from "../sections/PaymentCard";
+import { PaymentCardSkeleton } from "../sections/PaymentCardSkeleton";
 import { MissionSteps } from "../sections/MissionSteps";
 import { ActivityFeed } from "../sections/ActivityFeed";
 
@@ -130,6 +131,19 @@ export function EstimateDetailView({
               invoice={view?.invoice}
             />
           </div>
+        ) : (() => {
+          // Recalculate conditions for skeleton check (variables from above IIFE are out of scope)
+          const workflowStatus = view?.workflow?.status;
+          const isPaymentEligible = 
+            workflowStatus === 'accepted' || 
+            workflowStatus === 'booked';
+          const hasInvoice = view?.invoice && (view?.invoice.id || view?.invoice.number);
+          
+          return isPaymentEligible && !hasInvoice && (view?.quote?.status === 'accepted' || view?.workflow?.status === 'accepted') && !view?.invoiceError;
+        })() ? (
+          // Show skeleton while invoice is being created after acceptance
+          // Only show if there's no invoice error (error is handled by ApprovalCard)
+          <PaymentCardSkeleton />
         ) : (view?.workflow?.status === 'accepted' || view?.workflow?.status === 'booked') && 
              view?.payment?.status === 'paid' && 
              !view?.booking ? (

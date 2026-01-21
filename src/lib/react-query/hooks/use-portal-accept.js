@@ -161,9 +161,8 @@ export function useAcceptEstimate() {
         refetchType: 'all', // Force refetch
       });
       
-      // Show toast notifications
+      // Show toast notifications with progressive feedback
       // Always show success toast since estimate was accepted
-      // If invoice creation failed, also show warning toast with details
       if (data.invoiceError) {
         toast.warning('Estimate accepted, but invoice creation failed', {
           description: data.invoiceError,
@@ -173,8 +172,18 @@ export function useAcceptEstimate() {
         toast.success('Estimate accepted successfully!', {
           duration: 3000,
         });
+      } else if (data.invoice) {
+        // Invoice created successfully - show success with next step
+        toast.success('Estimate accepted! Invoice created.', {
+          description: 'Payment options are now available.',
+          duration: 4000,
+        });
       } else {
-        toast.success('Estimate accepted successfully!');
+        // Estimate accepted, invoice might be pending
+        toast.success('Estimate accepted successfully!', {
+          description: 'Invoice is being created...',
+          duration: 3000,
+        });
       }
     },
   });

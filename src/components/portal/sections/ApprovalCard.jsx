@@ -73,13 +73,22 @@ export function ApprovalCard({ view, estimateId, locationId, onUploadPhotos }) {
       return;
     }
     try {
+      // Show initial feedback
+      const loadingToast = toast.loading('Accepting estimate...', {
+        description: 'This will only take a moment.',
+      });
+      
       const result = await acceptMutation.mutateAsync({
         estimateId,
         locationId: locationId || undefined,
         inviteToken: view?.account?.inviteToken,
       });
+      
       setShowPhotoWarning(false);
-      // Success - the mutation will automatically refetch and update the UI
+      
+      // Dismiss loading toast - success toast will be shown by the mutation hook
+      // The mutation hook handles all toast notifications (success, warning, info)
+      toast.dismiss(loadingToast);
     } catch (error) {
       // Error is handled by React Query's onError callback
       toast.error(
