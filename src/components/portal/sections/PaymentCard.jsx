@@ -140,6 +140,7 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
       // Phase 2: Confirm payment (clientSecret exists)
       // CRITICAL FIX: Check PaymentIntent status BEFORE confirming via backend to prevent reusing succeeded PaymentIntents
       // Use backend endpoint for reliable status check (backend has direct Stripe API access)
+      let paymentIntentAlreadySucceeded = false;
       if (clientSecret && paymentIntentId) {
         try {
           const nonce = await getWpNonceSafe().catch(() => '');
@@ -187,20 +188,24 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
             
             // If status check succeeds and PaymentIntent is already succeeded, handle it gracefully
             if (statusData.ok && statusData.status === 'succeeded') {
-              // PaymentIntent already succeeded - clear state and refresh
-              setClientSecret(null);
-              setPaymentIntentId(null);
-              setCardElementReady(false);
-              
-              toast.info('Payment already processed', {
-                description: 'This payment has already been completed. Refreshing...',
-                duration: 2000,
+              // Stripe says PaymentIntent already succeeded.
+              // DO NOT return early - we still must call backend confirmPayment()
+              // so portal invoice meta updates and Xero sync can run.
+              // The backend idempotency logic will safely handle duplicates.
+              paymentIntentAlreadySucceeded = true;
+              if (process.env.NODE_ENV === 'development') {
+                console.info('PaymentIntent already succeeded in Stripe, proceeding with backend confirmation', {
+                  paymentIntentId,
+                  estimateId,
+                });
+              }
+              toast.info('Stripe payment succeeded. Finalising in portal...', {
+                description: 'Completing payment confirmation...',
+                duration: 2500,
               });
-              
-              // Reload to refresh view data
-              setTimeout(() => window.location.reload(), 2000);
-              setIsProcessing(false);
-              return;
+              // Continue to confirmation flow below - do NOT return
+              // We'll skip stripe.confirmCardPayment() since it's already succeeded
+              // and proceed directly to backend confirmation
             }
             
             // If status check succeeds but PaymentIntent is in an invalid state, handle it
@@ -234,101 +239,69 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
         }
       }
 
-      // Gate: CardElement must be ready
-      if (!cardElementReady) {
-        setError('Card element not ready. Please wait a moment and try again.');
-        return;
-      }
-
-      // Get fresh CardElement reference right before use
-      const card = elements.getElement(CardElement);
-      if (!card) {
-        setError('Card element not ready. Please wait a moment and try again.');
-        return;
-      }
-
-      // Confirm payment with Stripe
-      let { error: stripeError, paymentIntent } = await stripe.confirmCardPayment(
-        clientSecret,
-        {
-          payment_method: {
-            card: card,
-          },
+      // If PaymentIntent is already succeeded, skip Stripe confirmation and create mock paymentIntent
+      let stripeError = null;
+      let paymentIntent = null;
+      
+      if (paymentIntentAlreadySucceeded) {
+        // PaymentIntent already succeeded - create mock object for backend confirmation
+        paymentIntent = {
+          id: paymentIntentId,
+          status: 'succeeded',
+        };
+      } else {
+        // Gate: CardElement must be ready (only needed if we're confirming with Stripe)
+        if (!cardElementReady) {
+          setError('Card element not ready. Please wait a moment and try again.');
+          return;
         }
-      );
+
+        // Get fresh CardElement reference right before use
+        const card = elements.getElement(CardElement);
+        if (!card) {
+          setError('Card element not ready. Please wait a moment and try again.');
+          return;
+        }
+
+        // Confirm payment with Stripe
+        const stripeResult = await stripe.confirmCardPayment(
+          clientSecret,
+          {
+            payment_method: {
+              card: card,
+            },
+          }
+        );
+        stripeError = stripeResult.error;
+        paymentIntent = stripeResult.paymentIntent;
+      }
 
       // Handle Stripe errors with specific error codes
       if (stripeError) {
         // Check if error is due to PaymentIntent already being succeeded
         if (stripeError.code === 'payment_intent_unexpected_state' || 
             stripeError.message?.toLowerCase().includes('already succeeded')) {
-          // Log the error for debugging and production monitoring
+          // PaymentIntent already succeeded - create mock paymentIntent and proceed to backend confirmation
+          // This ensures portal meta updates and Xero sync can run
+          // The backend idempotency logic will safely handle duplicates
           if (process.env.NODE_ENV === 'development') {
-            console.warn('PaymentIntent already succeeded, creating new one', {
+            console.info('PaymentIntent already succeeded (from Stripe error), proceeding with backend confirmation', {
               paymentIntentId,
               error: stripeError.message,
               estimateId,
             });
           }
-          // TODO: In production, integrate with error tracking service (e.g., Sentry)
-          // This helps track how often this recovery flow is triggered
-          // Example: Sentry.captureMessage('PaymentIntent recovery: already succeeded', {
-          //   level: 'warning',
-          //   tags: { payment_intent_id: paymentIntentId, estimate_id: estimateId },
-          //   extra: { error_message: stripeError.message }
-          // });
-          
-          // Clear state and create new payment intent for remaining balance
-          setClientSecret(null);
-          setPaymentIntentId(null);
-          setCardElementReady(false);
-          setError(null);
-          
-          // CRITICAL FIX: Prevent race conditions - check if already creating intent
-          if (isCreatingIntent) {
-            setIsProcessing(false);
-            return; // Already creating new intent, prevent duplicate attempts
-          }
-          
-          // Use toast.promise for better UX - single toast with loading/success/error states
-          // Wrap createPaymentIntent to throw on failure (required for toast.promise)
-          const recoveryPromise = (async () => {
-            setIsCreatingIntent(true); // Prevent multiple recovery attempts
-            try {
-              const newClientSecret = await createPaymentIntent();
-              if (!newClientSecret) {
-                throw new Error('Failed to create new payment intent');
-              }
-              return newClientSecret;
-            } finally {
-              setIsCreatingIntent(false);
-            }
-          })();
-          
-          // Show toast with promise states
-          toast.promise(recoveryPromise, {
-            loading: 'Previous payment detected. Creating new payment for remaining balance...',
-            success: () => {
-              // Clear any previous error messages
-              setError(null);
-              return 'New payment ready. Please complete the payment for the remaining balance.';
-            },
-            error: (err) => {
-              setError('Failed to create new payment. Please try again.');
-              return err?.message || 'Failed to create new payment. Please try again.';
-            },
+          // Create mock paymentIntent object for backend confirmation
+          paymentIntent = {
+            id: paymentIntentId,
+            status: 'succeeded',
+          };
+          stripeError = null; // Clear error so we proceed to backend confirmation
+          toast.info('Stripe payment succeeded. Finalising in portal...', {
+            description: 'Completing payment confirmation...',
+            duration: 2500,
           });
-          
-          // Wait for promise to resolve
-          try {
-            await recoveryPromise;
-            setIsProcessing(false); // Reset processing state after successful recovery
-            return; // User will click "Complete Payment" again with new intent
-          } catch (err) {
-            // Error already handled by toast.promise
-            setIsProcessing(false); // Reset processing state on error
-            return;
-          }
+          // Continue to backend confirmation below
         }
         
         // Handle specific Stripe error codes with user-friendly messages
