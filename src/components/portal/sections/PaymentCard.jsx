@@ -476,7 +476,38 @@ function PaymentForm({ estimateId, locationId, inviteToken, amount, onSuccess, w
 
       const confirmData = await confirmResponse.json();
 
+      // TASK A: Handle invoice_already_paid as success ONLY when backend indicates idempotent success
       if (!confirmResponse.ok || !confirmData.ok) {
+        const errorCode = confirmData.code || confirmData.error?.code || confirmData.err?.code;
+        const isAlreadyPaid = errorCode === 'invoice_already_paid';
+        const isIdempotentSuccess = confirmData.alreadyPaid === true || confirmData.duplicateTransaction === true;
+        
+        // Only treat as success if backend explicitly indicates idempotent success
+        if (isAlreadyPaid && isIdempotentSuccess) {
+          console.info('[PAYMENT_CONFIRM] Payment already processed (idempotent success)', {
+            estimateId,
+            transactionId: paymentIntent.id,
+            backendResponse: confirmData,
+          });
+          
+          // Success! Clear payment intent state
+          setClientSecret(null);
+          setPaymentIntentId(null);
+          setCardElementReady(false);
+          
+          toast.success('Payment confirmed', {
+            description: 'Your payment has already been processed.',
+            duration: 2000,
+          });
+          
+          // Reload to refresh UI
+          setTimeout(() => {
+            window.location.reload();
+          }, 2000);
+          return;
+        }
+        
+        // Otherwise, show error
         throw new Error(confirmData.error || confirmData.err || 'Failed to confirm payment');
       }
 

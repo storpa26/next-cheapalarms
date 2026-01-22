@@ -31,6 +31,10 @@ export { UPLOAD_CONFIG };
 // Map<estimateId, session>
 const sessionMap = new Map();
 
+// Track in-flight token refresh promises per estimateId (mutex pattern)
+// Prevents concurrent refresh requests when multiple uploads hit 401 simultaneously
+const refreshPromises = new Map(); // Map<estimateId, Promise<session>>
+
 // PHASE 2: Upload queue system - prevents server overload with parallel uploads
 const uploadQueue = new PQueue({ 
   concurrency: 3, // Upload 3 files at a time
@@ -100,17 +104,60 @@ export async function startUploadSession(estimateId, locationId) {
 }
 
 /**
+ * Ensure valid upload token - refresh if expired/invalid
+ * Uses mutex pattern to prevent concurrent refresh requests
+ * @param {string} estimateId 
+ * @param {string} locationId 
+ * @returns {Promise<session>} Valid session
+ */
+async function ensureValidUploadToken(estimateId, locationId) {
+  // Clean up expired sessions first
+  cleanupExpiredSessions();
+  
+  // Check if we have a valid session
+  const session = sessionMap.get(estimateId);
+  const now = Date.now() / 1000;
+  const isExpired = session?.exp != null && 
+                    session.exp !== 0 && 
+                    typeof session.exp === 'number' &&
+                    session.exp < now;
+  
+  // If session exists and is valid, return it
+  if (session && !isExpired && session.estimateId === estimateId) {
+    return session;
+  }
+  
+  // Check if refresh is already in progress (mutex)
+  if (refreshPromises.has(estimateId)) {
+    return refreshPromises.get(estimateId);
+  }
+  
+  // Start refresh
+  const refreshPromise = startUploadSession(estimateId, locationId)
+    .finally(() => {
+      // Clean up mutex after refresh completes (success or failure)
+      refreshPromises.delete(estimateId);
+    });
+  
+  refreshPromises.set(estimateId, refreshPromise);
+  return refreshPromise;
+}
+
+/**
  * Internal upload function - performs actual upload
  * PHASE 2: This is wrapped by uploadQueue for concurrency control
+ * @param {retryCount} number - Internal counter to prevent infinite retry loops
+ * @param {tokenOverride} string - Optional token to use instead of session token (for retry with refreshed token)
  */
-function _uploadFileInternal(file, metadata, onProgress, uploadId = null, estimateId = null) {
+function _uploadFileInternal(file, metadata, onProgress, uploadId = null, estimateId = null, retryCount = 0, tokenOverride = null) {
   // FIX: Get session from Map based on estimateId
   // If estimateId not provided, try to get from metadata or use first available session
   let session = null;
   if (estimateId) {
     session = sessionMap.get(estimateId);
   } else if (metadata?.estimateId) {
-    session = sessionMap.get(metadata.estimateId);
+    estimateId = metadata.estimateId;
+    session = sessionMap.get(estimateId);
   } else {
     // Fallback: use first available session (backward compatibility)
     const sessions = Array.from(sessionMap.values());
@@ -136,7 +183,8 @@ function _uploadFileInternal(file, metadata, onProgress, uploadId = null, estima
   // Create FormData
   const formData = new FormData();
   formData.append('file', file);
-  formData.append('token', session.token);
+  // ✅ FIXED: Token sent only in query param (backend prefers query to avoid multipart parsing issues)
+  // Removed duplicate token from form body to ensure refreshed token is used correctly
   
   // Add metadata
   if (metadata) {
@@ -215,6 +263,44 @@ function _uploadFileInternal(file, metadata, onProgress, uploadId = null, estima
           reject(new Error(`Invalid response from server: ${error.message || 'Failed to parse JSON'}`));
         }
       } else {
+        // ✅ ADDED: Handle 401 errors with token refresh + retry (only for token expiry)
+        if (xhr.status === 401 && retryCount === 0 && estimateId && metadata?.locationId) {
+          // Parse error response to check if it's token expiry (not other 401 errors)
+          let shouldRetry = false;
+          try {
+            if (xhr.responseText && xhr.responseText.trim() !== '') {
+              const errorData = JSON.parse(xhr.responseText);
+              const errorMessage = (errorData.err || errorData.error || '').toLowerCase();
+              // Only retry on explicit token expiry - not on invalid signature, missing token, generic unauthorized, etc.
+              shouldRetry = errorMessage.includes('token expired') || errorMessage.includes('expired');
+            }
+            // Do not retry on empty/unparseable responses - these are likely non-expiry errors
+          } catch (parseError) {
+            // Do not retry on unparseable responses - likely non-expiry errors
+            shouldRetry = false;
+          }
+          
+          if (shouldRetry) {
+            // Token expired - refresh and retry once
+            activeXhrInstances.delete(id);
+            uploadPromises.delete(id);
+            isResolved = true;
+            
+            // Refresh token and retry with explicit token override
+            ensureValidUploadToken(estimateId, metadata.locationId)
+              .then((newSession) => {
+                // ✅ Retry upload with refreshed token explicitly passed as tokenOverride
+                // This ensures we use the fresh token directly, not relying on sessionMap update timing
+                return _uploadFileInternal(file, metadata, onProgress, uploadId, estimateId, retryCount + 1, newSession.token);
+              })
+              .then(resolve)
+              .catch(reject);
+            return; // Exit early - retry will resolve/reject
+          }
+          // If not token expiry, fall through to normal error handling below
+        }
+        
+        // Non-401 errors or already retried - handle normally
         try {
           // FIX: Check for empty response before parsing
           if (xhr.responseText && xhr.responseText.trim() !== '') {
@@ -249,7 +335,9 @@ function _uploadFileInternal(file, metadata, onProgress, uploadId = null, estima
     });
 
     // Configure and send to Next.js API route (which proxies to WordPress)
-    xhr.open('POST', `/api/upload/file?token=${encodeURIComponent(session.token)}`);
+    // ✅ Use tokenOverride if provided (for retry with refreshed token), otherwise use session token
+    const tokenToUse = tokenOverride ?? session.token;
+    xhr.open('POST', `/api/upload/file?token=${encodeURIComponent(tokenToUse)}`);
     xhr.timeout = UPLOAD_CONFIG.timeout;
     xhr.withCredentials = true; // Include cookies
     
@@ -307,7 +395,8 @@ export function uploadFile(file, metadata, onProgress, uploadId = null, estimate
   // Create a task that returns the upload promise
   const uploadTask = async () => {
     // Store internal promise reference when task executes
-    internalPromise = _uploadFileInternal(file, metadata, onProgress, uploadId, estimateId);
+    // Pass retryCount = 0 for initial attempt
+    internalPromise = _uploadFileInternal(file, metadata, onProgress, uploadId, estimateId, 0);
     return internalPromise;
   };
   
@@ -483,6 +572,12 @@ export function resetWorkerPool() {
 export function getActiveUploadCount() {
   return activeXhrInstances.size;
 }
+
+/**
+ * Ensure valid upload token - refresh if expired/invalid
+ * Exported for testing and external use
+ */
+export { ensureValidUploadToken };
 
 /**
  * Store photos metadata (for portal state)
