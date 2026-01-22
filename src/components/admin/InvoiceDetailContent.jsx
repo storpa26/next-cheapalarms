@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import Link from "next/link";
 import { Badge } from "../ui/badge";
 import { Spinner } from "../ui/spinner";
-import { useAdminInvoice, useSendInvoice, useSyncInvoiceToXero, useXeroStatus, useDeleteInvoice } from "../../lib/react-query/hooks/admin";
+import { useAdminInvoice, useSendInvoice, useSyncInvoiceToXero, useSyncPaymentToXero, useXeroStatus, useDeleteInvoice } from "../../lib/react-query/hooks/admin";
 import { useEstimatePhotos } from "../../lib/react-query/hooks/use-estimate-photos";
 import { PhotoGallery } from "./PhotoGallery";
 import { DeleteDialog } from "./DeleteDialog";
@@ -18,6 +18,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
 
   const sendInvoiceMutation = useSendInvoice();
   const syncToXeroMutation = useSyncInvoiceToXero();
+  const syncPaymentToXeroMutation = useSyncPaymentToXero();
   const deleteInvoiceMutation = useDeleteInvoice();
   const { data: xeroStatus } = useXeroStatus();
   const isXeroConnected = xeroStatus?.ok && xeroStatus?.connected;
@@ -87,6 +88,25 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
     }
   };
 
+  const handleSyncPaymentToXero = async () => {
+    if (!isXeroConnected) {
+      toast.error("Xero is not connected. Please connect Xero first in Settings > Integrations.");
+      return;
+    }
+
+    try {
+      const result = await syncPaymentToXeroMutation.mutateAsync({ invoiceId, locationId });
+      if (result?.ok) {
+        toast.success("Payment synced to Xero successfully");
+        refetch();
+      } else {
+        throw new Error(result?.message || "Failed to sync payment to Xero");
+      }
+    } catch (err) {
+      toast.error(err.message || "Failed to sync payment to Xero");
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -107,6 +127,7 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
   const contact = invoice.contact || {};
   const items = invoice.items || [];
   const payments = invoice.payments || [];
+  const hasPayments = payments.length > 0;
 
   return (
     <div className="space-y-6">
@@ -477,6 +498,13 @@ export function InvoiceDetailContent({ invoiceId, locationId }) {
                   className="w-full rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground transition hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {syncToXeroMutation.isPending ? "Syncing..." : invoice.xeroInvoiceId ? "Already Synced" : "Sync to Xero"}
+                </button>
+                <button
+                  onClick={handleSyncPaymentToXero}
+                  disabled={syncPaymentToXeroMutation.isPending || !isXeroConnected || !hasPayments}
+                  className="mt-2 w-full rounded-md bg-secondary px-3 py-2 text-sm font-medium text-secondary-foreground transition hover:bg-secondary/90 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {syncPaymentToXeroMutation.isPending ? "Syncing Payment..." : "Sync Payment to Xero"}
                 </button>
                 {!isXeroConnected && (
                   <p className="mt-2 text-xs text-muted-foreground text-center">

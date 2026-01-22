@@ -9,7 +9,7 @@ export { useAdminLogs } from './use-admin-logs';
 export { useCreateInvoiceFromEstimate, useSendEstimate, useCompleteReview, useRequestChanges, useSendRevisionNotification } from './use-admin-estimate-actions';
 export { useSendInvoice } from './use-admin-invoice-actions';
 export { useUpdateEstimate } from './use-update-estimate';
-export { useXeroStatus, useXeroAuthorize, useXeroDisconnect, useSyncInvoiceToXero } from './use-xero';
+export { useXeroStatus, useXeroAuthorize, useXeroDisconnect, useSyncInvoiceToXero, useSyncPaymentToXero } from './use-xero';
 export { useDeleteEstimate } from './use-delete-estimate';
 export { useDeleteInvoice } from './use-delete-invoice';
 export { useDeleteUser } from './use-delete-user';
@@ -23,4 +23,3 @@ export { useBulkDeleteUsers } from './use-bulk-delete-users';
 export { useEmptyTrash } from './use-empty-trash';
 export { useDeleteByEmail } from './use-delete-by-email';
 // Note: useSyncEstimate and useSyncInvoice are kept in files but not exported (for potential future use)
-

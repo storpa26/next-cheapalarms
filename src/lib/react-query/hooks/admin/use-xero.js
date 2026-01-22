@@ -124,3 +124,35 @@ export function useSyncInvoiceToXero() {
   });
 }
 
+/**
+ * React Query mutation for syncing payments to Xero (existing invoice).
+ */
+export function useSyncPaymentToXero() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ invoiceId, locationId, transactionId }) => {
+      const res = await fetch('/api/xero/sync-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ invoiceId, locationId, transactionId }),
+      });
+      if (!res.ok) {
+        let error;
+        try {
+          error = await res.json();
+        } catch {
+          error = { err: `HTTP ${res.status}: ${res.statusText}` };
+        }
+        throw new Error(error.err || error.error || 'Failed to sync payment to Xero');
+      }
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-invoice'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
+    },
+  });
+}
+
