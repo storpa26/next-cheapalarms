@@ -31,26 +31,28 @@ export function Modal({ isOpen, onClose, title, children, showBackButton = true 
     } else {
       document.body.style.overflow = "";
     }
-  }, [isOpen, onClose, mounted]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, mounted]); // onClose excluded - should be stable from parent
 
   // Don't render anything on server-side or if not mounted
   if (!isOpen || !mounted) return null;
 
   const content = (
     <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 p-4"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
           onClose();
         }
       }}
+      style={{ willChange: 'opacity' }}
     >
       <div
-        className="flex flex-col bg-background rounded-xl shadow-2xl overflow-hidden w-full max-w-7xl"
+        className="flex flex-col bg-background rounded-xl overflow-hidden w-full max-w-7xl"
         style={{
           maxHeight: "90vh",
           boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0, 0, 0, 0.1)",
-          filter: "drop-shadow(0 20px 25px rgba(0, 0, 0, 0.3))",
+          transform: "translateZ(0)", // GPU acceleration
         }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -79,8 +81,10 @@ export function Modal({ isOpen, onClose, title, children, showBackButton = true 
           </button>
         </div>
 
-        {/* Scrollable Content */}
-        <div className="flex-1 overflow-y-auto">
+        {/* Scrollable Content - Optimized for performance */}
+        <div 
+          className="flex-1 overflow-y-auto scroll-optimized"
+        >
           <div className="p-6">
             {children}
           </div>

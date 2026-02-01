@@ -254,24 +254,24 @@ export default function InvoicesListPage() {
         <title>Invoices • Admin</title>
       </Head>
       <AdminLayout title="Invoices">
-        <div className="space-y-6">
+        <div className="space-y-8">
           {/* Page Header */}
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Invoices</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h1 className="text-4xl font-bold text-foreground tracking-tight">Invoices</h1>
+              <p className="mt-2 text-base text-muted-foreground font-medium">
                 Manage all invoices for your business
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="shadow-sm hover:shadow-md transition-all">
                 <Settings className="h-5 w-5" />
               </Button>
             </div>
           </div>
 
           {/* Summary Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
             <SummaryCard
               label={`${summaryMetrics.sent.count} sent`}
               value={summaryMetrics.sent.total}
@@ -322,8 +322,8 @@ export default function InvoicesListPage() {
               <p className="mt-1">{error.message || "An unexpected error occurred"}</p>
             </div>
           ) : invoices.length === 0 ? (
-            <div className="rounded-lg border border-border bg-surface p-12 text-center">
-              <p className="text-muted-foreground">No invoices found</p>
+            <div className="rounded-xl border border-border/60 bg-gradient-to-br from-surface to-surface/95 p-16 text-center shadow-lg">
+              <p className="text-muted-foreground font-medium">No invoices found</p>
             </div>
           ) : (
             <>
@@ -335,7 +335,7 @@ export default function InvoicesListPage() {
                     <div
                       key={invoice.id}
                       onClick={() => handleRowClick(invoice.id)}
-                      className={`bg-surface rounded-lg border border-border p-4 shadow-sm cursor-pointer transition-all hover:shadow-md active:scale-[0.99] ${isSelected ? 'ring-2 ring-primary' : ''}`}
+                      className={`bg-gradient-to-br from-surface to-surface/95 rounded-xl border border-border/60 p-5 shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] ${isSelected ? 'ring-2 ring-[#1EA6DF]/40 shadow-lg' : ''}`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -427,10 +427,10 @@ export default function InvoicesListPage() {
               </div>
 
               {/* Desktop Table View */}
-              <div className="hidden lg:block bg-surface rounded-lg border border-border shadow-sm overflow-hidden">
+              <div className="hidden lg:block bg-surface rounded-xl border border-border/60 shadow-lg overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full">
-                    <thead className="bg-muted border-b border-border">
+                    <thead className="bg-gradient-to-b from-muted/80 to-muted/60 border-b-2 border-border/60">
                       <tr>
                         <th className="px-6 py-4 text-left">
                           <Checkbox
@@ -439,39 +439,49 @@ export default function InvoicesListPage() {
                             aria-label="Select all"
                           />
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Invoice #
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Customer
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Total
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Amount Due
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Status
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Estimate
                         </th>
-                        <th className="px-6 py-4 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-left text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Created
                         </th>
-                        <th className="px-6 py-4 text-right text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-muted-foreground">
                           Actions
                         </th>
                       </tr>
                     </thead>
-                    <tbody className="bg-surface divide-y divide-border">
-                      {invoices.map((invoice) => {
+                    <tbody className="bg-surface divide-y divide-border/40">
+                      {invoices.map((invoice, index) => {
                         const isSelected = selectedIds.has(invoice.id);
+                        const isEven = index % 2 === 0;
                         return (
                         <tr
                           key={invoice.id}
-                          className={`cursor-pointer transition-colors hover:bg-primary/5 ${isSelected ? 'bg-primary/10' : ''}`}
+                          className={`
+                            cursor-pointer transition-all duration-200 ease-standard
+                            ${isSelected 
+                              ? 'bg-gradient-to-r from-[#1EA6DF]/10 via-[#c95375]/5 to-[#1EA6DF]/10 ring-2 ring-[#1EA6DF]/40 shadow-sm' 
+                              : isEven 
+                                ? 'bg-surface hover:bg-muted/30' 
+                                : 'bg-surface/50 hover:bg-muted/40'
+                            }
+                            hover:shadow-sm
+                          `}
                           onClick={() => handleRowClick(invoice.id)}
                         >
                           <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
@@ -522,7 +532,7 @@ export default function InvoicesListPage() {
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span
                               className={`
-                                inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border
+                                inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border shadow-sm
                                 ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
                               `}
                             >

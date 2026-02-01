@@ -23,18 +23,18 @@ export const SummaryCard = memo(function SummaryCard({
 
   const Icon = icon || iconMap[variant] || null;
 
-  // Clean rectangular design with subtle color accents
+  // Professional design with gradients and enhanced depth
   const variants = {
-    default: "bg-surface border-border/60",
-    sent: "bg-surface border-l-4 border-l-info bg-info-bg/30",
-    accepted: "bg-surface border-l-4 border-l-success bg-success-bg/30",
-    declined: "bg-surface border-l-4 border-l-error bg-error-bg/30",
-    invoiced: "bg-surface border-l-4 border-l-primary bg-primary/5",
+    default: "bg-gradient-to-br from-surface to-surface/95 border-border/60 shadow-md hover:shadow-lg",
+    sent: "bg-gradient-to-br from-surface via-info-bg/20 to-surface border-l-4 border-l-[#1EA6DF] shadow-md hover:shadow-lg",
+    accepted: "bg-gradient-to-br from-surface via-success-bg/20 to-surface border-l-4 border-l-success shadow-md hover:shadow-lg",
+    declined: "bg-gradient-to-br from-surface via-error-bg/20 to-surface border-l-4 border-l-error shadow-md hover:shadow-lg",
+    invoiced: "bg-gradient-to-br from-surface via-primary/10 to-surface border-l-4 border-l-primary shadow-md hover:shadow-lg",
   };
 
   const iconColors = {
     default: "text-muted-foreground",
-    sent: "text-info",
+    sent: "text-[#1EA6DF]",
     accepted: "text-success",
     declined: "text-error",
     invoiced: "text-primary",
@@ -61,39 +61,40 @@ export const SummaryCard = memo(function SummaryCard({
     <div
       className={`
         ${variants[variant] || variants.default}
-        rounded-lg border border-t-0 border-r border-b border-l-0
-        p-6 shadow-sm hover:shadow-md
-        transition-all duration-200 ease-standard
-        ${onClick ? "cursor-pointer hover:border-border" : ""}
+        rounded-xl border border-t-0 border-r border-b border-l-0
+        p-7
+        transition-all duration-300 ease-standard
+        ${onClick ? "cursor-pointer hover:scale-[1.02] hover:border-border/80" : ""}
         h-full flex flex-col
+        backdrop-blur-sm
       `}
       onClick={onClick}
     >
-      <div className="flex items-start justify-between mb-4">
+      <div className="flex items-start justify-between mb-5">
         <div className="flex items-center gap-3">
           {Icon && (
-            <div className={`p-2 rounded-md ${iconColors[variant] || iconColors.default} bg-background/80`}>
+            <div className={`p-2.5 rounded-lg ${iconColors[variant] || iconColors.default} bg-background/90 shadow-sm border border-border/40`}>
               <Icon className="h-5 w-5" />
             </div>
           )}
-          <p className="text-sm font-medium text-muted-foreground">{label}</p>
+          <p className="text-sm font-semibold text-muted-foreground tracking-wide">{label}</p>
         </div>
       </div>
       
       <div className="flex-1 flex flex-col justify-end">
-        <div className="space-y-1">
-          <p className={`text-3xl font-bold ${valueColors[variant] || valueColors.default}`}>
+        <div className="space-y-2">
+          <p className={`text-3xl font-bold tracking-tight ${valueColors[variant] || valueColors.default}`}>
             {currency} {typeof value === 'number' ? value.toFixed(2) : value}
           </p>
           
           {count !== undefined && count !== null && (
-            <p className="text-sm text-muted-foreground font-medium">
+            <p className="text-sm text-muted-foreground font-semibold">
               {count} {count === 1 ? 'estimate' : 'estimates'}
             </p>
           )}
           
           {trend !== undefined && trend !== null && trendLabel && (
-            <div className={`flex items-center gap-1.5 text-xs font-medium mt-2 ${trendColors[trendVariant]}`}>
+            <div className={`flex items-center gap-1.5 text-xs font-semibold mt-3 ${trendColors[trendVariant]}`}>
               {TrendIcon && <TrendIcon className="h-3.5 w-3.5" />}
               <span>{trendLabel}</span>
             </div>

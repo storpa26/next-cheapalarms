@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback, memo } from "react";
 import Link from "next/link";
 import { Badge } from "../ui/badge";
 import { Button } from "../ui/button";
@@ -36,9 +36,149 @@ import { WorkflowStatusCard } from "./WorkflowStatusCard";
 import { DeleteDialog } from "./DeleteDialog";
 import JobDetailModal from "../servicem8/JobDetailModal";
 import { toast } from "sonner";
-import { Trash2 } from "lucide-react";
+import { Trash2, User, Mail, Phone, CheckCircle2, DollarSign, Calendar, Send } from "lucide-react";
 
-export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated }) {
+// Memoized table row component for performance
+const EstimateTableRow = memo(function EstimateTableRow({
+  item,
+  idx,
+  photoCount,
+  isSelected,
+  currency,
+  isEditMode,
+  itemQty,
+  onQuantityChange,
+  onRemoveClick,
+  onSelect
+}) {
+  const itemName = item?.name || "Item";
+  
+  const rowClassName = useMemo(() => {
+    if (isEditMode) {
+      return "transition-all duration-200";
+    }
+    return `cursor-pointer transition-all duration-200 ${
+      isSelected
+        ? "bg-primary/10 ring-2 ring-primary/40 shadow-sm"
+        : "hover:bg-muted/30 hover:shadow-sm"
+    }`;
+  }, [isSelected, isEditMode]);
+
+  const handleRowClick = useCallback(() => {
+    if (!isEditMode && onSelect) {
+      if (isSelected) {
+        onSelect(null);
+      } else {
+        onSelect({ ...item, name: itemName });
+      }
+    }
+  }, [isEditMode, isSelected, item, itemName, onSelect]);
+
+  return (
+    <tr
+      onClick={handleRowClick}
+      className={rowClassName}
+      role={!isEditMode ? "button" : undefined}
+      tabIndex={!isEditMode ? 0 : undefined}
+      aria-selected={!isEditMode ? isSelected : undefined}
+      onKeyDown={!isEditMode ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          handleRowClick();
+        }
+      } : undefined}
+    >
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <div className="font-medium text-foreground flex items-center gap-2">
+              {itemName}
+              {item?.isCustom && (
+                <span className="text-xs px-1.5 py-0.5 bg-success-bg text-success rounded font-semibold">NEW</span>
+              )}
+            </div>
+            {item?.description && (
+              <div className="text-xs text-muted-foreground">{item?.description}</div>
+            )}
+          </div>
+          {!isEditMode && photoCount > 0 && (
+            <div className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm border border-primary/30">
+              <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span>{photoCount}</span>
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-3">
+        {isEditMode ? (
+          <div className="flex items-center justify-center gap-1">
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuantityChange(idx, -1);
+              }}
+              disabled={itemQty <= 1}
+              variant="outline"
+              size="icon-sm"
+              className="w-7 h-7"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+              </svg>
+            </Button>
+            <span className="w-10 text-center font-medium text-foreground">{itemQty}</span>
+            <Button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuantityChange(idx, 1);
+              }}
+              disabled={itemQty >= (item?.originalQty || 1) + 10}
+              variant="outline"
+              size="icon-sm"
+              className="w-7 h-7"
+            >
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+            </Button>
+          </div>
+        ) : (
+          <div className="text-center text-sm text-foreground">{itemQty}</div>
+        )}
+      </td>
+      <td className="px-4 py-3 text-right text-sm text-foreground">
+        {currency} {(Number(item?.amount) || 0).toFixed(2)}
+      </td>
+      <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
+        {currency} {((Number(item?.amount) || 0) * itemQty).toFixed(2)}
+      </td>
+      {isEditMode && (
+        <td className="px-4 py-3 text-center">
+          <Button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemoveClick(idx);
+            }}
+            variant="ghost"
+            size="icon-sm"
+            className="text-error hover:text-error/80"
+            title="Remove item"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </Button>
+        </td>
+      )}
+    </tr>
+  );
+});
+EstimateTableRow.displayName = 'EstimateTableRow';
+
+export const EstimateDetailContent = memo(function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated }) {
   const { data, isLoading, error, refetch } = useAdminEstimate({
     estimateId: estimateId || null,
     locationId: locationId || undefined,
@@ -148,8 +288,120 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [isEditMode]);
 
+  // Extract estimate data (safe even if estimate is null) - MUST be before any usage
+  const contact = estimate?.contact || {};
+  const items = isEditMode ? editedItems : (estimate?.items || []);
+  const portalMeta = estimate?.portalMeta || {};
+  const linkedInvoice = estimate?.linkedInvoice;
+  const currency = estimate?.currency || DEFAULT_CURRENCY;
+
+  // Memoize getStatusDisplay function
+  const getStatusDisplay = useCallback((displayStatus) => {
+    switch (displayStatus) {
+      case 'ACCEPTED':
+      case 'INVOICE_READY':
+        return { variant: 'success', label: 'Accepted' };
+      case 'REJECTED':
+        return { variant: 'destructive', label: 'Rejected' };
+      case 'PHOTOS_UNDER_REVIEW':
+        return { variant: 'info', label: 'Under Review' };
+      case 'READY_TO_ACCEPT':
+        return { variant: 'success', label: 'Ready to Accept' };
+      case 'CHANGES_REQUESTED':
+        return { variant: 'warning', label: 'Changes Requested' };
+      case 'AWAITING_PHOTOS':
+      case 'PHOTOS_UPLOADED':
+        return { variant: 'info', label: 'Awaiting Photos' };
+      case 'ESTIMATE_SENT':
+      default:
+        return { variant: 'warning', label: 'Sent' };
+    }
+  }, []);
+
+  // Compute UI state from portal meta to get accurate status
+  const uiState = useMemo(() => computeUIState(portalMeta), [portalMeta]);
+  const displayStatus = uiState.displayStatus;
+  const statusMessage = uiState.statusMessage;
+  const statusDisplay = useMemo(() => getStatusDisplay(displayStatus), [displayStatus, getStatusDisplay]);
+
+  // Memoize date formatting with validation
+  const acceptedAtFormatted = useMemo(() => {
+    if (!portalMeta.acceptedAt) return null;
+    const date = new Date(portalMeta.acceptedAt);
+    if (isNaN(date.getTime())) return null; // Invalid date
+    return date.toLocaleString();
+  }, [portalMeta.acceptedAt]);
+
+  const submittedAtFormatted = useMemo(() => {
+    if (!portalMeta.photos?.submitted_at) return null;
+    const date = new Date(portalMeta.photos.submitted_at);
+    if (isNaN(date.getTime())) return null; // Invalid date
+    return date.toLocaleString();
+  }, [portalMeta.photos?.submitted_at]);
+
+  // Memoize estimateTotal for DiscountModal
+  const estimateTotalForDiscount = useMemo(() => {
+    return (editedItems || [])
+      .filter(item => item != null)
+      .reduce((sum, item) => {
+        const amount = Number(item?.amount);
+        const qty = Number(item?.qty || item?.quantity || 1);
+        return sum + ((isNaN(amount) ? 0 : amount) * (isNaN(qty) ? 1 : qty));
+      }, 0);
+  }, [editedItems]);
+
+  // Calculate totals (safe even if estimate is null) - MUST be before handleConfirmSave
+  const originalTotal = estimate?.total || 0;
+  const newTotal = useMemo(() => {
+    const itemsTotal = (editedItems || [])
+      .filter(item => item != null)
+      .reduce((sum, item) => {
+        const amount = Number(item?.amount);
+        const qty = Number(item?.qty || item?.quantity || 1);
+        return sum + ((isNaN(amount) ? 0 : amount) * (isNaN(qty) ? 1 : qty));
+      }, 0);
+    
+    if (editedDiscount && editedDiscount.value !== 0 && editedDiscount.type) {
+      const discountValue = Number(editedDiscount.value);
+      if (isNaN(discountValue)) return itemsTotal;
+      
+      if (editedDiscount.type === 'percentage') {
+        // For percentage: positive = discount, negative = surcharge
+        return itemsTotal * (1 - discountValue / 100);
+      } else {
+        // For fixed: positive = discount, negative = surcharge
+        return itemsTotal - discountValue;
+      }
+    }
+    
+    return itemsTotal;
+  }, [editedItems, editedDiscount]);
+
+  // Detect changes - MUST be before handleConfirmSave
+  const changedItems = useMemo(() => {
+    if (!isEditMode) return [];
+    const original = estimate?.items || [];
+    return (editedItems || [])
+      .filter(item => item != null)
+      .filter((edited, idx) => {
+        const orig = original[idx];
+        return orig && (edited?.qty || edited?.quantity) !== (orig?.qty || orig?.quantity);
+      })
+      .map((edited) => ({
+        name: edited?.name || 'Item',
+        originalQty: edited?.originalQty || 0,
+        newQty: edited?.qty || edited?.quantity || 0
+      }));
+  }, [isEditMode, editedItems, estimate]);
+
+  const addedItems = useMemo(() => {
+    if (!isEditMode) return [];
+    const originalCount = estimate?.items?.length || 0;
+    return (editedItems || []).slice(originalCount).filter(item => item != null);
+  }, [isEditMode, editedItems, estimate]);
+
   // Initialize edited items when entering edit mode
-  const handleEnterEditMode = () => {
+  const handleEnterEditMode = useCallback(() => {
     const items = estimate?.items || [];
     setEditedItems(items.filter(item => item != null).map(item => ({ 
       ...item, 
@@ -158,16 +410,16 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     setEditedDiscount(estimate?.discount || null);
     setRemovedItems([]);
     setIsEditMode(true);
-  };
+  }, [estimate?.items, estimate?.discount]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setIsEditMode(false);
     setEditedItems([]);
     setEditedDiscount(null);
     setRemovedItems([]);
-  };
+  }, []);
 
-  const handleSaveClick = () => {
+  const handleSaveClick = useCallback(() => {
     // Validation
     if (editedItems.length === 0) {
       toast.error("Cannot save estimate with no items");
@@ -176,9 +428,9 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     
     const invalidItems = (editedItems || []).filter(item => {
       if (!item) return true; // Filter out null items
-      const qty = item?.qty || item?.quantity || 0;
-      const amount = item?.amount || 0;
-      return amount <= 0 || qty <= 0;
+      const qty = Number(item?.qty || item?.quantity || 0);
+      const amount = Number(item?.amount || 0);
+      return isNaN(amount) || isNaN(qty) || amount <= 0 || qty <= 0;
     });
     
     if (invalidItems.length > 0) {
@@ -188,9 +440,28 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     
     // Show save confirmation modal
     setShowSaveModal(true);
-  };
+  }, [editedItems]);
 
-  const handleConfirmSave = async ({ adminNote, sendNotification }) => {
+  // Define handleSendEstimate before handleConfirmSave since it's used in handleConfirmSave's dependency array
+  const handleSendEstimate = useCallback(async () => {
+    // Prevent double-clicking or concurrent sends
+    if (sendEstimateMutation.isPending) {
+      return;
+    }
+    
+    try {
+      await sendEstimateMutation.mutateAsync({ estimateId, locationId });
+      // Note: Toast is handled in the mutation hook's onSuccess handler
+      // No refetch needed - mutation already invalidates queries
+    } catch (err) {
+      // Log error for debugging (toast is handled by hook's onError handler)
+      console.error('Send estimate error:', err);
+      // Prevent error from bubbling up to Next.js error boundary
+      return;
+    }
+  }, [sendEstimateMutation, estimateId, locationId]);
+
+  const handleConfirmSave = useCallback(async ({ adminNote, sendNotification }) => {
     try {
       // Calculate revision data with validation for NaN/Infinity
       const safeOldTotal = isFinite(originalTotal) ? originalTotal : 0;
@@ -276,9 +547,9 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       toast.error(errorMessage || "Failed to update estimate");
       // Note: No refetch needed - React Query will refetch on next mount or when queries are refocused
     }
-  };
+  }, [originalTotal, newTotal, changedItems, addedItems, removedItems, editedDiscount, editedItems, estimate, updateEstimateMutation, estimateId, locationId, sendRevisionMutation, displayStatus, handleSendEstimate]);
 
-  const handleQuantityChange = (index, delta) => {
+  const handleQuantityChange = useCallback((index, delta) => {
     setEditedItems(prev => {
       // Bounds check: ensure index is valid
       if (index < 0 || index >= prev.length) {
@@ -300,83 +571,104 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       newItems[index] = { ...newItems[index], qty: newQty, quantity: newQty };
       return newItems;
     });
-  };
+  }, []);
 
-  const handleRemoveItemClick = (index) => {
+  const handleRemoveItemClick = useCallback((index) => {
     // Bounds check: ensure index is valid
-    if (index < 0 || index >= editedItems.length) {
-      return;
-    }
-    setItemToDeleteIndex(index);
-    setDeleteItemDialogOpen(true);
-  };
+    setEditedItems(prev => {
+      if (index < 0 || index >= prev.length) {
+        return prev;
+      }
+      setItemToDeleteIndex(index);
+      setDeleteItemDialogOpen(true);
+      return prev;
+    });
+  }, []);
 
-  const handleRemoveItem = (index) => {
-    if (index < 0 || index >= (editedItems || []).length) return; // Safety check
-    const item = editedItems[index];
-    // Track removed items if they were original (not custom added)
-    if (item && !item.isCustom) {
-      setRemovedItems(prev => [...prev, item]);
-    }
-    setEditedItems(prev => prev.filter((_, i) => i !== index));
-    setDeleteItemDialogOpen(false);
-    setItemToDeleteIndex(null);
-  };
+  const handleRemoveItem = useCallback((index) => {
+    setEditedItems(prev => {
+      if (index < 0 || index >= prev.length) return prev; // Safety check
+      const item = prev[index];
+      // Track removed items if they were original (not custom added)
+      if (item && !item.isCustom) {
+        setRemovedItems(prevRemoved => [...prevRemoved, item]);
+      }
+      setDeleteItemDialogOpen(false);
+      setItemToDeleteIndex(null);
+      return prev.filter((_, i) => i !== index);
+    });
+  }, []);
 
-  const handleAddCustomItem = (newItem) => {
+  const handleAddCustomItem = useCallback((newItem) => {
     setEditedItems(prev => [...prev, newItem]);
-  };
+  }, []);
 
-  const handleApplyDiscount = (discount) => {
+  const handleApplyDiscount = useCallback((discount) => {
     setEditedDiscount(discount);
-  };
+  }, []);
 
-  // Calculate totals
-  const originalTotal = estimate?.total || 0;
-  const newTotal = useMemo(() => {
-    const itemsTotal = (editedItems || [])
-      .filter(item => item != null)
-      .reduce((sum, item) => {
-        return sum + ((item?.amount || 0) * (item?.qty || item?.quantity || 1));
-      }, 0);
-    
-    if (editedDiscount && editedDiscount.value !== 0 && editedDiscount.type) {
-      if (editedDiscount.type === 'percentage') {
-        // For percentage: positive = discount, negative = surcharge
-        return itemsTotal * (1 - editedDiscount.value / 100);
+  const handleRowSelect = useCallback((item) => {
+    if (!isEditMode) {
+      if (selectedItem?.name === item?.name) {
+        setSelectedItem(null);
       } else {
-        // For fixed: positive = discount, negative = surcharge
-        return itemsTotal - editedDiscount.value;
+        setSelectedItem(item);
       }
     }
-    
-    return itemsTotal;
-  }, [editedItems, editedDiscount]);
+  }, [isEditMode, selectedItem]);
 
-  // Detect changes
-  const changedItems = useMemo(() => {
-    if (!isEditMode) return [];
-    const original = estimate?.items || [];
-    return (editedItems || [])
-      .filter(item => item != null)
-      .filter((edited, idx) => {
-        const orig = original[idx];
-        return orig && (edited?.qty || edited?.quantity) !== (orig?.qty || orig?.quantity);
-      })
-      .map((edited) => ({
-        name: edited?.name || 'Item',
-        originalQty: edited?.originalQty || 0,
-        newQty: edited?.qty || edited?.quantity || 0
-      }));
-  }, [isEditMode, editedItems, estimate]);
+  // Memoize modal handlers to prevent unnecessary re-renders
+  const handleShowAddItemModal = useCallback(() => {
+    setShowAddItemModal(true);
+  }, []);
 
-  const addedItems = useMemo(() => {
-    if (!isEditMode) return [];
-    const originalCount = estimate?.items?.length || 0;
-    return (editedItems || []).slice(originalCount).filter(item => item != null);
-  }, [isEditMode, editedItems, estimate]);
+  const handleShowDiscountModal = useCallback(() => {
+    setShowDiscountModal(true);
+  }, []);
 
-  const handleCreateInvoice = async () => {
+  // Memoize filtered items array to prevent re-filtering on every render
+  const filteredItems = useMemo(() => {
+    return (items || []).filter(item => item != null);
+  }, [items]);
+
+  // Memoize created date formatting
+  const createdAtFormatted = useMemo(() => {
+    if (!estimate?.createdAt) return "N/A";
+    const date = new Date(estimate.createdAt);
+    if (isNaN(date.getTime())) return "N/A";
+    return date.toLocaleDateString();
+  }, [estimate?.createdAt]);
+
+  // Memoize status icon component logic
+  const statusIcon = useMemo(() => {
+    switch (displayStatus) {
+      case 'ESTIMATE_SENT':
+        return <Send className="h-3 w-3" />;
+      case 'ACCEPTED':
+      case 'INVOICE_READY':
+        return <CheckCircle2 className="h-3 w-3" />;
+      case 'REJECTED':
+        return <CheckCircle2 className="h-3 w-3" />;
+      default:
+        return null;
+    }
+  }, [displayStatus]);
+
+  const statusIconLarge = useMemo(() => {
+    switch (displayStatus) {
+      case 'ESTIMATE_SENT':
+        return <Send className="h-4 w-4 text-warning" />;
+      case 'ACCEPTED':
+      case 'INVOICE_READY':
+        return <CheckCircle2 className="h-4 w-4 text-success" />;
+      case 'REJECTED':
+        return <CheckCircle2 className="h-4 w-4 text-destructive" />;
+      default:
+        return null;
+    }
+  }, [displayStatus]);
+
+  const handleCreateInvoice = useCallback(async () => {
     try {
       const result = await createInvoiceMutation.mutateAsync({ estimateId, locationId });
       toast.success("Invoice created successfully");
@@ -388,9 +680,9 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       const errorMessage = parseWpFetchError(err);
       toast.error(errorMessage || "Failed to create invoice");
     }
-  };
+  }, [createInvoiceMutation, estimateId, locationId, onInvoiceCreated]);
 
-  const handleCreateServiceM8Job = async () => {
+  const handleCreateServiceM8Job = useCallback(async () => {
     if (!estimateId) {
       toast.error("Estimate ID is required");
       return;
@@ -442,9 +734,31 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     } finally {
       setCreatingJob(false);
     }
-  };
+  }, [estimateId, locationId, estimate?.locationId, estimate?.altId, estimate?.location_id]);
 
-  const handleViewServiceM8Job = async () => {
+  const handleCompleteReview = useCallback(async () => {
+    try {
+      await completeReviewMutation.mutateAsync({ estimateId, locationId });
+      // Note: Toast is handled in the mutation hook's onSuccess handler
+      // No refetch needed - mutation already invalidates queries
+    } catch (err) {
+      const errorMessage = parseWpFetchError(err);
+      toast.error(errorMessage || "Failed to complete review");
+    }
+  }, [completeReviewMutation, estimateId, locationId]);
+
+  const handleRequestChanges = useCallback(async (reason = '') => {
+    try {
+      await requestChangesMutation.mutateAsync({ estimateId, locationId, reason });
+      toast.success("Changes requested. Customer can now resubmit photos.");
+      // Note: No refetch needed - mutation already invalidates queries
+    } catch (err) {
+      const errorMessage = parseWpFetchError(err);
+      toast.error(errorMessage || "Failed to request changes");
+    }
+  }, [requestChangesMutation, estimateId, locationId]);
+
+  const handleViewServiceM8Job = useCallback(async () => {
     const jobUuid = jobLink?.jobUuid || jobData?.uuid;
     if (!jobUuid) {
       toast.error("Job UUID not found");
@@ -469,47 +783,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     }
     
     setJobModalOpen(true);
-  };
-
-  const handleSendEstimate = async () => {
-    // Prevent double-clicking or concurrent sends
-    if (sendEstimateMutation.isPending) {
-      return;
-    }
-    
-    try {
-      await sendEstimateMutation.mutateAsync({ estimateId, locationId });
-      // Note: Toast is handled in the mutation hook's onSuccess handler
-      // No refetch needed - mutation already invalidates queries
-    } catch (err) {
-      // Log error for debugging (toast is handled by hook's onError handler)
-      console.error('Send estimate error:', err);
-      // Prevent error from bubbling up to Next.js error boundary
-      return;
-    }
-  };
-
-  const handleCompleteReview = async () => {
-    try {
-      await completeReviewMutation.mutateAsync({ estimateId, locationId });
-      // Note: Toast is handled in the mutation hook's onSuccess handler
-      // No refetch needed - mutation already invalidates queries
-    } catch (err) {
-      const errorMessage = parseWpFetchError(err);
-      toast.error(errorMessage || "Failed to complete review");
-    }
-  };
-
-  const handleRequestChanges = async (reason = '') => {
-    try {
-      await requestChangesMutation.mutateAsync({ estimateId, locationId, reason });
-      toast.success("Changes requested. Customer can now resubmit photos.");
-      // Note: No refetch needed - mutation already invalidates queries
-    } catch (err) {
-      const errorMessage = parseWpFetchError(err);
-      toast.error(errorMessage || "Failed to request changes");
-    }
-  };
+  }, [jobLink?.jobUuid, jobData]);
 
   if (isLoading) {
     return (
@@ -528,87 +802,106 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
     );
   }
 
-  const contact = estimate?.contact || {};
-  const items = isEditMode ? editedItems : (estimate?.items || []);
-  const portalMeta = estimate?.portalMeta || {};
-  const linkedInvoice = estimate?.linkedInvoice;
-  const currency = estimate?.currency || DEFAULT_CURRENCY;
-
-  // Compute UI state from portal meta to get accurate status
-  const uiState = computeUIState(portalMeta);
-  const displayStatus = uiState.displayStatus;
-  const statusMessage = uiState.statusMessage;
-
-  // Helper function to get status badge variant and label
-  const getStatusDisplay = (displayStatus) => {
-    switch (displayStatus) {
-      case 'ACCEPTED':
-      case 'INVOICE_READY':
-        return { variant: 'success', label: 'Accepted' };
-      case 'REJECTED':
-        return { variant: 'destructive', label: 'Rejected' };
-      case 'PHOTOS_UNDER_REVIEW':
-        return { variant: 'info', label: 'Under Review' };
-      case 'READY_TO_ACCEPT':
-        return { variant: 'success', label: 'Ready to Accept' };
-      case 'CHANGES_REQUESTED':
-        return { variant: 'warning', label: 'Changes Requested' };
-      case 'AWAITING_PHOTOS':
-      case 'PHOTOS_UPLOADED':
-        return { variant: 'info', label: 'Awaiting Photos' };
-      case 'ESTIMATE_SENT':
-      default:
-        return { variant: 'warning', label: 'Sent' };
-    }
-  };
-
-  const statusDisplay = getStatusDisplay(displayStatus);
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="rounded-xl border border-border/60 bg-card p-6 shadow-sm">
+      <div className="rounded-xl border border-border/60 bg-card p-8 shadow-md">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <h1 className="text-2xl font-bold text-foreground">{estimate?.title || "ESTIMATE"}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <h1 className="text-3xl font-bold text-foreground tracking-tight">{estimate?.title || "ESTIMATE"}</h1>
+            <p className="mt-2 text-sm font-medium text-muted-foreground">
               Estimate #{estimate?.estimateNumber || estimateId}
             </p>
           </div>
           <div className="flex items-center gap-3">
             {portalMeta.quote?.revisionNumber != null && portalMeta.quote.revisionNumber > 0 && (
-              <Badge variant="outline" className="text-xs font-medium">
+              <Badge variant="outline" className="text-xs font-semibold shadow-sm px-3 py-1">
                 Revision {portalMeta.quote.revisionNumber}
               </Badge>
             )}
             {portalMeta.workflow?.status === 'ready_to_accept' && portalMeta.quote?.acceptance_enabled && (
-              <Badge variant="info" className="text-xs font-medium">
+              <Badge variant="info" className="text-xs font-semibold shadow-sm px-3 py-1">
                 Awaiting Acceptance
               </Badge>
             )}
             <Badge
               variant={statusDisplay.variant}
-              className="text-xs font-medium"
+              className="text-xs font-semibold shadow-sm px-3 py-1 flex items-center gap-1.5"
             >
+              {statusIcon}
               {statusDisplay.label}
             </Badge>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer</p>
-            <p className="mt-1 font-medium text-foreground">{contact.name || "N/A"}</p>
-            <p className="text-sm text-muted-foreground">{contact.email || ""}</p>
+        <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
+          <div className="p-4 rounded-lg bg-muted/20 border border-border/40">
+            <div className="flex items-center gap-2 mb-2">
+              <User className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Customer</p>
+            </div>
+            <p className="mt-2 font-semibold text-foreground flex items-center gap-2">
+              <User className="h-4 w-4 text-primary" />
+              {contact.name || "N/A"}
+            </p>
+            {contact.email && (
+              <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
+                <Mail className="h-3.5 w-3.5" />
+                {contact.email}
+              </p>
+            )}
             {contact.phone && (
-              <p className="text-sm text-muted-foreground">{contact.phone}</p>
+              <p className="mt-1 text-sm text-muted-foreground flex items-center gap-2">
+                <Phone className="h-3.5 w-3.5" />
+                {contact.phone}
+              </p>
             )}
           </div>
-          <div>
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">Total</p>
-            <p className="mt-1 text-2xl font-bold text-foreground">
+          <div className="p-4 rounded-lg bg-muted/20 border border-border/40">
+            <div className="flex items-center gap-2 mb-2">
+              <CheckCircle2 className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Status</p>
+            </div>
+            <p className="mt-2 font-semibold text-foreground flex items-center gap-2">
+              {statusIconLarge}
+              {statusDisplay.label}
+            </p>
+            {portalMeta.quote?.revisionNumber != null && portalMeta.quote.revisionNumber > 0 && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                Revision {portalMeta.quote.revisionNumber}
+              </p>
+            )}
+          </div>
+          <div className="p-4 rounded-lg bg-muted/20 border border-border/40">
+            <div className="flex items-center gap-2 mb-2">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Estimate Total</p>
+            </div>
+            <p className="mt-2 text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
+              <DollarSign className="h-5 w-5 text-primary" />
               {currency} {(isEditMode ? newTotal : originalTotal).toFixed(2)}
             </p>
+            {portalMeta.photos?.submission_status === 'submitted' && (
+              <p className="mt-2 text-xs font-medium text-muted-foreground">
+                {portalMeta.photos.total || 0} photo{(portalMeta.photos.total || 0) !== 1 ? 's' : ''} submitted
+              </p>
+            )}
+          </div>
+          <div className="p-4 rounded-lg bg-muted/20 border border-border/40">
+            <div className="flex items-center gap-2 mb-2">
+              <Calendar className="h-4 w-4 text-muted-foreground" />
+              <p className="text-xs uppercase tracking-wider font-semibold text-muted-foreground">Created</p>
+            </div>
+            <p className="mt-2 font-semibold text-foreground flex items-center gap-2">
+              <Calendar className="h-4 w-4 text-primary" />
+              {createdAtFormatted}
+            </p>
+            {acceptedAtFormatted && (
+              <p className="mt-1 text-xs text-muted-foreground flex items-center gap-1.5">
+                <CheckCircle2 className="h-3 w-3 text-success" />
+                Accepted: {acceptedAtFormatted}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -679,13 +972,13 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
           )}
 
           {/* Line Items Table */}
-          <div className="rounded-xl border border-border/60 bg-card p-6">
+          <div className="rounded-xl border border-border/60 bg-card p-7 shadow-md">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-foreground">Line Items</h2>
               {isEditMode && (
                 <div className="flex gap-2">
                   <Button
-                    onClick={() => setShowAddItemModal(true)}
+                    onClick={handleShowAddItemModal}
                     variant="default"
                     size="sm"
                     className="bg-success text-success-foreground hover:bg-success/90"
@@ -696,7 +989,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                     Add Item
                   </Button>
                   <Button
-                    onClick={() => setShowDiscountModal(true)}
+                    onClick={handleShowDiscountModal}
                     variant="default"
                     size="sm"
                   >
@@ -709,7 +1002,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
               )}
             </div>
             
-            {items.length === 0 ? (
+            {filteredItems.length === 0 ? (
               <p className="text-sm text-muted-foreground">No items</p>
             ) : (
               <div className="overflow-x-auto">
@@ -726,106 +1019,26 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border/60">
-                    {(items || []).filter(item => item != null).map((item, idx) => {
+                    {filteredItems.map((item, idx) => {
                       const itemName = item?.name || "Item";
                       const photoCount = itemPhotoCounts[itemName] || 0;
                       const itemQty = item?.qty || item?.quantity || 1;
                       const isSelected = !isEditMode && selectedItem?.name === itemName;
                       
                       return (
-                        <tr
+                        <EstimateTableRow
                           key={item?.id || idx}
-                          onClick={() => {
-                            // Allow photo viewing even in edit mode
-                            if (selectedItem?.name === itemName) {
-                              setSelectedItem(null);
-                            } else {
-                              setSelectedItem({ ...item, name: itemName });
-                            }
-                          }}
-                          className={`cursor-pointer transition-all duration-200 ${
-                            isSelected
-                              ? "bg-primary/10 ring-2 ring-primary/40 shadow-sm"
-                              : "hover:bg-muted/30 hover:shadow-sm"
-                          }`}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1">
-                                <div className="font-medium text-foreground flex items-center gap-2">
-                                  {itemName}
-                                  {item?.isCustom && (
-                                    <span className="text-xs px-1.5 py-0.5 bg-success-bg text-success rounded font-semibold">NEW</span>
-                                  )}
-                                </div>
-                                {item?.description && (
-                                  <div className="text-xs text-muted-foreground">{item?.description}</div>
-                                )}
-                              </div>
-                              {!isEditMode && photoCount > 0 && (
-                                <div className="flex items-center gap-1 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary shadow-sm border border-primary/30">
-                                  <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  </svg>
-                                  <span>{photoCount}</span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            {isEditMode ? (
-                              <div className="flex items-center justify-center gap-1">
-                                <Button
-                                  onClick={() => handleQuantityChange(idx, -1)}
-                                  disabled={itemQty <= 1}
-                                  variant="outline"
-                                  size="icon-sm"
-                                  className="w-7 h-7"
-                                >
-                                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
-                                  </svg>
-                                </Button>
-                                <span className="w-10 text-center font-medium text-foreground">{itemQty}</span>
-                                <Button
-                                  onClick={() => handleQuantityChange(idx, 1)}
-                                  disabled={itemQty >= (item?.originalQty || 1) + 10}
-                                  variant="outline"
-                                  size="icon-sm"
-                                  className="w-7 h-7"
-                                >
-                                  <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                  </svg>
-                                </Button>
-                              </div>
-                            ) : (
-                              <div className="text-center text-sm text-foreground">{itemQty}</div>
-                            )}
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm text-foreground">
-                            {currency} {(item?.amount || 0).toFixed(2)}
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
-                            {currency} {((item?.amount || 0) * itemQty).toFixed(2)}
-                          </td>
-                          {isEditMode && (
-                            <td className="px-4 py-3 text-center">
-                              <Button
-                                onClick={() => handleRemoveItemClick(idx)}
-                                variant="ghost"
-                                size="icon-sm"
-                                className="text-error hover:text-error/80"
-                                title="Remove item"
-                              >
-                                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </Button>
-                            </td>
-                          )}
-                        </tr>
+                          item={item}
+                          idx={idx}
+                          photoCount={photoCount}
+                          isSelected={isSelected}
+                          currency={currency}
+                          isEditMode={isEditMode}
+                          itemQty={itemQty}
+                          onQuantityChange={handleQuantityChange}
+                          onRemoveClick={handleRemoveItemClick}
+                          onSelect={handleRowSelect}
+                        />
                       );
                     })}
                   </tbody>
@@ -884,11 +1097,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                 <span className="text-muted-foreground">Status:</span>{" "}
                 <span className="font-medium text-foreground">{statusDisplay.label}</span>
               </div>
-              {portalMeta.acceptedAt && (
+              {acceptedAtFormatted && (
                 <div>
                   <span className="text-muted-foreground">Accepted:</span>{" "}
                   <span className="font-medium text-foreground">
-                    {new Date(portalMeta.acceptedAt).toLocaleString()}
+                    {acceptedAtFormatted}
                   </span>
                 </div>
               )}
@@ -907,11 +1120,11 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                   )}
                 </div>
               )}
-              {portalMeta.photos?.submitted_at && (
+              {submittedAtFormatted && (
                 <div>
                   <span className="text-muted-foreground">Submitted:</span>{" "}
                   <span className="font-medium text-foreground">
-                    {new Date(portalMeta.photos.submitted_at).toLocaleString()}
+                    {submittedAtFormatted}
                   </span>
                 </div>
               )}
@@ -943,7 +1156,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                 <div>
                   <span className="text-muted-foreground">Amount Due:</span>{" "}
                   <span className="font-medium text-foreground">
-                    {currency} {linkedInvoice?.amountDue?.toFixed(2) || "0.00"}
+                    {currency} {((linkedInvoice?.amountDue ?? 0) || 0).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -1019,11 +1232,22 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                 return (
                   <>
                     {/* Single button: "Send Estimate" or "Finish" */}
-                    <Button
+                    <button
                       onClick={showFinish ? handleCompleteReview : handleSendEstimate}
                       disabled={showFinish ? completeReviewMutation.isPending : sendEstimateMutation.isPending}
-                      variant="default"
-                      className="w-full bg-success text-success-foreground hover:bg-success/90"
+                      className="w-full rounded-lg px-4 py-3 text-sm font-semibold text-white transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                      style={{ 
+                        backgroundColor: 'hsl(280, 45%, 50%)',
+                        // Matte texture: no shadows, flat appearance
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!e.currentTarget.disabled) {
+                          e.currentTarget.style.backgroundColor = 'hsl(280, 45%, 47%)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'hsl(280, 45%, 50%)';
+                      }}
                     >
                       {showFinish ? (
                         completeReviewMutation.isPending ? (
@@ -1041,7 +1265,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
                           "Send Estimate"
                         )
                       )}
-                    </Button>
+                    </button>
                     
                     {/* Request Changes - Secondary action (only when photos required) */}
                     {uiState.adminCanRequestChanges && (
@@ -1154,7 +1378,7 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
         onClose={() => setShowDiscountModal(false)}
         onApply={handleApplyDiscount}
         currentDiscount={editedDiscount}
-        estimateTotal={(editedItems || []).filter(item => item != null).reduce((sum, item) => sum + ((item?.amount || 0) * (item?.qty || item?.quantity || 1)), 0)}
+        estimateTotal={estimateTotalForDiscount}
         currency={currency}
       />
 
@@ -1237,5 +1461,6 @@ export function EstimateDetailContent({ estimateId, locationId, onInvoiceCreated
       )}
     </div>
   );
-}
+});
+EstimateDetailContent.displayName = 'EstimateDetailContent';
 

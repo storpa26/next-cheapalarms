@@ -86,6 +86,14 @@ a {
 }
 
 @layer utilities {
+  /* Performance optimizations for scrolling */
+  .scroll-optimized {
+    -webkit-overflow-scrolling: touch;
+    transform: translateZ(0);
+    will-change: scroll-position;
+    overscroll-behavior: contain;
+  }
+  
   /* Custom animations for activity feed */
   @keyframes float {
     0%, 100% {
