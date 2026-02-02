@@ -1,17 +1,9 @@
 import Head from "next/head";
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { useRouter } from "next/router";
 import { Settings } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import AdminLayout from "../../../components/admin/layout/AdminLayout";
-import { 
-  useAdminInvoices,
-  useBulkDeleteInvoices,
-  useDeleteInvoice
-} from "../../../lib/react-query/hooks/admin";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
 import { Spinner } from "../../../components/ui/spinner";
-import { useQueryClient } from "@tanstack/react-query";
 import { SummaryCard } from "../../../components/admin/SummaryCard";
 import { StatusTabs } from "../../../components/admin/StatusTabs";
 import { Avatar } from "../../../components/admin/Avatar";
@@ -22,231 +14,50 @@ import { FloatingActionBar } from "../../../components/admin/FloatingActionBar";
 import { InvoiceDetailModal } from "../../../components/admin/InvoiceDetailModal";
 import { Checkbox } from "../../../components/ui/checkbox";
 import Link from "next/link";
-import { useKeyboardShortcuts } from "../../../hooks/useKeyboardShortcuts";
-import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "../../../lib/admin/constants";
+import { useInvoicesListState } from "../../../lib/admin/useInvoicesListState";
 
 export default function InvoicesListPage() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
-  const [page, setPage] = useState(1);
-  const [locationId, setLocationId] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
-  const [deleteScope, setDeleteScope] = useState('both');
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
-  const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
-  const pageSize = DEFAULT_PAGE_SIZE;
-
-  const deleteInvoiceMutation = useDeleteInvoice();
-  const bulkDeleteMutation = useBulkDeleteInvoices();
-
-  // Get invoiceId from URL query for deep linking
-  const invoiceIdFromQuery = router.query.invoiceId;
-  const selectedInvoiceId = invoiceIdFromQuery || null;
-
-  // Map tab to status filter
-  const statusFilter = activeTab === "all" ? "" : activeTab;
-
-  // Fetch invoices
-  const { data, isLoading, error, refetch } = useAdminInvoices({
-    search: search || undefined,
-    status: statusFilter || undefined,
-    page,
+  const {
+    invoices,
+    total,
+    totalPages,
     pageSize,
-  });
-
-  const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['admin-invoices'] });
-    refetch();
-  }, [queryClient, refetch]);
-
-  const invoices = useMemo(() => data?.items ?? [], [data?.items]);
-  const total = data?.total ?? 0;
-  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
-
-  // Clear selection when page, filters, or tab changes
-   
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [page, search, activeTab]);
-
-  const handleRowClick = useCallback((invoiceId) => {
-    router.replace(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, invoiceId },
-      },
-      undefined,
-      { shallow: true }
-    );
-  }, [router]);
-
-  const handleCloseModal = useCallback(() => {
-    const { invoiceId, ...restQuery } = router.query;
-    router.replace(
-      {
-        pathname: router.pathname,
-        query: restQuery,
-      },
-      undefined,
-      { shallow: true }
-    );
-  }, [router]);
-
-  // Handle select all
-  const handleSelectAll = useCallback((checked) => {
-    if (checked) {
-      setSelectedIds(new Set(invoices.map((item) => item.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  }, [invoices]);
-
-  // Handle individual selection
-  const handleSelectItem = useCallback((invoiceId, checked) => {
-    setSelectedIds((prev) => {
-      const newSelected = new Set(prev);
-      if (checked) {
-        newSelected.add(invoiceId);
-      } else {
-        newSelected.delete(invoiceId);
-      }
-      return newSelected;
-    });
-  }, []);
-
-  // Handle bulk delete
-  const handleBulkDelete = useCallback(async () => {
-    const invoiceIds = Array.from(selectedIds);
-    if (invoiceIds.length === 0) return;
-
-    try {
-      await bulkDeleteMutation.mutateAsync({ 
-        invoiceIds, 
-        locationId: locationId || undefined,
-        scope: bulkDeleteScope 
-      });
-      setSelectedIds(new Set());
-      setBulkDeleteDialogOpen(false);
-      
-      // Close modal if any deleted invoice is currently open
-      if (selectedInvoiceId && invoiceIds.includes(selectedInvoiceId)) {
-        handleCloseModal();
-      }
-      
-      // Refresh the list
-      handleRefresh();
-    } catch (error) {
-      // Error handled by mutation
-    }
-  }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope, selectedInvoiceId, handleCloseModal, handleRefresh]);
-
-  // Calculate summary metrics
-  const summaryMetrics = useMemo(() => {
-    // Use portalStatus (prioritize) with fallback to ghlStatus
-    const sent = invoices.filter(i => (i.portalStatus || i.ghlStatus) === "sent");
-    const paid = invoices.filter(i => (i.portalStatus || i.ghlStatus) === "paid");
-    const partiallyPaid = invoices.filter(i => (i.portalStatus || i.ghlStatus) === "partial" || (i.portalStatus || i.ghlStatus) === "partiallyPaid");
-    const overdue = invoices.filter(i => {
-      if (!i.dueDate) return false;
-      const status = i.portalStatus || i.ghlStatus;
-      return new Date(i.dueDate) < new Date() && status !== "paid";
-    });
-
-    return {
-      sent: {
-        count: sent.length,
-        total: sent.reduce((sum, i) => sum + (i.total || 0), 0),
-      },
-      paid: {
-        count: paid.length,
-        total: paid.reduce((sum, i) => sum + (i.total || 0), 0),
-      },
-      partiallyPaid: {
-        count: partiallyPaid.length,
-        total: partiallyPaid.reduce((sum, i) => sum + (i.amountDue || 0), 0),
-      },
-      overdue: {
-        count: overdue.length,
-        total: overdue.reduce((sum, i) => sum + (i.amountDue || 0), 0),
-      },
-    };
-  }, [invoices]);
-
-  // Handle delete
-  const handleDeleteClick = useCallback((invoiceId, locId) => {
-    setInvoiceToDelete({ id: invoiceId, locationId: locId || locationId });
-    setDeleteDialogOpen(true);
-  }, [locationId]);
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!invoiceToDelete) return;
-    
-    try {
-      await deleteInvoiceMutation.mutateAsync({
-        invoiceId: invoiceToDelete.id,
-        locationId: invoiceToDelete.locationId || locationId,
-        scope: deleteScope,
-      });
-      setDeleteDialogOpen(false);
-      setInvoiceToDelete(null);
-      
-      // Close modal if the deleted invoice is currently open
-      if (selectedInvoiceId === invoiceToDelete.id) {
-        handleCloseModal();
-      }
-      
-      // Refresh the list
-      handleRefresh();
-    } catch (error) {
-      // Error handled by mutation
-    }
-  }, [invoiceToDelete, locationId, deleteScope, deleteInvoiceMutation, selectedInvoiceId, handleCloseModal, handleRefresh]);
-
-  // Keyboard shortcuts
-  const shortcuts = useMemo(() => ({
-    Escape: (e) => {
-      e.preventDefault();
-      if (deleteDialogOpen) {
-        setDeleteDialogOpen(false);
-      }
-    },
-  }), [deleteDialogOpen]);
-
-  useKeyboardShortcuts(shortcuts, true, [deleteDialogOpen]);
-
-  const getStatusBadgeClass = (status) => {
-    const classes = {
-      draft: "bg-muted text-muted-foreground border-border",
-      sent: "bg-info-bg text-info border-info/30",
-      paid: "bg-success-bg text-success border-success/30",
-      partial: "bg-warning-bg text-warning border-warning/30",
-      partiallyPaid: "bg-warning-bg text-warning border-warning/30", // Backward compatibility
-      voided: "bg-error-bg text-error border-error/30",
-      accepted: "bg-success-bg text-success border-success/30",
-      rejected: "bg-error-bg text-error border-error/30",
-    };
-    return classes[status] || "bg-muted text-muted-foreground border-border";
-  };
-
-  // Helper function to format status for display
-  const formatStatusLabel = (status) => {
-    if (!status) return "sent";
-    if (status === "partial") return "Partially Paid";
-    if (status === "partiallyPaid") return "Partially Paid"; // Backward compatibility
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
-  const statusTabs = [
-    { value: "all", label: "All" },
-    { value: "draft", label: "Draft" },
-    { value: "sent", label: "Sent" },
-    { value: "paid", label: "Paid" },
-    { value: "partial", label: "Partially Paid" },
-  ];
+    isLoading,
+    error,
+    search,
+    setSearch,
+    activeTab,
+    setActiveTab,
+    page,
+    setPage,
+    locationId,
+    selectedIds,
+    setSelectedIds,
+    handleSelectAll,
+    handleSelectItem,
+    selectedInvoiceId,
+    handleRowClick,
+    handleCloseModal,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    invoiceToDelete,
+    deleteScope,
+    setDeleteScope,
+    handleDeleteClick,
+    handleDeleteConfirm,
+    deleteInvoiceMutation,
+    bulkDeleteDialogOpen,
+    setBulkDeleteDialogOpen,
+    bulkDeleteScope,
+    setBulkDeleteScope,
+    handleBulkDelete,
+    bulkDeleteMutation,
+    summaryMetrics,
+    getStatusBadgeClass,
+    formatStatusLabel,
+    statusTabs,
+    DEFAULT_CURRENCY,
+  } = useInvoicesListState();
 
   return (
     <>
@@ -258,13 +69,19 @@ export default function InvoicesListPage() {
           {/* Page Header */}
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-foreground tracking-tight">Invoices</h1>
+              <h1 className="text-4xl font-bold text-foreground tracking-tight">
+                Invoices
+              </h1>
               <p className="mt-2 text-base text-muted-foreground font-medium">
                 Manage all invoices for your business
               </p>
             </div>
             <div className="flex items-center gap-3">
-              <Button variant="outline" size="icon" className="shadow-sm hover:shadow-md transition-all">
+              <Button
+                variant="outline"
+                size="icon"
+                className="shadow-sm hover:shadow-md transition-all"
+              >
                 <Settings className="h-5 w-5" />
               </Button>
             </div>
@@ -299,7 +116,11 @@ export default function InvoicesListPage() {
           </div>
 
           {/* Status Tabs */}
-          <StatusTabs tabs={statusTabs} activeTab={activeTab} onTabChange={setActiveTab} />
+          <StatusTabs
+            tabs={statusTabs}
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+          />
 
           {/* Search Bar */}
           <SearchBar
@@ -319,11 +140,15 @@ export default function InvoicesListPage() {
           ) : error ? (
             <div className="rounded-lg border border-error/30 bg-error-bg p-4 text-sm text-error">
               <p className="font-semibold">Error loading invoices</p>
-              <p className="mt-1">{error.message || "An unexpected error occurred"}</p>
+              <p className="mt-1">
+                {error.message || "An unexpected error occurred"}
+              </p>
             </div>
           ) : invoices.length === 0 ? (
             <div className="rounded-xl border border-border/60 bg-gradient-to-br from-surface to-surface/95 p-16 text-center shadow-lg">
-              <p className="text-muted-foreground font-medium">No invoices found</p>
+              <p className="text-muted-foreground font-medium">
+                No invoices found
+              </p>
             </div>
           ) : (
             <>
@@ -335,7 +160,7 @@ export default function InvoicesListPage() {
                     <div
                       key={invoice.id}
                       onClick={() => handleRowClick(invoice.id)}
-                      className={`bg-gradient-to-br from-surface to-surface/95 rounded-xl border border-border/60 p-5 shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] ${isSelected ? 'ring-2 ring-[#1EA6DF]/40 shadow-lg' : ''}`}
+                      className={`bg-gradient-to-br from-surface to-surface/95 rounded-xl border border-border/60 p-5 shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] ${isSelected ? "ring-2 ring-[#1EA6DF]/40 shadow-lg" : ""}`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -359,10 +184,12 @@ export default function InvoicesListPage() {
                             ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
                           `}
                         >
-                          {formatStatusLabel(invoice.portalStatus || invoice.ghlStatus || "sent")}
+                          {formatStatusLabel(
+                            invoice.portalStatus || invoice.ghlStatus || "sent"
+                          )}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-2 mb-3">
                         <Avatar
                           name={invoice.contactName}
@@ -378,10 +205,12 @@ export default function InvoicesListPage() {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-3 pt-3 border-t border-border">
                         <div>
-                          <p className="text-xs text-muted-foreground">Total</p>
+                          <p className="text-xs text-muted-foreground">
+                            Total
+                          </p>
                           <p className="text-sm font-semibold text-foreground">
                             {invoice.total > 0
                               ? `${invoice.currency || DEFAULT_CURRENCY} ${invoice.total.toFixed(2)}`
@@ -389,20 +218,30 @@ export default function InvoicesListPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Amount Due</p>
-                          <p className={`text-sm font-semibold ${
-                            invoice.amountDue === 0 ? 'text-success' : 'text-foreground'
-                          }`}>
+                          <p className="text-xs text-muted-foreground">
+                            Amount Due
+                          </p>
+                          <p
+                            className={`text-sm font-semibold ${
+                              invoice.amountDue === 0
+                                ? "text-success"
+                                : "text-foreground"
+                            }`}
+                          >
                             {invoice.amountDue !== undefined
                               ? `${invoice.currency || DEFAULT_CURRENCY} ${invoice.amountDue.toFixed(2)}`
                               : "—"}
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Created</p>
+                          <p className="text-xs text-muted-foreground">
+                            Created
+                          </p>
                           <p className="text-sm text-foreground">
                             {invoice.createdAt
-                              ? new Date(invoice.createdAt).toLocaleDateString("en-US", {
+                              ? new Date(
+                                  invoice.createdAt
+                                ).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",
                                 })
@@ -410,10 +249,14 @@ export default function InvoicesListPage() {
                           </p>
                         </div>
                         <div>
-                          <p className="text-xs text-muted-foreground">Updated</p>
+                          <p className="text-xs text-muted-foreground">
+                            Updated
+                          </p>
                           <p className="text-sm text-foreground">
                             {invoice.updatedAt
-                              ? new Date(invoice.updatedAt).toLocaleDateString("en-US", {
+                              ? new Date(
+                                  invoice.updatedAt
+                                ).toLocaleDateString("en-US", {
                                   month: "short",
                                   day: "numeric",
                                 })
@@ -434,8 +277,13 @@ export default function InvoicesListPage() {
                       <tr>
                         <th className="px-6 py-4 text-left">
                           <Checkbox
-                            checked={invoices.length > 0 && selectedIds.size === invoices.length}
-                            onChange={(e) => handleSelectAll(e.target.checked)}
+                            checked={
+                              invoices.length > 0 &&
+                              selectedIds.size === invoices.length
+                            }
+                            onChange={(e) =>
+                              handleSelectAll(e.target.checked)
+                            }
                             aria-label="Select all"
                           />
                         </th>
@@ -470,111 +318,135 @@ export default function InvoicesListPage() {
                         const isSelected = selectedIds.has(invoice.id);
                         const isEven = index % 2 === 0;
                         return (
-                        <tr
-                          key={invoice.id}
-                          className={`
+                          <tr
+                            key={invoice.id}
+                            className={`
                             cursor-pointer transition-all duration-200 ease-standard
-                            ${isSelected 
-                              ? 'bg-gradient-to-r from-[#1EA6DF]/10 via-[#c95375]/5 to-[#1EA6DF]/10 ring-2 ring-[#1EA6DF]/40 shadow-sm' 
-                              : isEven 
-                                ? 'bg-surface hover:bg-muted/30' 
-                                : 'bg-surface/50 hover:bg-muted/40'
+                            ${
+                              isSelected
+                                ? "bg-gradient-to-r from-[#1EA6DF]/10 via-[#c95375]/5 to-[#1EA6DF]/10 ring-2 ring-[#1EA6DF]/40 shadow-sm"
+                                : isEven
+                                  ? "bg-surface hover:bg-muted/30"
+                                  : "bg-surface/50 hover:bg-muted/40"
                             }
                             hover:shadow-sm
                           `}
-                          onClick={() => handleRowClick(invoice.id)}
-                        >
-                          <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={isSelected}
-                              onChange={(e) => handleSelectItem(invoice.id, e.target.checked)}
-                              aria-label={`Select invoice ${invoice.id}`}
-                            />
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <Button
-                              variant="link"
-                              className="font-medium text-sm text-left max-w-xs truncate block p-0 h-auto"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRowClick(invoice.id);
-                              }}
-                              title={`Invoice #${invoice.invoiceNumber || invoice.id}`}
+                            onClick={() => handleRowClick(invoice.id)}
+                          >
+                            <td
+                              className="px-6 py-4"
+                              onClick={(e) => e.stopPropagation()}
                             >
-                              {invoice.invoiceNumber || invoice.id}
-                            </Button>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center gap-3">
-                              <Avatar
-                                name={invoice.contactName}
-                                email={invoice.contactEmail}
-                                size="md"
+                              <Checkbox
+                                checked={isSelected}
+                                onChange={(e) =>
+                                  handleSelectItem(
+                                    invoice.id,
+                                    e.target.checked
+                                  )
+                                }
+                                aria-label={`Select invoice ${invoice.id}`}
                               />
-                              <div>
-                                <div className="text-sm font-medium text-foreground">
-                                  {invoice.contactName || "N/A"}
-                                </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {invoice.contactEmail || ""}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <Button
+                                variant="link"
+                                className="font-medium text-sm text-left max-w-xs truncate block p-0 h-auto"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRowClick(invoice.id);
+                                }}
+                                title={`Invoice #${invoice.invoiceNumber || invoice.id}`}
+                              >
+                                {invoice.invoiceNumber || invoice.id}
+                              </Button>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center gap-3">
+                                <Avatar
+                                  name={invoice.contactName}
+                                  email={invoice.contactEmail}
+                                  size="md"
+                                />
+                                <div>
+                                  <div className="text-sm font-medium text-foreground">
+                                    {invoice.contactName || "N/A"}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {invoice.contactEmail || ""}
+                                  </div>
                                 </div>
                               </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-foreground">
-                            {invoice.currency || DEFAULT_CURRENCY} {invoice.total?.toFixed(2) || "0.00"}
-                          </td>
-                          <td className={`px-6 py-4 whitespace-nowrap text-right text-sm font-medium ${
-                            invoice.amountDue === 0 ? 'text-success' : 'text-foreground'
-                          }`}>
-                            {invoice.currency || DEFAULT_CURRENCY} {invoice.amountDue?.toFixed(2) || "0.00"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span
-                              className={`
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-foreground">
+                              {invoice.currency || DEFAULT_CURRENCY}{" "}
+                              {invoice.total?.toFixed(2) || "0.00"}
+                            </td>
+                            <td
+                              className={`px-6 py-4 whitespace-nowrap text-right text-sm font-medium ${
+                                invoice.amountDue === 0
+                                  ? "text-success"
+                                  : "text-foreground"
+                              }`}
+                            >
+                              {invoice.currency || DEFAULT_CURRENCY}{" "}
+                              {invoice.amountDue?.toFixed(2) || "0.00"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <span
+                                className={`
                                 inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border shadow-sm
                                 ${getStatusBadgeClass(invoice.portalStatus || invoice.ghlStatus || "sent")}
                               `}
-                            >
-                              {formatStatusLabel(invoice.portalStatus || invoice.ghlStatus || "sent")}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {invoice.linkedEstimateId ? (
-                              <Link
-                                href={`/admin/estimates/${invoice.linkedEstimateId}`}
-                                className="text-primary hover:text-primary-hover hover:underline"
-                                onClick={(e) => e.stopPropagation()}
                               >
-                                View
-                              </Link>
-                            ) : (
-                              "—"
-                            )}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                            {invoice.createdAt
-                              ? new Date(invoice.createdAt).toLocaleDateString("en-US", {
-                                  month: "short",
-                                  day: "numeric",
-                                  year: "numeric",
-                                })
-                              : "—"}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteClick(invoice.id, invoice.locationId);
-                              }}
-                            >
-                              Delete
-                            </Button>
-                          </td>
-                        </tr>
-                      );
+                                {formatStatusLabel(
+                                  invoice.portalStatus ||
+                                    invoice.ghlStatus ||
+                                    "sent"
+                                )}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                              {invoice.linkedEstimateId ? (
+                                <Link
+                                  href={`/admin/estimates/${invoice.linkedEstimateId}`}
+                                  className="text-primary hover:text-primary-hover hover:underline"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  View
+                                </Link>
+                              ) : (
+                                "—"
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                              {invoice.createdAt
+                                ? new Date(
+                                    invoice.createdAt
+                                  ).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                  })
+                                : "—"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteClick(
+                                    invoice.id,
+                                    invoice.locationId
+                                  );
+                                }}
+                              >
+                                Delete
+                              </Button>
+                            </td>
+                          </tr>
+                        );
                       })}
                     </tbody>
                   </table>
@@ -585,7 +457,8 @@ export default function InvoicesListPage() {
               {totalPages > 1 && (
                 <div className="flex items-center justify-between bg-surface px-6 py-4 border-t border-border rounded-b-lg">
                   <p className="text-sm text-muted-foreground">
-                    Showing {((page - 1) * pageSize) + 1} to {Math.min(page * pageSize, total)} of {total}
+                    Showing {(page - 1) * pageSize + 1} to{" "}
+                    {Math.min(page * pageSize, total)} of {total}
                   </p>
                   <div className="flex gap-2">
                     <Button
@@ -597,7 +470,9 @@ export default function InvoicesListPage() {
                       Previous
                     </Button>
                     <Button
-                      onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={page >= totalPages}
                       variant="outline"
                       size="sm"
@@ -639,9 +514,10 @@ export default function InvoicesListPage() {
           onOpenChange={setDeleteDialogOpen}
           onConfirm={handleDeleteConfirm}
           title="Delete Invoice"
-          description={invoiceToDelete 
-            ? `This invoice will be permanently deleted. This action cannot be undone.`
-            : undefined
+          description={
+            invoiceToDelete
+              ? "This invoice will be permanently deleted. This action cannot be undone."
+              : undefined
           }
           itemName={invoiceToDelete?.id}
           isLoading={deleteInvoiceMutation.isPending}

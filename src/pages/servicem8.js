@@ -7,7 +7,7 @@ import {
   generateServiceM8Workers,
   generateServiceM8Companies,
   generateServiceM8Stats,
-} from "../lib/servicem8/mock-data";
+} from "../lib/mocks/servicem8";
 import JobsSection from "../components/servicem8/JobsSection";
 import WorkersSection from "../components/servicem8/WorkersSection";
 import CompaniesSection from "../components/servicem8/CompaniesSection";

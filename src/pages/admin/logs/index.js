@@ -5,12 +5,13 @@ import { Button } from "../../../components/ui/button";
 import { Input } from "../../../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../../../components/ui/select";
 import { useState, useCallback } from "react";
-import { useDebounce } from "../../../hooks/useDebounce";
+import { useDebouncedValue } from "../../../lib/hooks/useDebounce";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
 import { HealthStatusCard } from "../../../components/admin/HealthStatusCard";
 import { useAdminLogs } from "../../../lib/react-query/hooks/admin/use-admin-logs";
 import { Spinner } from "../../../components/ui/spinner";
-import { RefreshCw, Search, XCircle, AlertCircle, Info, Bug } from "lucide-react";
+import { RefreshCw, Search } from "lucide-react";
+import { getLevelIcon, getLevelColor, formatTimestamp, formatFileSize, getLogKey } from "../../../lib/admin/utils/log-utils";
 
 export default function AdminLogs() {
   const [limit, setLimit] = useState(100);
@@ -19,7 +20,7 @@ export default function AdminLogs() {
   const [requestId, setRequestId] = useState("");
 
   // Debounce search input to avoid excessive API calls
-  const debouncedSearch = useDebounce(searchInput, 300);
+  const debouncedSearch = useDebouncedValue(searchInput, 300);
 
   const { data, isLoading, error, refetch, isRefetching } = useAdminLogs({
     limit,
@@ -31,79 +32,6 @@ export default function AdminLogs() {
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
-
-  const getLevelIcon = (level) => {
-    if (!level || typeof level !== 'string') {
-      return null;
-    }
-    switch (level.toLowerCase()) {
-      case "error":
-        return <XCircle className="h-4 w-4 text-error" />;
-      case "warning":
-        return <AlertCircle className="h-4 w-4 text-warning" />;
-      case "info":
-        return <Info className="h-4 w-4 text-info" />;
-      case "debug":
-        return <Bug className="h-4 w-4 text-muted-foreground" />;
-      default:
-        return null;
-    }
-  };
-
-  const getLevelColor = (level) => {
-    if (!level || typeof level !== 'string') {
-      return "text-foreground";
-    }
-    switch (level.toLowerCase()) {
-      case "error":
-        return "text-error";
-      case "warning":
-        return "text-warning";
-      case "info":
-        return "text-info";
-      case "debug":
-        return "text-muted-foreground";
-      default:
-        return "text-foreground";
-    }
-  };
-
-  const formatTimestamp = (timestamp) => {
-    if (!timestamp) {
-      return 'No timestamp';
-    }
-    try {
-      return new Date(timestamp).toLocaleString();
-    } catch {
-      return timestamp;
-    }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (!bytes || bytes === 0) return '0 B';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  };
-
-  // Generate stable unique key for log entries (includes index for uniqueness)
-  const getLogKey = useCallback((log, index) => {
-    // Create stable identifier from log content
-    // Include index to ensure uniqueness even if content is identical
-    if (log?.request_id && log?.timestamp && log?.message && typeof log.message === 'string') {
-      // Use hash-like identifier from stable fields (first 50 chars of message for uniqueness)
-      const messagePrefix = log.message.substring(0, 50).replace(/[^a-zA-Z0-9]/g, '');
-      const stableId = `${log.request_id}-${log.timestamp}-${messagePrefix}-${index}`;
-      return stableId.replace(/[^a-zA-Z0-9-]/g, '-');
-    }
-    // Fallback: use timestamp + message hash
-    if (log?.timestamp && log?.message && typeof log.message === 'string') {
-      const messageHash = log.message.substring(0, 30).replace(/[^a-zA-Z0-9]/g, '');
-      return `${log.timestamp}-${messageHash}-${index}`;
-    }
-    // Last resort: timestamp + index (but this is less stable)
-    return `${log?.timestamp || Date.now()}-${index}`;
-  }, []);
 
   return (
     <>

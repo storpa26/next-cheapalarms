@@ -212,19 +212,12 @@ Run ESLint to find design system violations:
 npm run lint
 ```
 
-### UI Library
-View design system components and tokens:
-- Navigate to `/ui-library` in development mode
-- See all available tokens and components
-- Copy usage examples
-
 ## 💡 Tips
 
 1. **Start Small**: Migrate one component at a time
 2. **Test Thoroughly**: Visual regression test after each migration
 3. **Use Compatibility Layer**: Old code continues to work during migration
-4. **Check UI Library**: Reference `/ui-library` for examples
-5. **Ask for Help**: Check README or ask team if unsure
+4. **Ask for Help**: Check README or ask team if unsure
 
 ## 🚨 Common Pitfalls
 
@@ -265,7 +258,6 @@ import { Button } from '@/components/ui/button';
 ## 📚 Resources
 
 - **Design System README**: `src/design-system/README.md`
-- **UI Library**: `/ui-library` (dev mode)
 - **Token Reference**: `src/design-system/tokens/`
 - **Theme CSS**: `src/design-system/theme/light.css`
 

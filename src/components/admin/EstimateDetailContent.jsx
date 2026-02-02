@@ -15,6 +15,12 @@ import {
 } from "../ui/alert-dialog";
 import { DEFAULT_CURRENCY } from "../../lib/admin/constants";
 import { parseWpFetchError } from "../../lib/admin/utils/error-handler";
+import {
+  getStatusDisplay,
+  formatDateTime,
+  formatDateOnly,
+  formatCurrencyAmount,
+} from "./EstimateDetailContent/helpers";
 import { 
   useAdminEstimate, 
   useCreateInvoiceFromEstimate, 
@@ -150,10 +156,10 @@ const EstimateTableRow = memo(function EstimateTableRow({
         )}
       </td>
       <td className="px-4 py-3 text-right text-sm text-foreground">
-        {currency} {(Number(item?.amount) || 0).toFixed(2)}
+        {formatCurrencyAmount(item?.amount, currency)}
       </td>
       <td className="px-4 py-3 text-right text-sm font-medium text-foreground">
-        {currency} {((Number(item?.amount) || 0) * itemQty).toFixed(2)}
+        {formatCurrencyAmount((Number(item?.amount) || 0) * itemQty, currency)}
       </td>
       {isEditMode && (
         <td className="px-4 py-3 text-center">
@@ -295,29 +301,6 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
   const linkedInvoice = estimate?.linkedInvoice;
   const currency = estimate?.currency || DEFAULT_CURRENCY;
 
-  // Memoize getStatusDisplay function
-  const getStatusDisplay = useCallback((displayStatus) => {
-    switch (displayStatus) {
-      case 'ACCEPTED':
-      case 'INVOICE_READY':
-        return { variant: 'success', label: 'Accepted' };
-      case 'REJECTED':
-        return { variant: 'destructive', label: 'Rejected' };
-      case 'PHOTOS_UNDER_REVIEW':
-        return { variant: 'info', label: 'Under Review' };
-      case 'READY_TO_ACCEPT':
-        return { variant: 'success', label: 'Ready to Accept' };
-      case 'CHANGES_REQUESTED':
-        return { variant: 'warning', label: 'Changes Requested' };
-      case 'AWAITING_PHOTOS':
-      case 'PHOTOS_UPLOADED':
-        return { variant: 'info', label: 'Awaiting Photos' };
-      case 'ESTIMATE_SENT':
-      default:
-        return { variant: 'warning', label: 'Sent' };
-    }
-  }, []);
-
   // Compute UI state from portal meta to get accurate status
   const uiState = useMemo(() => computeUIState(portalMeta), [portalMeta]);
   const displayStatus = uiState.displayStatus;
@@ -325,19 +308,14 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
   const statusDisplay = useMemo(() => getStatusDisplay(displayStatus), [displayStatus, getStatusDisplay]);
 
   // Memoize date formatting with validation
-  const acceptedAtFormatted = useMemo(() => {
-    if (!portalMeta.acceptedAt) return null;
-    const date = new Date(portalMeta.acceptedAt);
-    if (isNaN(date.getTime())) return null; // Invalid date
-    return date.toLocaleString();
-  }, [portalMeta.acceptedAt]);
-
-  const submittedAtFormatted = useMemo(() => {
-    if (!portalMeta.photos?.submitted_at) return null;
-    const date = new Date(portalMeta.photos.submitted_at);
-    if (isNaN(date.getTime())) return null; // Invalid date
-    return date.toLocaleString();
-  }, [portalMeta.photos?.submitted_at]);
+  const acceptedAtFormatted = useMemo(
+    () => formatDateTime(portalMeta.acceptedAt),
+    [portalMeta.acceptedAt]
+  );
+  const submittedAtFormatted = useMemo(
+    () => formatDateTime(portalMeta.photos?.submitted_at),
+    [portalMeta.photos?.submitted_at]
+  );
 
   // Memoize estimateTotal for DiscountModal
   const estimateTotalForDiscount = useMemo(() => {
@@ -632,12 +610,10 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
   }, [items]);
 
   // Memoize created date formatting
-  const createdAtFormatted = useMemo(() => {
-    if (!estimate?.createdAt) return "N/A";
-    const date = new Date(estimate.createdAt);
-    if (isNaN(date.getTime())) return "N/A";
-    return date.toLocaleDateString();
-  }, [estimate?.createdAt]);
+  const createdAtFormatted = useMemo(
+    () => formatDateOnly(estimate?.createdAt, "N/A"),
+    [estimate?.createdAt]
+  );
 
   // Memoize status icon component logic
   const statusIcon = useMemo(() => {
@@ -879,7 +855,7 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
             </div>
             <p className="mt-2 text-2xl font-bold text-foreground tracking-tight flex items-center gap-2">
               <DollarSign className="h-5 w-5 text-primary" />
-              {currency} {(isEditMode ? newTotal : originalTotal).toFixed(2)}
+              {formatCurrencyAmount(isEditMode ? newTotal : originalTotal, currency)}
             </p>
             {portalMeta.photos?.submission_status === 'submitted' && (
               <p className="mt-2 text-xs font-medium text-muted-foreground">
@@ -1046,7 +1022,7 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
                     <tr>
                       <td colSpan={isEditMode ? 4 : 3} className="px-4 py-3 text-right font-semibold text-foreground">Total</td>
                       <td className="px-4 py-3 text-right font-bold text-foreground">
-                        {currency} {(isEditMode ? newTotal : originalTotal).toFixed(2)}
+                        {formatCurrencyAmount(isEditMode ? newTotal : originalTotal, currency)}
                       </td>
                       {isEditMode && <td></td>}
                     </tr>
@@ -1156,7 +1132,7 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
                 <div>
                   <span className="text-muted-foreground">Amount Due:</span>{" "}
                   <span className="font-medium text-foreground">
-                    {currency} {((linkedInvoice?.amountDue ?? 0) || 0).toFixed(2)}
+                    {formatCurrencyAmount((linkedInvoice?.amountDue ?? 0) || 0, currency)}
                   </span>
                 </div>
               </div>

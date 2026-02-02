@@ -1,6 +1,6 @@
 import { SupportSection } from "../sections/SupportSection";
 import { FAQSection } from "../sections/AccountSection";
-import { mockSupportInfo } from "../utils/mock-data";
+import { mockSupportInfo } from "../../../lib/mocks/portal";
 
 export function SupportView({ view }) {
   // Use actual data if available, otherwise use mock data

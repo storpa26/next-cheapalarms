@@ -11,7 +11,7 @@ import { FloatingActionBar } from "./FloatingActionBar";
 import { RestoreDialog } from "./RestoreDialog";
 import { EmptyTrashDialog } from "./EmptyTrashDialog";
 import { useRestoreEstimate, useBulkRestoreEstimates, useEmptyTrash } from "../../lib/react-query/hooks/admin";
-import { formatTimeAgo } from "../../lib/admin/utils/time-utils";
+import { formatTimeAgo } from "../../lib/utils/time-utils";
 import { DEFAULT_CURRENCY } from "../../lib/admin/constants";
 
 /**

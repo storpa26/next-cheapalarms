@@ -126,7 +126,7 @@ const eslintConfig = defineConfig([
   },
   {
     // Portal components - user-facing text with apostrophes/quotes
-    files: ["**/portal/**", "**/pages/**", "**/workflow-simulator/**", "**/design-system/**"],
+    files: ["**/portal/**", "**/pages/**", "**/design-system/**"],
     rules: {
       "react/no-unescaped-entities": "off",
     },

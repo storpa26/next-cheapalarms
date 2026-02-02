@@ -1,16 +1,10 @@
 import { EmailHeader } from './EmailHeader';
 import { EmailFooter } from './EmailFooter';
 import { EmailCTA } from './EmailCTA';
+import { formatCurrency } from './utils/formatters';
 
 export function PaymentEmail({ context, data, variation }) {
   const { customerName, paymentAmount, invoiceNumber, invoiceTotal, bookingDate, bookingTime, portalUrl } = data;
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
 
   const getSubject = () => {
     switch (variation) {

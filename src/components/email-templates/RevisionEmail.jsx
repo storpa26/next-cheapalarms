@@ -1,16 +1,10 @@
 import { EmailHeader } from './EmailHeader';
 import { EmailFooter } from './EmailFooter';
 import { EmailCTA } from './EmailCTA';
+import { formatCurrency } from './utils/formatters';
 
 export function RevisionEmail({ context, data, variation }) {
   const { customerName, estimateNumber, savingsAmount, adminNote, portalUrl } = data;
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
 
   const getSubject = () => {
     switch (variation) {

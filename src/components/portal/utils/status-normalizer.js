@@ -1,4 +1,4 @@
-import { mockSamplePhotos } from "./mock-data";
+import { mockSamplePhotos } from "../../../lib/mocks/portal";
 
 /**
  * Normalizes portal status data from API to consistent format

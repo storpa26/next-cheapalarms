@@ -2,7 +2,7 @@ import { useState } from "react";
 import { PaymentSection } from "../sections/PaymentSection";
 import { DocumentSection } from "../sections/DocumentSection";
 import { TaskSection } from "../sections/TaskSection";
-import { mockPaymentHistory, mockDocumentList, mockTaskList } from "../utils/mock-data";
+import { mockPaymentHistory, mockDocumentList, mockTaskList } from "../../../lib/mocks/portal";
 
 export function PaymentsView({ view }) {
   const [taskState, setTaskState] = useState({});

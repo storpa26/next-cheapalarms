@@ -1,21 +1,9 @@
 import Head from "next/head";
-import { useState, useMemo, useEffect, useCallback } from "react";
-import { useRouter } from "next/router";
 import { Settings, Plus, Download, FileText } from "lucide-react";
-import * as XLSX from 'xlsx';
 import { Button } from "../../../components/ui/button";
-import { Badge } from "../../../components/ui/badge";
 import AdminLayout from "../../../components/admin/layout/AdminLayout";
-import { 
-  useAdminEstimates, 
-  useAdminEstimatesTrash,
-  useAdminEstimatesChart,
-  useDeleteEstimate,
-  useBulkDeleteEstimates
-} from "../../../lib/react-query/hooks/admin";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
 import { Spinner } from "../../../components/ui/spinner";
-import { useQueryClient } from "@tanstack/react-query";
 import { EstimateDetailModal } from "../../../components/admin/EstimateDetailModal";
 import { SummaryCard } from "../../../components/admin/SummaryCard";
 import { StatusTabs } from "../../../components/admin/StatusTabs";
@@ -29,318 +17,68 @@ import { FloatingActionBar } from "../../../components/admin/FloatingActionBar";
 import { EstimatesChart } from "../../../components/admin/EstimatesChart";
 import { TimeRangeSelector } from "../../../components/admin/TimeRangeSelector";
 import { Checkbox } from "../../../components/ui/checkbox";
-import { useKeyboardShortcuts } from "../../../hooks/useKeyboardShortcuts";
-import { DEFAULT_PAGE_SIZE, DEFAULT_CURRENCY } from "../../../lib/admin/constants";
+import { useEstimatesListState } from "../../../lib/admin/useEstimatesListState";
+import { DEFAULT_CURRENCY } from "../../../lib/admin/constants";
 
 export default function EstimatesListPage() {
-  const router = useRouter();
-  const queryClient = useQueryClient();
-  const [search, setSearch] = useState("");
-  const [startDate, setStartDate] = useState("");
-  const [endDate, setEndDate] = useState("");
-  const [activeTab, setActiveTab] = useState("all");
-  const [workflowStatusFilter, setWorkflowStatusFilter] = useState(""); // NEW: Workflow status filter
-  const [page, setPage] = useState(1);
-  const [locationId, setLocationId] = useState("");
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [estimateToDelete, setEstimateToDelete] = useState(null);
-  const [deleteScope, setDeleteScope] = useState('local');
-  const [selectedIds, setSelectedIds] = useState(new Set());
-  const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
-  const [bulkDeleteScope, setBulkDeleteScope] = useState('both');
-  const [chartRange, setChartRange] = useState('30d');
-  const pageSize = DEFAULT_PAGE_SIZE;
-
-  const deleteEstimateMutation = useDeleteEstimate();
-  const bulkDeleteMutation = useBulkDeleteEstimates();
-
-  // Get estimateId from URL query for deep linking
-  const estimateIdFromQuery = router.query.estimateId;
-  const selectedEstimateId = estimateIdFromQuery || null;
-
-  // Map tab to portal status filter (exclude "invoiced" as it's client-side filtered)
-  const portalStatusFilter = activeTab === "all" || activeTab === "trash" || activeTab === "invoiced" ? "" : activeTab;
-
-  // Fetch active estimates (only when not in trash tab)
-  const { data, isLoading, error, refetch } = useAdminEstimates({
-    search: search || undefined,
-    portalStatus: portalStatusFilter || undefined,
-    workflowStatus: workflowStatusFilter || undefined,
-    startDate: startDate || undefined,
-    endDate: endDate || undefined,
+  const {
+    search,
+    setSearch,
+    startDate,
+    endDate,
+    activeTab,
+    setActiveTab,
+    workflowStatusFilter,
     page,
+    setPage,
+    locationId,
     pageSize,
-    enabled: activeTab !== "trash",
-  });
-
-  // Fetch trash (only when in trash tab)
-  const { 
-    data: trashData, 
-    isLoading: trashLoading, 
-    error: trashError, 
-    refetch: refetchTrash 
-  } = useAdminEstimatesTrash({
-    locationId: locationId || undefined,
-    limit: 100,
-    enabled: activeTab === "trash",
-  });
-
-  // Fetch chart data (only when not in trash tab)
-  const { 
-    data: chartData, 
-    isLoading: chartLoading, 
-    error: chartError 
-  } = useAdminEstimatesChart({
-    range: chartRange,
-    enabled: activeTab !== "trash",
-  });
-
-  const handleRefresh = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['admin-estimates'] });
-    refetch();
-  }, [queryClient, refetch]);
-
-  // Filter estimates based on active tab
-  const filteredEstimates = useMemo(() => {
-    const allEstimates = data?.items ?? [];
-    
-    // Client-side filter for "invoiced" tab (based on linkedInvoiceId, not portalStatus)
-    if (activeTab === "invoiced") {
-      return allEstimates.filter(e => e.linkedInvoiceId);
-    }
-    
-    return allEstimates;
-  }, [data?.items, activeTab]);
-  
-  const estimates = filteredEstimates;
-  const total = activeTab === "invoiced" ? estimates.length : (data?.total ?? 0);
-  const totalPages = pageSize > 0 ? Math.ceil(total / pageSize) : 1;
-
-  // Clear selection when page, filters, or tab changes
-   
-  useEffect(() => {
-    setSelectedIds(new Set());
-  }, [page, search, activeTab, workflowStatusFilter]);
-
-  // Handle select all
-  const handleSelectAll = useCallback((checked) => {
-    if (checked) {
-      setSelectedIds(new Set(estimates.map((item) => item.id)));
-    } else {
-      setSelectedIds(new Set());
-    }
-  }, [estimates]);
-
-  // Handle individual selection
-  const handleSelectItem = useCallback((estimateId, checked) => {
-    setSelectedIds((prev) => {
-      const newSelected = new Set(prev);
-      if (checked) {
-        newSelected.add(estimateId);
-      } else {
-        newSelected.delete(estimateId);
-      }
-      return newSelected;
-    });
-  }, []);
-
-  // Handle bulk delete
-  const handleBulkDelete = useCallback(async () => {
-    const estimateIds = Array.from(selectedIds);
-    if (estimateIds.length === 0) return;
-
-    try {
-      await bulkDeleteMutation.mutateAsync({ 
-        estimateIds, 
-        locationId: locationId || undefined,
-        scope: bulkDeleteScope 
-      });
-      setSelectedIds(new Set());
-      setBulkDeleteDialogOpen(false);
-    } catch (error) {
-      // Error handled by mutation
-    }
-  }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope]);
-
-  // Handle Excel export
-  const handleExportCSV = useCallback(() => {
-    const estimates = data?.items || [];
-    if (estimates.length === 0) return;
-
-    // Prepare data with proper date handling
-    const worksheetData = estimates.map(est => ({
-      'Estimate Number': est.estimateNumber || est.id || '',
-      'Title': est.title || 'ESTIMATE',
-      'Customer Name': est.contactName || '',
-      'Email': est.contactEmail || '',
-      'Total': est.total || 0,
-      'Currency': est.currency || DEFAULT_CURRENCY,
-      'GHL Status': est.ghlStatus || '',
-      'Portal Status': est.portalStatus || '',
-      'Workflow Status': est.workflowStatus || '',
-      'Created At': est.createdAt ? new Date(est.createdAt) : null,
-      'Updated At': est.updatedAt ? new Date(est.updatedAt) : null,
-    }));
-
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(worksheetData);
-
-    // Auto-size columns to prevent truncation
-    const colWidths = [
-      { wch: 15 }, // Estimate Number
-      { wch: 25 }, // Title
-      { wch: 20 }, // Customer Name
-      { wch: 25 }, // Email
-      { wch: 12 }, // Total
-      { wch: 8 },  // Currency
-      { wch: 12 }, // GHL Status
-      { wch: 12 }, // Portal Status
-      { wch: 15 }, // Workflow Status
-      { wch: 20 }, // Created At
-      { wch: 20 }, // Updated At
-    ];
-    ws['!cols'] = colWidths;
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, 'Estimates');
-
-    // Generate file and download
-    const fileName = `estimates-export-${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
-  }, [data?.items]);
-
-  // Use backend summary totals (calculated across ALL estimates, not just current page)
-  const summaryMetrics = useMemo(() => {
-    const backendSummary = data?.summary;
-    if (backendSummary) {
-      return {
-        sent: {
-          count: backendSummary.sent?.count || 0,
-          total: backendSummary.sent?.total || 0,
-        },
-        accepted: {
-          count: backendSummary.accepted?.count || 0,
-          total: backendSummary.accepted?.total || 0,
-        },
-        declined: {
-          count: backendSummary.rejected?.count || 0,
-          total: backendSummary.rejected?.total || 0,
-        },
-        invoiced: {
-          count: backendSummary.invoiced?.count || 0,
-          total: backendSummary.invoiced?.total || 0,
-        },
-      };
-    }
-    
-    // Fallback: calculate from current page if backend summary not available
-    const sent = estimates.filter(e => e.portalStatus === "sent" || e.ghlStatus === "sent");
-    const accepted = estimates.filter(e => e.portalStatus === "accepted");
-    const declined = estimates.filter(e => e.portalStatus === "rejected");
-    const invoiced = estimates.filter(e => e.linkedInvoiceId);
-
-    return {
-      sent: {
-        count: sent.length,
-        total: sent.reduce((sum, e) => sum + (e.total || 0), 0),
-      },
-      accepted: {
-        count: accepted.length,
-        total: accepted.reduce((sum, e) => sum + (e.total || 0), 0),
-      },
-      declined: {
-        count: declined.length,
-        total: declined.reduce((sum, e) => sum + (e.total || 0), 0),
-      },
-      invoiced: {
-        count: invoiced.length,
-        total: invoiced.reduce((sum, e) => sum + (e.total || 0), 0),
-      },
-    };
-  }, [data?.summary, estimates]);
-
-  const handleRowClick = useCallback((estimateId) => {
-    router.replace(
-      {
-        pathname: router.pathname,
-        query: { ...router.query, estimateId },
-      },
-      undefined,
-      { shallow: true }
-    );
-  }, [router]);
-
-  const handleCloseModal = useCallback(() => {
-    const { estimateId, ...restQuery } = router.query;
-    router.replace(
-      {
-        pathname: router.pathname,
-        query: restQuery,
-      },
-      undefined,
-      { shallow: true }
-    );
-  }, [router]);
-
-  const handleInvoiceCreated = useCallback(() => {
-    handleRefresh();
-  }, [handleRefresh]);
-
-  // Get trash count for badge
-  const trashCount = trashData?.count || 0;
-
-  const statusTabs = useMemo(() => [
-    { value: "all", label: "All" },
-    { value: "sent", label: "Sent" },
-    { value: "accepted", label: "Accepted" },
-    { value: "rejected", label: "Rejected" },
-    { value: "invoiced", label: "Invoiced" },
-    { 
-      value: "trash", 
-      label: "Trash",
-      badge: trashCount > 0 ? trashCount : undefined,
-    },
-  ], [trashCount]);
-
-  // Handle delete
-  const handleDeleteClick = useCallback((estimateId, locId) => {
-    setEstimateToDelete({ id: estimateId, locationId: locId || locationId });
-    setDeleteDialogOpen(true);
-  }, [locationId]);
-
-  const handleDeleteConfirm = useCallback(async () => {
-    if (!estimateToDelete) return;
-    
-    try {
-      await deleteEstimateMutation.mutateAsync({
-        estimateId: estimateToDelete.id,
-        locationId: estimateToDelete.locationId || locationId,
-        scope: deleteScope,
-      });
-      setDeleteDialogOpen(false);
-      setEstimateToDelete(null);
-    } catch (error) {
-      // Error handled by mutation
-    }
-  }, [estimateToDelete, locationId, deleteScope, deleteEstimateMutation]);
-
-  // Handle view details
-  const handleViewDetails = useCallback((estimateId) => {
-    handleRowClick(estimateId);
-  }, [handleRowClick]);
-
-  // Keyboard shortcuts
-  const shortcuts = useMemo(() => ({
-    Escape: (e) => {
-      e.preventDefault();
-      if (deleteDialogOpen) {
-        setDeleteDialogOpen(false);
-      }
-    },
-  }), [deleteDialogOpen]);
-
-  useKeyboardShortcuts(shortcuts, true, [deleteDialogOpen]);
+    chartRange,
+    setChartRange,
+    deleteDialogOpen,
+    setDeleteDialogOpen,
+    estimateToDelete,
+    deleteScope,
+    setDeleteScope,
+    selectedIds,
+    setSelectedIds,
+    bulkDeleteDialogOpen,
+    setBulkDeleteDialogOpen,
+    bulkDeleteScope,
+    setBulkDeleteScope,
+    selectedEstimateId,
+    data,
+    isLoading,
+    error,
+    trashData,
+    trashLoading,
+    trashError,
+    refetchTrash,
+    chartData,
+    chartLoading,
+    chartError,
+    estimates,
+    total,
+    totalPages,
+    summaryMetrics,
+    statusTabs,
+    handleSearchChange,
+    handleStartDateChange,
+    handleEndDateChange,
+    handleWorkflowStatusChange,
+    handleSelectAll,
+    handleSelectItem,
+    handleBulkDelete,
+    handleExportCSV,
+    handleRowClick,
+    handleCloseModal,
+    handleInvoiceCreated,
+    handleDeleteClick,
+    handleDeleteConfirm,
+    handleViewDetails,
+    deleteEstimateMutation,
+    bulkDeleteMutation,
+  } = useEstimatesListState();
 
   const getStatusBadgeClass = (status) => {
     const classes = {
@@ -481,25 +219,13 @@ export default function EstimatesListPage() {
               {/* Search Bar */}
               <SearchBar
                 search={search}
-                onSearchChange={(value) => {
-                  setSearch(value);
-                  setPage(1);
-                }}
+                onSearchChange={handleSearchChange}
                 startDate={startDate}
-                onStartDateChange={(value) => {
-                  setStartDate(value);
-                  setPage(1);
-                }}
+                onStartDateChange={handleStartDateChange}
                 endDate={endDate}
-                onEndDateChange={(value) => {
-                  setEndDate(value);
-                  setPage(1);
-                }}
+                onEndDateChange={handleEndDateChange}
                 workflowStatus={workflowStatusFilter}
-                onWorkflowStatusChange={(value) => {
-                  setWorkflowStatusFilter(value);
-                  setPage(1);
-                }}
+                onWorkflowStatusChange={handleWorkflowStatusChange}
                 placeholder="Search by number, email..."
               />
 

@@ -54,6 +54,10 @@ test.describe("headless surface smoke test", () => {
     await expect(page.getByText(/financial overview/i)).toBeVisible();
     await expect(page.getByText(/payments & documents/i)).toBeVisible();
     await expect(page.getByText(/outstanding balance/i)).toBeVisible();
+    // Payment UI: amount input or Pay button must be visible when payment form is shown
+    const payButton = page.getByRole("button", { name: /pay now|complete payment/i });
+    const amountInput = page.getByLabel(/custom payment amount/i);
+    await expect(payButton.or(amountInput)).toBeVisible();
   });
 
   test("portal navigates to support view", async ({ page }) => {

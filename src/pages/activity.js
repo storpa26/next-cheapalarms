@@ -9,7 +9,7 @@ import {
   generateWorkerStatus,
   generateCustomerActivity,
   generateRecentEvents,
-} from "../lib/activity/mock-data";
+} from "../lib/mocks/activity";
 import { isAuthenticated, getLoginRedirect } from "../lib/auth";
 import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card";
 

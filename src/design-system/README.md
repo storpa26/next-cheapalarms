@@ -277,10 +277,6 @@ The design system includes a compatibility layer in `globals.css` that maps old 
 - Avoid creating duplicate components
 - Use layout primitives for consistent spacing
 
-## 🎨 UI Library
-
-View all components, tokens, and examples at `/ui-library` (dev mode only).
-
 ## 📝 Contributing
 
 ### Adding New Components
@@ -288,8 +284,7 @@ View all components, tokens, and examples at `/ui-library` (dev mode only).
 1. Create component in `src/components/ui/`
 2. Use design system tokens
 3. Add JSDoc comments
-4. Add to UI Library showcase
-5. Update this README
+4. Update this README
 
 ### Adding New Tokens
 
@@ -317,11 +312,8 @@ Before submitting a PR, ensure:
 - [ ] No hardcoded values (hex, arbitrary px)
 - [ ] Accessibility attributes included
 - [ ] Responsive design tested
-- [ ] UI Library updated if adding components
-
 ## 📚 Resources
 
-- **UI Library**: `/ui-library` (dev mode)
 - **Token Reference**: `src/design-system/tokens/`
 - **Theme CSS**: `src/design-system/theme/light.css`
 - **Tailwind Config**: `tailwind.config.js`

@@ -1,14 +1,36 @@
-import { useRef, useCallback, useEffect, useState } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 /**
- * Custom hook for debouncing function calls
- * Best practice: Prevents rapid-fire clicks and improves performance
- * 
+ * Debounces a value. Useful for search inputs and other scenarios where you want to delay updates.
+ *
+ * @param {*} value - The value to debounce
+ * @param {number} delay - Delay in milliseconds (default: 300)
+ * @returns {*} The debounced value
+ */
+export function useDebouncedValue(value, delay = 300) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
+/**
+ * Debounces function calls. Prevents rapid-fire invocations.
+ *
  * @param {Function} fn - Function to debounce
- * @param {number} delay - Delay in milliseconds (default: 300ms)
+ * @param {number} delay - Delay in milliseconds (default: 300)
  * @returns {Function} Debounced function
  */
-export function useDebounce(fn, delay = 300) {
+export function useDebouncedCallback(fn, delay = 300) {
   const timeoutRef = useRef(null);
 
   const debouncedFn = useCallback(

@@ -1,5 +1,5 @@
 import { AccountPreferences } from "../sections/AccountSection";
-import { mockActivityLog } from "../utils/mock-data";
+import { mockActivityLog } from "../../../lib/mocks/portal";
 
 export function PreferencesView({ view }) {
   // Use actual data if available, otherwise use mock data
