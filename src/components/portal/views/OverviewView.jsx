@@ -4,6 +4,7 @@ import { Button } from "../../ui/button";
 import Link from "next/link";
 import { DEFAULT_CURRENCY } from "../../../lib/admin/constants";
 import { RevisionBanner } from "../sections/RevisionBanner";
+import { RevisionHistory } from "../sections/RevisionHistory";
 import { WorkflowProgress } from "../sections/WorkflowProgress";
 import { BookingCard } from "../sections/BookingCard";
 import { PaymentCard } from "../sections/PaymentCard";
@@ -73,12 +74,23 @@ export const OverviewView = memo(function OverviewView({
   return (
     <div className="space-y-6">
       {/* Revision Banner (if estimate was revised) */}
-      {estimate.revision && (
+      {(estimate.revision || view?.revisionHistory?.length > 0) && (
         <RevisionBanner 
           revision={estimate.revision}
+          revisionHistory={view?.revisionHistory}
           currency={estimate.currency || DEFAULT_CURRENCY}
           portalStatus={statusValue}
         />
+      )}
+
+      {/* Full Revision History (show after any edit) */}
+      {view?.revisionHistory?.length >= 1 && (
+        <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <RevisionHistory
+            revisionHistory={view.revisionHistory}
+            currency={estimate.currency || DEFAULT_CURRENCY}
+          />
+        </div>
       )}
 
       {/* Workflow Progress */}

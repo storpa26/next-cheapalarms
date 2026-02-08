@@ -1,5 +1,4 @@
-import { getWpBase } from "../../../lib/api/wp-proxy";
-import { createWpHeaders } from "../../../lib/api/wp-proxy";
+import { getWpBase, createWpHeaders, parseWpResponse } from "../../../lib/api/wp-proxy";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -36,9 +35,9 @@ export default async function handler(req, res) {
       }),
     });
 
-    const invoiceBody = await invoiceResp.json();
+    const { body: invoiceBody, status } = await parseWpResponse(invoiceResp);
 
-    if (invoiceResp.ok && invoiceBody.invoice) {
+    if (status === 200 && invoiceBody?.invoice) {
       return res.status(200).json({
         ok: true,
         invoice: invoiceBody.invoice,
@@ -46,11 +45,10 @@ export default async function handler(req, res) {
       });
     }
 
-    // Return error response
-    return res.status(invoiceResp.status || 500).json({
+    return res.status(status || 500).json({
       ok: false,
-      err: invoiceBody.err || invoiceBody.error || "Failed to create invoice",
-      details: invoiceBody.details || null,
+      err: invoiceBody?.err ?? invoiceBody?.error ?? "Failed to create invoice",
+      details: invoiceBody?.details ?? null,
     });
   } catch (error) {
     return res.status(500).json({

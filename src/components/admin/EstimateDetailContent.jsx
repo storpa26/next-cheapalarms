@@ -40,6 +40,7 @@ import { ChangeSummary } from "./ChangeSummary";
 import { SaveEstimateModal } from "./SaveEstimateModal";
 import { WorkflowStatusCard } from "./WorkflowStatusCard";
 import { DeleteDialog } from "./DeleteDialog";
+import { EditHistoryTimeline } from "./EditHistoryTimeline";
 import JobDetailModal from "../servicem8/JobDetailModal";
 import { toast } from "sonner";
 import { Trash2, User, Mail, Phone, CheckCircle2, DollarSign, Calendar, Send } from "lucide-react";
@@ -53,6 +54,7 @@ const EstimateTableRow = memo(function EstimateTableRow({
   currency,
   isEditMode,
   itemQty,
+  originalQtyForItem,
   onQuantityChange,
   onRemoveClick,
   onSelect
@@ -141,7 +143,7 @@ const EstimateTableRow = memo(function EstimateTableRow({
                 e.stopPropagation();
                 onQuantityChange(idx, 1);
               }}
-              disabled={itemQty >= (item?.originalQty || 1) + 10}
+              disabled={itemQty >= (originalQtyForItem ?? 1) + 10}
               variant="outline"
               size="icon-sm"
               className="w-7 h-7"
@@ -204,11 +206,12 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
   // Row selection state (for photos)
   const [selectedItem, setSelectedItem] = useState(null);
   
-  // Edit mode state
+  // Edit mode state (ID-based: originals separate, no originalQty on items)
   const [isEditMode, setIsEditMode] = useState(false);
   const [editedItems, setEditedItems] = useState([]);
+  const [originalItemsById, setOriginalItemsById] = useState({});
   const [editedDiscount, setEditedDiscount] = useState(null);
-  const [removedItems, setRemovedItems] = useState([]);
+  const [removedItemIds, setRemovedItemIds] = useState([]);
   const [showAddItemModal, setShowAddItemModal] = useState(false);
   const [showDiscountModal, setShowDiscountModal] = useState(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -355,46 +358,88 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
     return itemsTotal;
   }, [editedItems, editedDiscount]);
 
-  // Detect changes - MUST be before handleConfirmSave
+  // Detect changes by ID (no index comparison; originals from originalItemsById)
+  // Now includes itemId, oldAmount, newAmount for full audit trail
   const changedItems = useMemo(() => {
     if (!isEditMode) return [];
-    const original = estimate?.items || [];
     return (editedItems || [])
-      .filter(item => item != null)
-      .filter((edited, idx) => {
-        const orig = original[idx];
-        return orig && (edited?.qty || edited?.quantity) !== (orig?.qty || orig?.quantity);
+      .filter((ed) => ed != null && originalItemsById[ed.id] != null)
+      .filter((ed) => {
+        const orig = originalItemsById[ed.id];
+        const origQty = orig?.qty ?? orig?.quantity ?? 0;
+        const edQty = ed?.qty ?? ed?.quantity ?? 0;
+        return origQty !== edQty;
       })
-      .map((edited) => ({
-        name: edited?.name || 'Item',
-        originalQty: edited?.originalQty || 0,
-        newQty: edited?.qty || edited?.quantity || 0
-      }));
-  }, [isEditMode, editedItems, estimate]);
+      .map((ed) => {
+        const orig = originalItemsById[ed.id];
+        const origQty = orig?.qty ?? orig?.quantity ?? 0;
+        const newQty = ed?.qty ?? ed?.quantity ?? 0;
+        const unitPrice = Number(ed?.amount) || 0;
+        return {
+          itemId: ed.id,
+          name: ed?.name || 'Item',
+          originalQty: origQty,
+          newQty: newQty,
+          oldAmount: unitPrice * origQty,
+          newAmount: unitPrice * newQty,
+        };
+      });
+  }, [isEditMode, editedItems, originalItemsById]);
 
+  // Added items - includes itemId and photoRequired flag
   const addedItems = useMemo(() => {
     if (!isEditMode) return [];
-    const originalCount = estimate?.items?.length || 0;
-    return (editedItems || []).slice(originalCount).filter(item => item != null);
-  }, [isEditMode, editedItems, estimate]);
+    return (editedItems || [])
+      .filter((ed) => ed != null && !originalItemsById[ed.id])
+      .map((ed) => ({
+        itemId: ed.id,
+        name: ed?.name || 'Item',
+        qty: ed?.qty ?? ed?.quantity ?? 1,
+        amount: Number(ed?.amount) || 0,
+        photoRequired: ed?.photoRequired ?? false, // Admin-added items default to no photo required
+        isCustom: ed?.isCustom ?? false,
+      }));
+  }, [isEditMode, editedItems, originalItemsById]);
 
-  // Initialize edited items when entering edit mode
+  // Removed items - includes itemId and amounts
+  const removedItems = useMemo(() => {
+    if (!isEditMode) return [];
+    return removedItemIds
+      .map((id) => {
+        const orig = originalItemsById[id];
+        if (!orig) return null;
+        return {
+          itemId: id,
+          name: orig?.name || 'Item',
+          qty: orig?.qty ?? orig?.quantity ?? 1,
+          amount: Number(orig?.amount) || 0,
+        };
+      })
+      .filter(Boolean);
+  }, [isEditMode, removedItemIds, originalItemsById]);
+
+  // Initialize edited items when entering edit mode (ID-based; no originalQty on items)
   const handleEnterEditMode = useCallback(() => {
-    const items = estimate?.items || [];
-    setEditedItems(items.filter(item => item != null).map(item => ({ 
-      ...item, 
-      originalQty: item?.qty || item?.quantity || 1 
-    })));
+    const items = (estimate?.items || []).filter((item) => item != null);
+    const byId = {};
+    const withId = items.map((item, idx) => {
+      const id = item.id ?? `orig-${idx}`;
+      byId[id] = { ...item, qty: item?.qty ?? item?.quantity ?? 1, quantity: item?.qty ?? item?.quantity ?? 1 };
+      return { ...item, id, qty: item?.qty ?? item?.quantity ?? 1, quantity: item?.qty ?? item?.quantity ?? 1 };
+    });
+    setOriginalItemsById(byId);
+    setEditedItems(withId);
     setEditedDiscount(estimate?.discount || null);
-    setRemovedItems([]);
+    setRemovedItemIds([]);
     setIsEditMode(true);
   }, [estimate?.items, estimate?.discount]);
 
   const handleCancelEdit = useCallback(() => {
     setIsEditMode(false);
     setEditedItems([]);
+    setOriginalItemsById({});
     setEditedDiscount(null);
-    setRemovedItems([]);
+    setRemovedItemIds([]);
   }, []);
 
   const handleSaveClick = useCallback(() => {
@@ -448,26 +493,37 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
         ? safeNewTotal - safeOldTotal 
         : 0;
       
+      // Build detailed revision data with item IDs and amounts for audit trail
       const revisionData = {
         revisedAt: new Date().toISOString(),
         adminNote,
+        source: 'admin-edit',
         oldTotal: safeOldTotal,
         newTotal: safeNewTotal,
         netChange: safeNetChange,
+        // Changed items with full details for line-by-line tracking
         changedItems: (changedItems || []).filter(item => item != null).map(item => ({
+          itemId: item?.itemId || '',
           name: item?.name || 'Item',
           oldQty: item?.originalQty || 0,
-          newQty: item?.newQty || 0
+          newQty: item?.newQty || 0,
+          oldAmount: item?.oldAmount || 0,
+          newAmount: item?.newAmount || 0,
         })),
+        // Added items with photoRequired flag
         addedItems: (addedItems || []).filter(item => item != null).map(item => ({
+          itemId: item?.itemId || '',
           name: item?.name || 'Item',
           qty: item?.qty || 1,
-          amount: item?.amount || 0
+          amount: item?.amount || 0,
+          photoRequired: item?.photoRequired ?? false,
         })),
+        // Removed items with ID and amounts
         removedItems: (removedItems || []).filter(item => item != null).map(item => ({
+          itemId: item?.itemId || '',
           name: item?.name || 'Item',
-          qty: item?.qty || item?.quantity || 1,
-          amount: item?.amount || 0
+          qty: item?.qty || 1,
+          amount: item?.amount || 0,
         })),
         discount: editedDiscount
       };
@@ -528,28 +584,21 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
   }, [originalTotal, newTotal, changedItems, addedItems, removedItems, editedDiscount, editedItems, estimate, updateEstimateMutation, estimateId, locationId, sendRevisionMutation, displayStatus, handleSendEstimate]);
 
   const handleQuantityChange = useCallback((index, delta) => {
-    setEditedItems(prev => {
-      // Bounds check: ensure index is valid
-      if (index < 0 || index >= prev.length) {
-        return prev;
-      }
-      
-      const newItems = [...prev];
-      if (!newItems[index]) return prev; // Safety check
-      const currentQty = newItems[index]?.qty || newItems[index]?.quantity || 1;
-      const originalQty = newItems[index]?.originalQty || currentQty;
-      
-      // Calculate min/max based on original quantity
-      const minQty = Math.max(1, originalQty - 10);
-      const maxQty = originalQty + 10;
-      
-      // Apply delta and constrain to limits
+    setEditedItems((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
+      const item = prev[index];
+      if (!item) return prev;
+      const orig = originalItemsById[item.id];
+      const origQty = orig ? (orig.qty ?? orig.quantity ?? 1) : (item.qty ?? item.quantity ?? 1);
+      const currentQty = item?.qty ?? item?.quantity ?? 1;
+      const minQty = Math.max(1, origQty - 10);
+      const maxQty = origQty + 10;
       const newQty = Math.max(minQty, Math.min(currentQty + delta, maxQty));
-      
-      newItems[index] = { ...newItems[index], qty: newQty, quantity: newQty };
+      const newItems = [...prev];
+      newItems[index] = { ...item, qty: newQty, quantity: newQty };
       return newItems;
     });
-  }, []);
+  }, [originalItemsById]);
 
   const handleRemoveItemClick = useCallback((index) => {
     // Bounds check: ensure index is valid
@@ -564,21 +613,21 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
   }, []);
 
   const handleRemoveItem = useCallback((index) => {
-    setEditedItems(prev => {
-      if (index < 0 || index >= prev.length) return prev; // Safety check
+    setEditedItems((prev) => {
+      if (index < 0 || index >= prev.length) return prev;
       const item = prev[index];
-      // Track removed items if they were original (not custom added)
-      if (item && !item.isCustom) {
-        setRemovedItems(prevRemoved => [...prevRemoved, item]);
+      if (item?.id && originalItemsById[item.id]) {
+        setRemovedItemIds((ids) => [...ids, item.id]);
       }
       setDeleteItemDialogOpen(false);
       setItemToDeleteIndex(null);
       return prev.filter((_, i) => i !== index);
     });
-  }, []);
+  }, [originalItemsById]);
 
   const handleAddCustomItem = useCallback((newItem) => {
-    setEditedItems(prev => [...prev, newItem]);
+    const id = newItem.id ?? `custom-${Date.now()}`;
+    setEditedItems((prev) => [...prev, { ...newItem, id, isCustom: true }]);
   }, []);
 
   const handleApplyDiscount = useCallback((discount) => {
@@ -1000,6 +1049,8 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
                       const photoCount = itemPhotoCounts[itemName] || 0;
                       const itemQty = item?.qty || item?.quantity || 1;
                       const isSelected = !isEditMode && selectedItem?.name === itemName;
+                      const orig = isEditMode && item?.id ? originalItemsById[item.id] : null;
+                      const originalQtyForItem = orig ? (orig.qty ?? orig.quantity ?? 1) : undefined;
                       
                       return (
                         <EstimateTableRow
@@ -1011,6 +1062,7 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
                           currency={currency}
                           isEditMode={isEditMode}
                           itemQty={itemQty}
+                          originalQtyForItem={originalQtyForItem}
                           onQuantityChange={handleQuantityChange}
                           onRemoveClick={handleRemoveItemClick}
                           onSelect={handleRowSelect}
@@ -1064,6 +1116,13 @@ export const EstimateDetailContent = memo(function EstimateDetailContent({ estim
               payment={portalMeta.payment}
             />
           )}
+
+          {/* Edit History Timeline */}
+          <EditHistoryTimeline
+            revisionHistory={portalMeta.revisionHistory}
+            revision={portalMeta.revision}
+            currency={currency}
+          />
 
           {/* Portal Meta */}
           <div className="rounded-xl border border-border/60 bg-card p-4">

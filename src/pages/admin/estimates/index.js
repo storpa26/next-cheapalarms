@@ -1,4 +1,5 @@
 import Head from "next/head";
+import dynamic from "next/dynamic";
 import { Settings, Plus, Download, FileText } from "lucide-react";
 import { Button } from "../../../components/ui/button";
 import AdminLayout from "../../../components/admin/layout/AdminLayout";
@@ -14,8 +15,12 @@ import { BulkDeleteDialog } from "../../../components/admin/BulkDeleteDialog";
 import { EstimateActionsMenu } from "../../../components/admin/EstimateActionsMenu";
 import { TrashView } from "../../../components/admin/TrashView";
 import { FloatingActionBar } from "../../../components/admin/FloatingActionBar";
-import { EstimatesChart } from "../../../components/admin/EstimatesChart";
 import { TimeRangeSelector } from "../../../components/admin/TimeRangeSelector";
+
+const EstimatesChart = dynamic(
+  () => import("../../../components/admin/EstimatesChart").then((m) => m.EstimatesChart),
+  { ssr: false }
+);
 import { Checkbox } from "../../../components/ui/checkbox";
 import { useEstimatesListState } from "../../../lib/admin/useEstimatesListState";
 import { DEFAULT_CURRENCY } from "../../../lib/admin/constants";

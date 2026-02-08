@@ -7,6 +7,13 @@ const __dirname = dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "@": resolve(__dirname, "src"),
+    };
+    return config;
+  },
   images: {
     remotePatterns: [
       {
@@ -21,6 +28,7 @@ const nextConfig = {
   },
   turbopack: {
     resolveAlias: {
+      "@": resolve(__dirname, "src"),
       "@/*": resolve(__dirname, "src"),
     },
     resolveExtensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],

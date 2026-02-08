@@ -1,14 +1,11 @@
 import { Card } from "../../ui/card";
 
-const brandTeal = "#0DC5C7";
-const brandPink = "#F78AB3";
-
 export default function MeetTheCast() {
   return (
     <section className="py-20 px-4 bg-background">
       <div className="container max-w-7xl mx-auto">
         <div className="text-center mb-16">
-          <p className="text-sm uppercase tracking-[0.4em] text-[#0AA9AB]">Meet the cast</p>
+          <p className="text-sm uppercase tracking-[0.4em] text-secondary">Meet the cast</p>
           <h2 className="text-4xl md:text-5xl font-bold text-center mb-4 text-foreground">
             The Pig, the Wolf, and the Brain
           </h2>
@@ -21,12 +18,7 @@ export default function MeetTheCast() {
           {/* Pig - the Homeowner */}
           <Card className="p-8 text-center border-2 hover:shadow-lg transition-all duration-300">
             <div className="mb-6">
-              <div
-                className="w-32 h-32 mx-auto rounded-full flex items-center justify-center text-6xl shadow-lg"
-                style={{
-                  background: `linear-gradient(135deg, ${brandPink}, #f99bc0)`,
-                }}
-              >
+              <div className="w-32 h-32 mx-auto rounded-full flex items-center justify-center text-6xl shadow-lg bg-gradient-to-br from-primary to-primary/80">
                 <span role="img" aria-label="Pig homeowner">
                   🐷
                 </span>
@@ -41,12 +33,7 @@ export default function MeetTheCast() {
           {/* Wolf - the Problem */}
           <Card className="p-8 text-center border-2 hover:shadow-lg transition-all duration-300">
             <div className="mb-6">
-              <div
-                className="w-32 h-32 mx-auto rounded-full flex items-center justify-center text-6xl shadow-lg"
-                style={{
-                  background: `linear-gradient(135deg, #4a5568, #2d3748)`,
-                }}
-              >
+              <div className="w-32 h-32 mx-auto rounded-full flex items-center justify-center text-6xl shadow-lg bg-gradient-to-br from-muted to-muted/80">
                 <span role="img" aria-label="Wolf intruder">
                   🐺
                 </span>
@@ -61,13 +48,7 @@ export default function MeetTheCast() {
           {/* Ajax Hub 2 - the Brain */}
           <Card className="p-8 text-center border-2 hover:shadow-lg transition-all duration-300">
             <div className="mb-6">
-              <div
-                className="w-32 h-32 mx-auto rounded-full flex items-center justify-center text-6xl shadow-lg"
-                style={{
-                  background: `linear-gradient(135deg, ${brandTeal}, #0ab5b6)`,
-                  boxShadow: `0 0 30px ${brandTeal}40`,
-                }}
-              >
+              <div className="w-32 h-32 mx-auto rounded-full flex items-center justify-center text-6xl shadow-lg bg-gradient-to-br from-secondary to-secondary/80 ring-4 ring-secondary/30">
                 <span role="img" aria-label="Ajax Hub 2 brain">
                   🧠
                 </span>

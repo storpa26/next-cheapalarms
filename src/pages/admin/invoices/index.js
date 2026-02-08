@@ -160,7 +160,7 @@ export default function InvoicesListPage() {
                     <div
                       key={invoice.id}
                       onClick={() => handleRowClick(invoice.id)}
-                      className={`bg-gradient-to-br from-surface to-surface/95 rounded-xl border border-border/60 p-5 shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] ${isSelected ? "ring-2 ring-[#1EA6DF]/40 shadow-lg" : ""}`}
+                      className={`bg-gradient-to-br from-surface to-surface/95 rounded-xl border border-border/60 p-5 shadow-md cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-[1.01] active:scale-[0.99] ${isSelected ? "ring-2 ring-info/40 shadow-lg" : ""}`}
                     >
                       <div className="flex items-start justify-between mb-3">
                         <div className="flex items-center gap-2">
@@ -324,7 +324,7 @@ export default function InvoicesListPage() {
                             cursor-pointer transition-all duration-200 ease-standard
                             ${
                               isSelected
-                                ? "bg-gradient-to-r from-[#1EA6DF]/10 via-[#c95375]/5 to-[#1EA6DF]/10 ring-2 ring-[#1EA6DF]/40 shadow-sm"
+                                ? "bg-gradient-to-r from-info/10 via-primary/5 to-info/10 ring-2 ring-info/40 shadow-sm"
                                 : isEven
                                   ? "bg-surface hover:bg-muted/30"
                                   : "bg-surface/50 hover:bg-muted/40"

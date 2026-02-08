@@ -124,14 +124,39 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   const shouldFetchEstimates = activeNav === 'overview' && !estimateId && estimates.length > 0;
   
   // Determine which estimates to fetch on Overview:
-  // Fetch ONLY the current estimate. Next/prev will fetch on-demand when the user switches.
+  // Fetch current + prefetch adjacent estimates (prev/next) for instant navigation
   const estimatesToFetch = useMemo(() => {
     if (!shouldFetchEstimates || estimates.length === 0) return [];
     
-    const current = estimates[overviewIndex];
-    if (!current) return [];
+    const toFetch = [];
+    const seen = new Set();
     
-    return [current];
+    // Always include current
+    const current = estimates[overviewIndex];
+    if (current) {
+      toFetch.push(current);
+      seen.add(current.estimateId);
+    }
+    
+    // Prefetch previous (if exists and not already included)
+    if (overviewIndex > 0) {
+      const prev = estimates[overviewIndex - 1];
+      if (prev && !seen.has(prev.estimateId)) {
+        toFetch.push(prev);
+        seen.add(prev.estimateId);
+      }
+    }
+    
+    // Prefetch next (if exists and not already included)
+    if (overviewIndex < estimates.length - 1) {
+      const next = estimates[overviewIndex + 1];
+      if (next && !seen.has(next.estimateId)) {
+        toFetch.push(next);
+        seen.add(next.estimateId);
+      }
+    }
+    
+    return toFetch;
   }, [shouldFetchEstimates, estimates, overviewIndex]);
   
   const estimateDetailsQueries = useQueries({
@@ -423,8 +448,66 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
   }, [estimateData, view]);
 
   const activityFeed = useMemo(() => {
-    if (!view?.activity) return [];
-    return Array.isArray(view.activity) ? view.activity.slice(0, 5) : [];
+    const entries = [];
+    
+    // Add revision history entries (estimate edits by admin)
+    if (view?.revisionHistory && Array.isArray(view.revisionHistory)) {
+      const sortedRevisions = [...view.revisionHistory].sort((a, b) => 
+        new Date(b.revisedAt || 0) - new Date(a.revisedAt || 0)
+      );
+      
+      sortedRevisions.forEach((rev) => {
+        const netChange = rev.netChange || 0;
+        const lineChanges = rev.lineChanges || [];
+        const addedCount = lineChanges.filter(c => c.action === 'add').length;
+        const removedCount = lineChanges.filter(c => c.action === 'remove').length;
+        const changedCount = lineChanges.filter(c => c.action === 'qty').length;
+        
+        // Build description
+        let description = '';
+        if (netChange < 0) {
+          description = `You saved $${Math.abs(netChange).toFixed(2)}`;
+        } else if (netChange > 0) {
+          description = `Total increased by $${netChange.toFixed(2)}`;
+        }
+        
+        // Add change details
+        const changeParts = [];
+        if (addedCount > 0) changeParts.push(`${addedCount} item${addedCount > 1 ? 's' : ''} added`);
+        if (removedCount > 0) changeParts.push(`${removedCount} item${removedCount > 1 ? 's' : ''} removed`);
+        if (changedCount > 0) changeParts.push(`${changedCount} qty change${changedCount > 1 ? 's' : ''}`);
+        
+        if (changeParts.length > 0) {
+          description = description ? `${description} • ${changeParts.join(', ')}` : changeParts.join(', ');
+        }
+        
+        // Add admin note if present
+        if (rev.adminNote) {
+          description = description ? `${description} — "${rev.adminNote}"` : `"${rev.adminNote}"`;
+        }
+        
+        entries.push({
+          label: netChange < 0 ? 'Price Adjusted - Savings!' : 'Estimate Updated',
+          detail: description || 'Your estimate has been reviewed',
+          time: rev.revisedAt ? new Date(rev.revisedAt).toLocaleString('en-AU', { 
+            day: 'numeric', 
+            month: 'short',
+            hour: '2-digit',
+            minute: '2-digit'
+          }) : '',
+          type: 'revision',
+          revisionId: rev.revisionId,
+        });
+      });
+    }
+    
+    // Add any existing activity entries
+    if (view?.activity && Array.isArray(view.activity)) {
+      entries.push(...view.activity);
+    }
+    
+    // Return top 5 most recent
+    return entries.slice(0, 5);
   }, [view]);
 
   const activeEstimate = useMemo(() => {
@@ -520,6 +603,7 @@ export function usePortalState({ initialStatus, initialError, initialEstimateId,
         ? (estimateData.title || `Estimate #${estimateData.estimateNumber || estimateId}`)
         : `Estimate #${view?.quote?.number || estimateId}`,
       revision: view?.revision || null, // Include revision data for RevisionBanner
+      revisionHistory: view?.revisionHistory || [], // Full revision history for edit timeline
       currency: estimateData?.ok ? (estimateData.currency || DEFAULT_CURRENCY) : DEFAULT_CURRENCY,
     };
     

@@ -14,7 +14,7 @@ export function PaymentsView({ view }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-[32px] border border-border-subtle bg-background p-6 shadow-[0_25px_80px_rgba(15,23,42,0.08)]">
+      <div className="rounded-[32px] border border-border-subtle bg-background p-6 shadow-lg">
         <p className="text-xs uppercase tracking-[0.35em] text-muted-foreground">Financial overview</p>
         <h1 className="mt-2 text-3xl font-semibold text-foreground">Payments & Documents</h1>
         <p className="mt-1 text-sm text-muted-foreground">

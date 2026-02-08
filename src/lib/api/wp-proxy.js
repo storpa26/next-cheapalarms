@@ -8,10 +8,45 @@ import { parse as parseCookie } from "cookie";
 const WP_API_BASE = process.env.NEXT_PUBLIC_WP_URL || "http://localhost:8882";
 
 /**
- * Get WordPress API base URL
+ * Get WordPress REST API base URL (always includes /wp-json so REST routes resolve correctly).
+ * Normalizes env value: appends /wp-json when missing, strips trailing slash.
  */
 export function getWpBase() {
-  return process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
+  const raw = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE;
+  if (!raw || typeof raw !== "string") return "";
+  const base = raw.replace(/\/+$/, "");
+  if (!base) return "";
+  if (/\/wp-json\/?$/i.test(base)) return base.replace(/\/+$/, "");
+  return `${base}/wp-json`;
+}
+
+/**
+ * Parse WordPress REST response body safely (text then JSON).
+ * Use in API routes that fetch WP directly instead of proxyToWordPress.
+ *
+ * @param {Response} response - Fetch Response
+ * @returns {Promise<{ ok: boolean, body: unknown, status: number }>} Parsed body and status; body may be null on parse failure
+ */
+export async function parseWpResponse(response) {
+  const status = response.status;
+  const text = await response.text().catch(() => "");
+  if (!text) {
+    return { ok: response.ok, body: { ok: false, err: "Empty response from WordPress API" }, status };
+  }
+  try {
+    const body = JSON.parse(text);
+    return { ok: response.ok, body, status };
+  } catch (e) {
+    return {
+      ok: false,
+      body: {
+        ok: false,
+        err: "Failed to parse response from WordPress API",
+        details: e instanceof Error ? e.message : "Unknown parsing error",
+      },
+      status: status || 500,
+    };
+  }
 }
 
 /**
@@ -126,23 +161,10 @@ export async function proxyToWordPress(req, res, wpPath, options = {}) {
 
     const wpUrl = `${wpBase}${finalPath}`;
     const wpResp = await fetch(wpUrl, fetchOptions);
-    
-    // Parse JSON response with error handling
-    let body;
-    try {
-      body = await wpResp.json();
-    } catch (parseError) {
-      // If response is not JSON, return error response
-      const text = await wpResp.text().catch(() => 'Failed to read response');
-      return res.status(wpResp.status).json({
-        ok: false,
-        err: `Invalid JSON response from WordPress API: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`,
-        details: text.substring(0, 200), // Limit details length
-      });
-    }
 
+    const { body, status } = await parseWpResponse(wpResp);
     const transformedBody = transformResponse(body);
-    return res.status(wpResp.status).json(transformedBody);
+    return res.status(status).json(transformedBody);
   } catch (e) {
     return res.status(500).json({
       ok: false,

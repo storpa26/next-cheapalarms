@@ -3,9 +3,17 @@
  */
 
 /**
- * Determine product status based on photos and skip state
+ * Determine product status based on photos, skip state, and required flag
  */
 export function determineProductStatus(product) {
+  // If product is optional (required: false), mark as optional unless photos added
+  if (!product.required) {
+    if (product.photos && product.photos.length > 0) {
+      return 'ready'; // Optional but customer added photos anyway
+    }
+    return 'optional'; // Optional and no photos needed
+  }
+  
   if (product.skipReason && product.skipReason.trim().length > 0) {
     return 'skipped';
   }
@@ -25,10 +33,13 @@ export function getPhotoCount(product) {
 
 /**
  * Calculate overall progress
+ * Only counts required products toward completion
  */
 export function calculateProgress(products) {
-  const total = products.length;
-  const completed = products.filter(p => {
+  // Only count required products toward progress
+  const requiredProducts = products.filter(p => p.required !== false);
+  const total = requiredProducts.length;
+  const completed = requiredProducts.filter(p => {
     const status = determineProductStatus(p);
     return status === 'ready' || status === 'skipped';
   }).length;
@@ -37,14 +48,17 @@ export function calculateProgress(products) {
     total,
     completed,
     percent: total > 0 ? Math.round((completed / total) * 100) : 0,
+    optionalCount: products.length - requiredProducts.length,
   };
 }
 
 /**
  * Validate if all required products have photos or skip reasons
+ * Optional products (required: false) are not validated
  */
 export function validateAllProducts(products) {
-  const requiredProducts = products.filter(p => p.required);
+  // Only validate required products
+  const requiredProducts = products.filter(p => p.required !== false);
   const incomplete = requiredProducts.filter(p => {
     const status = determineProductStatus(p);
     return status === 'pending';
@@ -54,6 +68,7 @@ export function validateAllProducts(products) {
     isComplete: incomplete.length === 0,
     incompleteCount: incomplete.length,
     incompleteProducts: incomplete,
+    optionalCount: products.filter(p => p.required === false).length,
   };
 }
 

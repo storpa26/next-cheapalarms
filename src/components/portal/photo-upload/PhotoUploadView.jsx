@@ -42,6 +42,10 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
   });
 
   // Build product list from estimate items
+  // Uses photoRequired flag to determine if customer needs to upload photos
+  // itemsMeta from portal status contains photoRequired for custom items added by admin
+  const itemsMeta = view?.itemsMeta || {};
+  
   const products = useMemo(() => {
     if (!estimateData?.ok || !estimateData.items) return [];
 
@@ -49,18 +53,30 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
     const photosByProduct = groupPhotosByProduct(photosData?.stored?.uploads || []);
 
     // Group estimate items by name (handle quantities)
+    // Track photoRequired - if ANY item with this name requires photos, require photos
     const grouped = {};
     estimateData.items.forEach(item => {
       const name = item.name || 'Unknown Item';
+      // Check itemsMeta by NAME (not ID) because GHL assigns different IDs than frontend
+      // This fixes the photoRequired flag not being applied correctly
+      const metaForItem = itemsMeta[name];
+      const itemRequiresPhoto = metaForItem 
+        ? metaForItem.photoRequired === true 
+        : (item.photoRequired !== false && !item.isCustom);
+      
       if (!grouped[name]) {
         grouped[name] = {
           name,
           quantity: 0,
-          required: true, // Assume all are required
+          required: itemRequiresPhoto, // Use item's photoRequired flag
           photos: [],
           note: '',
           skipReason: '',
+          isCustom: item.isCustom || false,
         };
+      } else {
+        // If any item with this name requires photos, mark as required
+        grouped[name].required = grouped[name].required || itemRequiresPhoto;
       }
       grouped[name].quantity += item.qty || item.quantity || 1;
     });
@@ -78,7 +94,7 @@ export function PhotoUploadView({ estimateId, locationId, onComplete, view }) {
     });
 
     return Object.values(grouped);
-  }, [estimateData, photosData]);
+  }, [estimateData, photosData, itemsMeta]);
 
   // Calculate progress
   const progress = useMemo(() => calculateProgress(products), [products]);

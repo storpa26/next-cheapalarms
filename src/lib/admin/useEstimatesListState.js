@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import { useQueryClient } from "@tanstack/react-query";
-import * as XLSX from "xlsx";
 import {
   useAdminEstimates,
   useAdminEstimatesTrash,
@@ -136,9 +135,11 @@ export function useEstimatesListState() {
     }
   }, [selectedIds, bulkDeleteMutation, locationId, bulkDeleteScope]);
 
-  const handleExportCSV = useCallback(() => {
+  const handleExportCSV = useCallback(async () => {
     const items = data?.items || [];
     if (items.length === 0) return;
+    const mod = await import("xlsx");
+    const XLSX = mod.default ?? mod;
     const worksheetData = items.map((est) => ({
       "Estimate Number": est.estimateNumber || est.id || "",
       Title: est.title || "ESTIMATE",

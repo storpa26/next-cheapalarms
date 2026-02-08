@@ -1,6 +1,16 @@
 import { useState, useMemo, useEffect } from "react";
+import Image from "next/image";
 import { Button } from "../ui/button";
 import { useEstimatePhotos } from "../../lib/react-query/hooks/use-estimate-photos";
+
+/**
+ * Fuzzy match helper: returns true if names match exactly or partially (case-insensitive)
+ */
+function fuzzyMatch(name1, name2) {
+  const n1 = (name1 || "").toLowerCase().trim();
+  const n2 = (name2 || "").toLowerCase().trim();
+  return n1 === n2 || n1.includes(n2) || n2.includes(n1);
+}
 
 /**
  * PhotoGallery component for displaying customer photos in admin sidebar
@@ -52,7 +62,7 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
     return [];
   }, [photosData]);
 
-  // Group photos by item name
+  // Group photos by item name (exact grouping from photo data)
   const photosByItem = useMemo(() => {
     const grouped = {};
     allPhotos.forEach((photo) => {
@@ -65,64 +75,70 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
     return grouped;
   }, [allPhotos]);
 
-  // Get photos for selected item (with fuzzy matching)
-  const selectedItemPhotos = useMemo(() => {
-    if (!selectedItem) return [];
-    const itemName = selectedItem.name || selectedItem.itemName || "";
+  // PERFORMANCE: Precompute fuzzy photo map for all items (single O(n*m) pass)
+  // Maps each item name to its matched photos, avoiding repeated fuzzy matching in render
+  const fuzzyPhotoMap = useMemo(() => {
+    const map = {};
+    const photoKeys = Object.keys(photosByItem);
     
-    if (!itemName) return [];
-    
-    // Exact match first
-    if (photosByItem[itemName]) {
-      return photosByItem[itemName];
-    }
-    
-    // Try fuzzy matching (case-insensitive, partial match)
-    const normalizedItemName = itemName.toLowerCase().trim();
-    for (const [photoItemName, photos] of Object.entries(photosByItem)) {
-      const normalizedPhotoItemName = photoItemName.toLowerCase().trim();
-      if (
-        normalizedPhotoItemName === normalizedItemName ||
-        normalizedPhotoItemName.includes(normalizedItemName) ||
-        normalizedItemName.includes(normalizedPhotoItemName)
-      ) {
-        return photos;
-      }
-    }
-    
-    return [];
-  }, [selectedItem, photosByItem]);
-
-  // Get photo counts for each item (with fuzzy matching)
-  const itemPhotoCounts = useMemo(() => {
-    const counts = {};
     items.forEach((item) => {
       const itemName = item.name || "Unknown";
       
       // Exact match first
       if (photosByItem[itemName]) {
-        counts[itemName] = photosByItem[itemName].length;
+        map[itemName] = photosByItem[itemName];
         return;
       }
       
-      // Try fuzzy matching
-      const normalizedItemName = itemName.toLowerCase().trim();
-      for (const [photoItemName, photos] of Object.entries(photosByItem)) {
-        const normalizedPhotoItemName = photoItemName.toLowerCase().trim();
-        if (
-          normalizedPhotoItemName === normalizedItemName ||
-          normalizedPhotoItemName.includes(normalizedItemName) ||
-          normalizedItemName.includes(normalizedPhotoItemName)
-        ) {
-          counts[itemName] = photos.length;
+      // Fuzzy match
+      for (const photoKey of photoKeys) {
+        if (fuzzyMatch(itemName, photoKey)) {
+          map[itemName] = photosByItem[photoKey];
           return;
         }
       }
       
-      counts[itemName] = 0;
+      map[itemName] = [];
+    });
+    
+    return map;
+  }, [items, photosByItem]);
+
+  // Get photos for selected item (uses precomputed map)
+  const selectedItemPhotos = useMemo(() => {
+    if (!selectedItem) return [];
+    const itemName = selectedItem.name || selectedItem.itemName || "";
+    if (!itemName) return [];
+    
+    // Use precomputed map if available
+    if (fuzzyPhotoMap[itemName]) {
+      return fuzzyPhotoMap[itemName];
+    }
+    
+    // Fallback for items not in the items array (e.g., selected from elsewhere)
+    if (photosByItem[itemName]) {
+      return photosByItem[itemName];
+    }
+    
+    // Fuzzy fallback
+    for (const [photoKey, photos] of Object.entries(photosByItem)) {
+      if (fuzzyMatch(itemName, photoKey)) {
+        return photos;
+      }
+    }
+    
+    return [];
+  }, [selectedItem, fuzzyPhotoMap, photosByItem]);
+
+  // Get photo counts for each item (uses precomputed map)
+  const itemPhotoCounts = useMemo(() => {
+    const counts = {};
+    items.forEach((item) => {
+      const itemName = item.name || "Unknown";
+      counts[itemName] = fuzzyPhotoMap[itemName]?.length ?? 0;
     });
     return counts;
-  }, [items, photosByItem]);
+  }, [items, fuzzyPhotoMap]);
 
   const toggleItem = (itemName) => {
     setExpandedItems((prev) => {
@@ -137,32 +153,13 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
   };
 
   // IMPORTANT: Calculate itemsWithPhotos BEFORE any returns to avoid hooks count mismatch
+  // Uses precomputed fuzzyPhotoMap for O(n) instead of O(n*m)
   const itemsWithPhotos = useMemo(() => {
     return items.filter((item) => {
       const itemName = item.name || "Unknown";
-      
-      // Check exact match
-      if (photosByItem[itemName]?.length > 0) {
-        return true;
-      }
-      
-      // Check fuzzy match
-      const normalizedItemName = itemName.toLowerCase().trim();
-      for (const [photoItemName, photos] of Object.entries(photosByItem)) {
-        const normalizedPhotoItemName = photoItemName.toLowerCase().trim();
-        if (
-          (normalizedPhotoItemName === normalizedItemName ||
-            normalizedPhotoItemName.includes(normalizedItemName) ||
-            normalizedItemName.includes(normalizedPhotoItemName)) &&
-          photos.length > 0
-        ) {
-          return true;
-        }
-      }
-      
-      return false;
+      return (fuzzyPhotoMap[itemName]?.length ?? 0) > 0;
     });
-  }, [items, photosByItem]);
+  }, [items, fuzzyPhotoMap]);
 
   // Handle case when estimateId is not available
   if (!estimateId) {
@@ -226,13 +223,14 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
                   variant="ghost"
                   className="group relative aspect-square overflow-hidden rounded-lg border border-border/60 bg-muted p-0 h-auto hover:border-border hover:shadow-md"
                 >
-                  <img
+                  <Image
                     src={photo.url}
                     alt={photo.label || `Photo ${idx + 1}`}
-                    className="h-full w-full object-cover transition group-hover:scale-105"
-                    onError={(e) => {
-                      e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23e5e7eb' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%239ca3af'%3EBroken%3C/text%3E%3C/svg%3E";
-                    }}
+                    fill
+                    sizes="(max-width: 768px) 50vw, 150px"
+                    className="object-cover transition group-hover:scale-105"
+                    loading="lazy"
+                    unoptimized
                   />
                   <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10"></div>
                 </Button>
@@ -247,12 +245,16 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
             className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4"
             onClick={() => setLightboxPhoto(null)}
           >
-            <div className="relative max-h-full max-w-full">
-              <img
+            <div className="relative" onClick={(e) => e.stopPropagation()}>
+              <Image
                 src={lightboxPhoto.url}
                 alt={lightboxPhoto.label || "Photo"}
-                className="max-h-[90vh] max-w-full rounded-lg object-contain"
-                onClick={(e) => e.stopPropagation()}
+                width={1200}
+                height={900}
+                className="rounded-lg object-contain"
+                style={{ maxHeight: "90vh", maxWidth: "90vw", width: "auto", height: "auto" }}
+                priority
+                unoptimized
               />
               <Button
                 onClick={() => setLightboxPhoto(null)}
@@ -310,24 +312,8 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
         <div className="space-y-2">
           {itemsWithPhotos.map((item) => {
             const itemName = item.name || "Unknown";
-            
-            // Find matching photos (exact or fuzzy)
-            let itemPhotos = photosByItem[itemName] || [];
-            if (itemPhotos.length === 0) {
-              const normalizedItemName = itemName.toLowerCase().trim();
-              for (const [photoItemName, photos] of Object.entries(photosByItem)) {
-                const normalizedPhotoItemName = photoItemName.toLowerCase().trim();
-                if (
-                  normalizedPhotoItemName === normalizedItemName ||
-                  normalizedPhotoItemName.includes(normalizedItemName) ||
-                  normalizedItemName.includes(normalizedPhotoItemName)
-                ) {
-                  itemPhotos = photos;
-                  break;
-                }
-              }
-            }
-            
+            // Use precomputed fuzzy map (no inline fuzzy matching)
+            const itemPhotos = fuzzyPhotoMap[itemName] || [];
             const isExpanded = expandedItems.has(itemName);
             const photoCount = itemPhotos.length;
 
@@ -363,13 +349,14 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
                         variant="ghost"
                         className="group relative aspect-square overflow-hidden rounded-lg border border-border/60 bg-muted p-0 h-auto hover:border-border hover:shadow-md"
                       >
-                        <img
+                        <Image
                           src={photo.url}
                           alt={photo.label || `Photo ${idx + 1}`}
-                          className="h-full w-full object-cover transition group-hover:scale-105"
-                          onError={(e) => {
-                            e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100'%3E%3Crect fill='%23e5e7eb' width='100' height='100'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' font-family='monospace' font-size='12' fill='%239ca3af'%3EBroken%3C/text%3E%3C/svg%3E";
-                          }}
+                          fill
+                          sizes="(max-width: 768px) 50vw, 150px"
+                          className="object-cover transition group-hover:scale-105"
+                          loading="lazy"
+                          unoptimized
                         />
                         <div className="absolute inset-0 bg-black/0 transition group-hover:bg-black/10"></div>
                       </Button>
@@ -388,12 +375,16 @@ export function PhotoGallery({ estimateId, items = [], selectedItem = null, port
           className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/80 p-4"
           onClick={() => setLightboxPhoto(null)}
         >
-          <div className="relative max-h-full max-w-full">
-            <img
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <Image
               src={lightboxPhoto.url}
               alt={lightboxPhoto.label || "Photo"}
-              className="max-h-[90vh] max-w-full rounded-lg object-contain"
-              onClick={(e) => e.stopPropagation()}
+              width={1200}
+              height={900}
+              className="rounded-lg object-contain"
+              style={{ maxHeight: "90vh", maxWidth: "90vw", width: "auto", height: "auto" }}
+              priority
+              unoptimized
             />
             <Button
               onClick={() => setLightboxPhoto(null)}

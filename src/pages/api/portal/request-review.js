@@ -1,5 +1,4 @@
-import { getWpBase } from "../../../lib/api/wp-proxy";
-import { createWpHeaders } from "../../../lib/api/wp-proxy";
+import { getWpBase, createWpHeaders, parseWpResponse } from "../../../lib/api/wp-proxy";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -25,23 +24,9 @@ export default async function handler(req, res) {
       credentials: "include",
       body: JSON.stringify(payload),
     });
-    
-    let body;
-    try {
-      const text = await resp.text();
-      if (!text) {
-        return res.status(500).json({ ok: false, err: "Empty response from WordPress API" });
-      }
-      body = JSON.parse(text);
-    } catch (parseError) {
-      return res.status(500).json({ 
-        ok: false, 
-        err: "Failed to parse response from WordPress API",
-        details: parseError instanceof Error ? parseError.message : "Unknown parsing error"
-      });
-    }
 
-    return res.status(resp.status).json(body);
+    const { body, status } = await parseWpResponse(resp);
+    return res.status(status).json(body);
   } catch (e) {
     return res.status(500).json({ ok: false, err: e instanceof Error ? e.message : "Failed" });
   }

@@ -78,11 +78,11 @@ export default function SetPasswordPage() {
         <Head>
           <title>Set Your Password - CheapAlarms</title>
         </Head>
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-          <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+        <div className="flex min-h-screen items-center justify-center bg-muted p-4">
+          <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-6 border border-border">
             <div className="text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-              <p className="mt-4 text-gray-600">Loading...</p>
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-foreground" />
+              <p className="mt-4 text-muted-foreground">Loading...</p>
             </div>
           </div>
         </div>
@@ -100,16 +100,14 @@ export default function SetPasswordPage() {
         <Head>
           <title>Set Your Password - CheapAlarms</title>
         </Head>
-        <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-          <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 border border-gray-200">
-            <h1 className="text-2xl font-bold text-gray-900 mb-4">Invalid Link</h1>
-            <p className="text-gray-600 mb-6">This password reset link is invalid or has expired.</p>
-            <button 
-              onClick={() => router.push("/portal")} 
-              className="w-full text-white font-semibold py-3 px-4 rounded-lg shadow-lg transition-all"
-              style={{ backgroundColor: '#c95375' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#b34563'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#c95375'}
+        <div className="flex min-h-screen items-center justify-center bg-muted p-4">
+          <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-6 border border-border">
+            <h1 className="text-2xl font-bold text-foreground mb-4">Invalid Link</h1>
+            <p className="text-muted-foreground mb-6">This password reset link is invalid or has expired.</p>
+            <button
+              type="button"
+              onClick={() => router.push("/portal")}
+              className="w-full bg-primary text-primary-foreground font-semibold py-3 px-4 rounded-lg shadow-lg transition-all hover:opacity-90"
             >
               Go to Portal
             </button>
@@ -124,22 +122,22 @@ export default function SetPasswordPage() {
       <Head>
         <title>Set Your Password - CheapAlarms</title>
       </Head>
-      <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
-        <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-6 border border-gray-200">
+      <div className="flex min-h-screen items-center justify-center bg-muted p-4">
+        <div className="w-full max-w-md bg-card rounded-lg shadow-lg p-6 border border-border">
           <div className="text-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-900 mb-2">Set Your Password</h1>
-            <p className="text-gray-600">Create a secure password for your CheapAlarms portal</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">Set Your Password</h1>
+            <p className="text-muted-foreground">Create a secure password for your CheapAlarms portal</p>
           </div>
-          
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-800">
+              <div className="rounded-lg bg-error-bg border border-error/30 p-3 text-sm text-error">
                 {error}
               </div>
             )}
-            
+
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-semibold text-gray-900">
+              <label htmlFor="password" className="text-sm font-semibold text-foreground">
                 New Password
               </label>
               <input
@@ -147,16 +145,16 @@ export default function SetPasswordPage() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition-all"
+                className="w-full rounded-lg border-2 border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring transition-all"
                 placeholder="At least 8 characters"
                 disabled={loading}
                 required
                 minLength={8}
               />
             </div>
-            
+
             <div className="space-y-2">
-              <label htmlFor="confirmPassword" className="text-sm font-semibold text-gray-900">
+              <label htmlFor="confirmPassword" className="text-sm font-semibold text-foreground">
                 Confirm Password
               </label>
               <input
@@ -164,24 +162,17 @@ export default function SetPasswordPage() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-lg border-2 border-gray-200 bg-white px-4 py-3 text-gray-900 placeholder:text-gray-400 focus:outline-none focus:border-gray-400 transition-all"
+                className="w-full rounded-lg border-2 border-input bg-background px-4 py-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-ring transition-all"
                 placeholder="Confirm your password"
                 disabled={loading}
                 required
                 minLength={8}
               />
             </div>
-            
-            <button 
-              type="submit" 
-              className="w-full text-white font-semibold py-3 px-4 rounded-lg shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed" 
-              style={{ backgroundColor: '#c95375' }}
-              onMouseEnter={(e) => {
-                if (!loading) e.target.style.backgroundColor = '#b34563';
-              }}
-              onMouseLeave={(e) => {
-                if (!loading) e.target.style.backgroundColor = '#c95375';
-              }}
+
+            <button
+              type="submit"
+              className="w-full bg-primary text-primary-foreground font-semibold py-3 px-4 rounded-lg shadow-lg transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               disabled={loading}
             >
               {loading ? "Setting Password..." : "Set Password & Continue"}

@@ -72,6 +72,8 @@ export function normaliseStatus(status) {
     booking: status.booking ?? null,
     payment: status.payment ?? null,
     revision: status.revision ?? null, // Include revision data for RevisionBanner
+    revisionHistory: status.revisionHistory ?? [], // Full revision history for edit timeline
+    itemsMeta: status.itemsMeta ?? {}, // Custom item metadata (photoRequired, isCustom)
     minimumPaymentInfo: status.minimumPaymentInfo ?? null, // Include minimum payment calculation
     // Guest mode info
     isGuestMode: status.isGuestMode ?? false,

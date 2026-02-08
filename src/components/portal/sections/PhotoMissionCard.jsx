@@ -46,25 +46,41 @@ export function PhotoMissionCard({
   });
 
   // Build product list from estimate items
+  // Uses photoRequired flag to determine if customer needs to upload photos
+  // itemsMeta from portal status contains photoRequired for custom items added by admin
+  const itemsMeta = view?.itemsMeta || {};
+  
   const products = useMemo(() => {
     if (!estimateData?.ok || !estimateData.items) return [];
 
     const photosByProduct = groupPhotosByProduct(photosData?.stored?.uploads || []);
 
     // Group estimate items by name
+    // Track photoRequired - if ANY item with this name requires photos, require photos
     const grouped = {};
     estimateData.items.forEach(item => {
       const name = item.name || 'Unknown Item';
+      // Check itemsMeta by NAME (not ID) because GHL assigns different IDs than frontend
+      // This fixes the photoRequired flag not being applied correctly
+      const metaForItem = itemsMeta[name];
+      const itemRequiresPhoto = metaForItem 
+        ? metaForItem.photoRequired === true 
+        : (item.photoRequired !== false && !item.isCustom);
+      
       if (!grouped[name]) {
         grouped[name] = {
           name,
           quantity: 0,
-          required: true,
+          required: itemRequiresPhoto, // Use item's photoRequired flag
           photos: [],
           note: '',
           skipReason: '',
           status: 'pending',
+          isCustom: item.isCustom || false,
         };
+      } else {
+        // If any item with this name requires photos, mark as required
+        grouped[name].required = grouped[name].required || itemRequiresPhoto;
       }
       grouped[name].quantity += item.qty || item.quantity || 1;
     });
@@ -76,10 +92,14 @@ export function PhotoMissionCard({
         grouped[name].photos = allPhotos;
         grouped[name].status = allPhotos.length > 0 ? 'ready' : 'pending';
       }
+      // For optional items (required: false), auto-set status to ready if no photos needed
+      if (!grouped[name].required && grouped[name].status === 'pending') {
+        grouped[name].status = 'optional';
+      }
     });
 
     return Object.values(grouped);
-  }, [estimateData, photosData]);
+  }, [estimateData, photosData, itemsMeta]);
 
   // Calculate progress
   const progress = useMemo(() => calculateProgress(products), [products]);

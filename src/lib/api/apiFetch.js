@@ -60,23 +60,42 @@ export async function apiFetch(path, options = {}) {
       ...fetchOptions,
     });
 
-    // Parse JSON response
+    // 204 No Content or empty body: do not call response.json()
+    if (response.status === 204) {
+      return null;
+    }
+
+    const raw = await response.text().catch(() => '');
+    const contentType = response.headers.get('Content-Type') ?? '';
+    const isJson =
+      contentType.includes('application/json') ||
+      (raw.length > 0 && (raw.trim().startsWith('{') || raw.trim().startsWith('[')));
+
     let json;
-    try {
-      json = await response.json();
-    } catch (parseError) {
-      // If response is not JSON, throw with status
-      const text = await response.text().catch(() => 'Failed to read response');
-      const error = new Error(`Invalid JSON response: ${text.substring(0, 200)}`);
+    if (!raw.trim()) {
+      json = null;
+    } else if (isJson) {
+      try {
+        json = JSON.parse(raw);
+      } catch (parseError) {
+        const error = new Error(`Invalid JSON response: ${raw.substring(0, 200)}`);
+        error.status = response.status;
+        throw error;
+      }
+    } else {
+      const error = new Error(`Non-JSON response: ${raw.substring(0, 200)}`);
       error.status = response.status;
       throw error;
     }
 
     // Check if response indicates error
     if (!response.ok) {
-      const error = new Error(json.err || json.error || json.message || `HTTP ${response.status}`);
+      const payload = json ?? {};
+      const error = new Error(
+        payload.err ?? payload.error ?? payload.message ?? `HTTP ${response.status}`,
+      );
       error.status = response.status;
-      error.response = json;
+      error.response = payload;
       throw error;
     }
 

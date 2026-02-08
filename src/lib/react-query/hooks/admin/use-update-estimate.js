@@ -74,15 +74,14 @@ export function useUpdateEstimate() {
       }));
 
       // Prepare discount (use provided or existing)
-      const discountData = discount !== undefined 
-        ? discount 
-        : (current.discount || { type: 'percentage', value: 0 });
+      // Use nullish coalescing to handle both null and undefined
+      const discountData = discount ?? current.discount ?? { type: 'percentage', value: 0 };
       
       // Clean discount object - GHL only accepts 'type' and 'value' properties
       // Remove any extra properties like 'name' or 'isDiscount' that come from DiscountModal
       const cleanDiscount = {
-        type: discountData.type || 'percentage',
-        value: parseFloat(discountData.value) || 0
+        type: discountData?.type || 'percentage',
+        value: parseFloat(discountData?.value) || 0
       };
 
       const payload = {

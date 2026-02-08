@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Inter } from 'next/font/google';
+import { Inter, Space_Grotesk } from 'next/font/google';
 import '../styles/globals.css';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from '../lib/react-query/query-client';
@@ -11,6 +11,13 @@ const inter = Inter({
   variable: '--font-inter',
   display: 'swap',
   weight: ['300', '400', '500', '600', '700'],
+});
+
+const spaceGrotesk = Space_Grotesk({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
 });
 
 // Initialize Sentry on client-side
@@ -102,10 +109,11 @@ export default function App({ Component, pageProps }) {
   // This prevents creating a new client on every render
   const [client] = useState(() => queryClient);
 
-  // Apply font variable to html element on mount (client-side only to avoid hydration issues)
+  // Apply font variables to html element on mount (client-side only to avoid hydration issues)
   useEffect(() => {
     if (typeof document !== 'undefined') {
       document.documentElement.classList.add(inter.variable);
+      document.documentElement.classList.add(spaceGrotesk.variable);
     }
   }, []);
 

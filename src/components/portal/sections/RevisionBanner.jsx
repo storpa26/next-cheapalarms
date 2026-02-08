@@ -1,24 +1,49 @@
 import { useState } from 'react';
-import { Sparkles, TrendingDown, TrendingUp, Info } from 'lucide-react';
+import { Sparkles, TrendingDown, TrendingUp, Info, History } from 'lucide-react';
 import { Button } from '../../ui/button';
 import { DEFAULT_CURRENCY } from '../../../lib/admin/constants';
 
 /**
  * Banner shown in customer portal when estimate has been revised
  * Highlights savings or changes with compelling visuals
+ * Now supports revisionHistory array for showing all updates
  */
-export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalStatus }) {
+export function RevisionBanner({ 
+  revision, 
+  revisionHistory = [],
+  currency = DEFAULT_CURRENCY, 
+  portalStatus,
+  onViewAllHistory,
+}) {
   const [showDetails, setShowDetails] = useState(false);
 
-  if (!revision || !revision.revisedAt) return null;
+  // Use latest revision from history if available, otherwise fall back to single revision
+  const latestRevision = revisionHistory?.length > 0 
+    ? [...revisionHistory].sort((a, b) => new Date(b.revisedAt || 0) - new Date(a.revisedAt || 0))[0]
+    : revision;
 
-  const netChange = revision.netChange || 0;
+  if (!latestRevision || !latestRevision.revisedAt) return null;
+
+  // Alias for existing code
+  const displayRevision = latestRevision;
+  const historyCount = revisionHistory?.length || (revision ? 1 : 0);
+
+  const netChange = displayRevision.netChange || 0;
   const isSavings = netChange < 0;
   const isIncrease = netChange > 0;
-  const hasDiscount = revision.discount && revision.discount.value !== 0;
+  const hasDiscount = displayRevision.discount && displayRevision.discount.value !== 0;
+  
+  // Extract line changes (new format) or fall back to legacy format
+  const lineChanges = displayRevision.lineChanges || [];
+  const changedItems = lineChanges.filter(c => c.action === 'qty').length > 0 
+    ? lineChanges.filter(c => c.action === 'qty')
+    : (displayRevision.changedItems || []);
+  const addedItems = lineChanges.filter(c => c.action === 'add').length > 0
+    ? lineChanges.filter(c => c.action === 'add')
+    : (displayRevision.addedItems || []);
 
-  // Don't show if already accepted (too late to influence decision)
-  if (portalStatus === 'accepted') return null;
+  // Show banner for all statuses - customer should always see revision history
+  const isAccepted = portalStatus === 'accepted';
 
   return (
     <>
@@ -41,10 +66,14 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           )}
           <div>
             <h2 className={`text-2xl font-bold ${isSavings ? 'text-success' : 'text-info'}`}>
-              {isSavings ? '🎉 Great News - Your Estimate Has Been Updated!' : '📋 Your Estimate Has Been Updated'}
+              {isAccepted 
+                ? (isSavings ? '🎉 Estimate Update History' : '📋 Estimate Update History')
+                : (isSavings ? '🎉 Great News - Your Estimate Has Been Updated!' : '📋 Your Estimate Has Been Updated')
+              }
             </h2>
             <p className={`text-sm ${isSavings ? 'text-success' : 'text-info'}`}>
-              Updated {new Date(revision.revisedAt).toLocaleDateString()} after reviewing your photos
+              Updated {new Date(displayRevision.revisedAt).toLocaleDateString()} after reviewing your photos
+              {historyCount > 1 && ` (${historyCount} total updates)`}
             </p>
           </div>
         </div>
@@ -55,7 +84,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           <div className="bg-surface/70 rounded-xl p-4 border border-border">
             <p className="text-xs uppercase tracking-wide text-muted-foreground mb-2">Original Estimate</p>
             <p className="text-2xl font-semibold text-muted-foreground line-through">
-              {currency} {(revision.oldTotal || 0).toFixed(2)}
+              {currency} {(displayRevision.oldTotal || 0).toFixed(2)}
             </p>
           </div>
 
@@ -67,7 +96,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           }`}>
             <p className="text-xs uppercase tracking-wide text-white/80 mb-2">Your New Price</p>
             <p className="text-3xl font-bold text-white">
-              {currency} {(revision.newTotal || 0).toFixed(2)}
+              {currency} {(displayRevision.newTotal || 0).toFixed(2)}
             </p>
           </div>
         </div>
@@ -104,7 +133,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
         )}
 
         {/* Admin Note */}
-        {revision.adminNote && (
+        {displayRevision.adminNote && (
           <div className="mt-4 bg-surface/80 rounded-xl p-4 border border-border">
             <div className="flex items-start gap-3">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
@@ -116,7 +145,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
               </div>
               <div>
                 <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">From Your Installer</p>
-                <p className="text-foreground leading-relaxed">{revision.adminNote}</p>
+                <p className="text-foreground leading-relaxed">{displayRevision.adminNote}</p>
               </div>
             </div>
           </div>
@@ -127,29 +156,31 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           <Button
             onClick={() => setShowDetails(!showDetails)}
             variant="outline"
-            className="flex-1 rounded-full"
+            className={`${isAccepted ? 'w-full' : 'flex-1'} rounded-full`}
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
             {showDetails ? 'Hide Details' : 'View Full Changes'}
           </Button>
-          <Button
-            onClick={() => {
-              // Scroll to approval card
-              const approvalCard = document.getElementById('approval-card');
-              if (approvalCard) {
-                approvalCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
-              }
-            }}
-            variant="gradient"
-            className="flex-1 rounded-xl shadow-lg hover:opacity-90"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-            </svg>
-            {isSavings ? 'Accept & Lock In Savings' : 'Review & Accept'}
-          </Button>
+          {!isAccepted && (
+            <Button
+              onClick={() => {
+                // Scroll to approval card
+                const approvalCard = document.getElementById('approval-card');
+                if (approvalCard) {
+                  approvalCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }}
+              variant="gradient"
+              className="flex-1 rounded-xl shadow-lg hover:opacity-90"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+              {isSavings ? 'Accept & Lock In Savings' : 'Review & Accept'}
+            </Button>
+          )}
         </div>
       </div>
 
@@ -159,19 +190,19 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           <h3 className="text-xl font-bold text-foreground mb-6">What Changed & Why</h3>
 
           {/* Quantity Changes */}
-          {revision.changedItems && revision.changedItems.length > 0 && (
+          {changedItems && changedItems.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <TrendingUp className="w-5 h-5 text-info" />
                 <h4 className="font-semibold text-foreground">Quantities Adjusted</h4>
               </div>
               <div className="space-y-3">
-                {revision.changedItems.map((item, idx) => (
+                {changedItems.map((item, idx) => (
                   <div key={idx} className="bg-muted rounded-xl p-4">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-foreground">{item.name}</span>
                       <span className="text-info font-semibold">
-                        {item.oldQty} → {item.newQty}
+                        {item.oldQty || item.originalQty} → {item.newQty}
                       </span>
                     </div>
                     {item.reason && (
@@ -189,7 +220,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
           )}
 
           {/* Added Items */}
-          {revision.addedItems && revision.addedItems.length > 0 && (
+          {addedItems && addedItems.length > 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -198,7 +229,7 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
                 <h4 className="font-semibold text-foreground">Items Added</h4>
               </div>
               <div className="space-y-3">
-                {revision.addedItems.map((item, idx) => (
+                {addedItems.map((item, idx) => (
                   <div key={idx} className="bg-success-bg rounded-xl p-4 border border-success/30">
                     <div className="flex items-center justify-between mb-2">
                       <span className="font-medium text-foreground">{item.name}</span>
@@ -215,8 +246,22 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
             </div>
           )}
 
+          {/* View All History Link */}
+          {historyCount > 1 && onViewAllHistory && (
+            <div className="mb-6">
+              <Button
+                onClick={onViewAllHistory}
+                variant="outline"
+                className="w-full flex items-center gap-2"
+              >
+                <History className="w-4 h-4" />
+                View all {historyCount} updates
+              </Button>
+            </div>
+          )}
+
           {/* Discount */}
-          {hasDiscount && revision.discount.value !== 0 && (
+          {hasDiscount && displayRevision.discount.value !== 0 && (
             <div className="mb-6">
               <div className="flex items-center gap-2 mb-3">
                 <svg className="w-5 h-5 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -228,14 +273,14 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
               </div>
               <div className="bg-gradient-to-r from-success to-success/80 rounded-xl p-6 text-success-foreground">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-lg font-semibold">{revision.discount.name || 'Special Discount'}</span>
+                  <span className="text-lg font-semibold">{displayRevision.discount.name || 'Special Discount'}</span>
                   <span className="text-2xl font-black">
-                    {revision.discount.type === 'percentage' ? `${Math.abs(revision.discount.value)}%` : `-${currency} ${Math.abs(revision.discount.value).toFixed(2)}`}
+                    {displayRevision.discount.type === 'percentage' ? `${Math.abs(displayRevision.discount.value)}%` : `-${currency} ${Math.abs(displayRevision.discount.value).toFixed(2)}`}
                   </span>
                 </div>
-                {revision.discount.reason && (
+                {displayRevision.discount.reason && (
                   <p className="text-white/90 text-sm">
-                    {revision.discount.reason}
+                    {displayRevision.discount.reason}
                   </p>
                 )}
               </div>
@@ -248,13 +293,13 @@ export function RevisionBanner({ revision, currency = DEFAULT_CURRENCY, portalSt
               <div>
                 <p className="text-white/70 text-sm mb-1">Original Estimate</p>
                 <p className="text-xl font-semibold line-through text-white/60">
-                  {currency} {(revision.oldTotal || 0).toFixed(2)}
+                  {currency} {(displayRevision.oldTotal || 0).toFixed(2)}
                 </p>
               </div>
               <div className="text-right">
                 <p className="text-white/70 text-sm mb-1">Updated Estimate</p>
                 <p className="text-3xl font-black text-white">
-                  {currency} {(revision.newTotal || 0).toFixed(2)}
+                  {currency} {(displayRevision.newTotal || 0).toFixed(2)}
                 </p>
               </div>
             </div>
