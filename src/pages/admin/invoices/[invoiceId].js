@@ -6,7 +6,7 @@ import AdminLayout from "../../../components/admin/layout/AdminLayout";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
 import { InvoiceDetailContent } from "../../../components/admin/InvoiceDetailContent";
 
-export default function InvoiceDetailPage() {
+export default function InvoiceDetailPage({ authContext }) {
   const router = useRouter();
   const { invoiceId } = router.query;
   const [locationId, setLocationId] = useState("");
@@ -16,7 +16,7 @@ export default function InvoiceDetailPage() {
       <Head>
         <title>Invoice #{invoiceId} • Admin</title>
       </Head>
-      <AdminLayout title={`Invoice #${invoiceId}`}>
+      <AdminLayout title={`Invoice #${invoiceId}`} authContext={authContext}>
         <div className="mb-4">
           <Link
             href="/admin/invoices"

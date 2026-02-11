@@ -6,7 +6,7 @@ import AdminLayout from "../../../components/admin/layout/AdminLayout";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
 import { EstimateDetailContent } from "../../../components/admin/EstimateDetailContent";
 
-export default function EstimateDetailPage() {
+export default function EstimateDetailPage({ authContext }) {
   const router = useRouter();
   const { estimateId } = router.query;
   const [locationId, setLocationId] = useState("");
@@ -16,7 +16,7 @@ export default function EstimateDetailPage() {
       <Head>
         <title>Estimate #{estimateId} • Admin</title>
       </Head>
-      <AdminLayout title={`Estimate #${estimateId}`}>
+      <AdminLayout title={`Estimate #${estimateId}`} authContext={authContext}>
         <div className="mb-4">
           <Link
             href="/admin/estimates"

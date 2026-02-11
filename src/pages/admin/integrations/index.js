@@ -9,7 +9,7 @@ import { useXeroStatus, useXeroAuthorize, useXeroDisconnect } from "../../../lib
 import { Spinner } from "../../../components/ui/spinner";
 import { CheckCircle2, XCircle, ExternalLink } from "lucide-react";
 
-export default function AdminIntegrations() {
+export default function AdminIntegrations({ authContext }) {
   const [apiKey, setApiKey] = useState("");
   const [locationId, setLocationId] = useState("");
   const [testing, setTesting] = useState(false);
@@ -100,7 +100,7 @@ export default function AdminIntegrations() {
       <Head>
         <title>Superadmin • Integrations</title>
       </Head>
-      <AdminLayout title="Integrations">
+      <AdminLayout title="Integrations" authContext={authContext}>
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>

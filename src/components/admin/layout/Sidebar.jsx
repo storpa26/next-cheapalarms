@@ -27,7 +27,7 @@ const iconMap = {
   "/admin/logs": ScrollText,
 };
 
-export function Sidebar({ navigatingTo, setNavigatingTo }) {
+export function Sidebar({ navigatingTo, setNavigatingTo, user, onProfileClick, onSettingsClick, onSignOutClick }) {
   const router = useRouter();
   const activeItem = router.pathname;
   const navigationRef = useRef(null);
@@ -91,6 +91,7 @@ export function Sidebar({ navigatingTo, setNavigatingTo }) {
       navigatingTo={effectiveNavigatingTo}
       title="Admin Portal"
       subtitle="Superadmin"
+      user={user}
       showFooter={true}
       showHeader={true}
       enableSearch={false}
@@ -98,6 +99,9 @@ export function Sidebar({ navigatingTo, setNavigatingTo }) {
       enablePinnedItems={false}
       enableNestedNav={false}
       onNavChange={handleNavChange}
+      onProfileClick={onProfileClick}
+      onSettingsClick={onSettingsClick}
+      onSignOutClick={onSignOutClick}
       inContainer={false}
     />
   );

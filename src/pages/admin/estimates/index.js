@@ -25,7 +25,7 @@ import { Checkbox } from "../../../components/ui/checkbox";
 import { useEstimatesListState } from "../../../lib/admin/useEstimatesListState";
 import { DEFAULT_CURRENCY } from "../../../lib/admin/constants";
 
-export default function EstimatesListPage() {
+export default function EstimatesListPage({ authContext }) {
   const {
     search,
     setSearch,
@@ -124,7 +124,7 @@ export default function EstimatesListPage() {
       <Head>
         <title>Estimates • Admin</title>
       </Head>
-      <AdminLayout title="Estimates">
+      <AdminLayout title="Estimates" authContext={authContext}>
         <div className="space-y-6">
           {/* Chart Section - Only show when not in trash */}
           {activeTab !== "trash" && (

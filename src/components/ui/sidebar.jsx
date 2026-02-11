@@ -11,6 +11,7 @@ import {
   Settings,
   Sun,
   Moon,
+  ChevronDown,
 } from "lucide-react"
 import { cn } from "../../lib/utils"
 import { Input } from "./input"
@@ -63,6 +64,9 @@ export function Sidebar({
   onSearch,
   onPinItem,
   onUnpinItem,
+  onProfileClick,
+  onSettingsClick,
+  onSignOutClick,
   className,
   children,
 }) {
@@ -407,6 +411,9 @@ export function Sidebar({
                 enableNotifications={enableNotifications}
                 enableThemeToggle={enableThemeToggle}
                 variant={variant}
+                onProfileClick={onProfileClick}
+                onSettingsClick={onSettingsClick}
+                onSignOutClick={onSignOutClick}
               />
             )}
           </>
@@ -491,8 +498,40 @@ function SidebarSearch() {
   )
 }
 
+// User menu dropdown (shared between split and default variants)
+function UserMenuDropdown({ onProfileClick, onSettingsClick, onSignOutClick, setShowUserMenu }) {
+  return (
+    <div className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border border-border bg-surface shadow-elevated p-1 z-50">
+      <button
+        type="button"
+        onClick={() => { setShowUserMenu(false); onProfileClick?.(); }}
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all hover:bg-state-hover-bg"
+      >
+        <User className="h-4 w-4 text-muted-foreground" />
+        <span className="text-foreground">Profile</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => { setShowUserMenu(false); onSettingsClick?.(); }}
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all hover:bg-state-hover-bg"
+      >
+        <Settings className="h-4 w-4 text-muted-foreground" />
+        <span className="text-foreground">Settings</span>
+      </button>
+      <button
+        type="button"
+        onClick={() => { setShowUserMenu(false); onSignOutClick?.(); }}
+        className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all hover:bg-state-hover-bg text-error"
+      >
+        <LogOut className="h-4 w-4" />
+        <span>Sign Out</span>
+      </button>
+    </div>
+  )
+}
+
 // SidebarFooter Component
-function SidebarFooter({ user, enableNotifications, enableThemeToggle, variant }) {
+function SidebarFooter({ user, enableNotifications, enableThemeToggle, variant, onProfileClick, onSettingsClick, onSignOutClick }) {
   const [theme, setTheme] = React.useState("light")
   const [showUserMenu, setShowUserMenu] = React.useState(false)
   const [notificationCount, setNotificationCount] = React.useState(3)
@@ -565,32 +604,52 @@ function SidebarFooter({ user, enableNotifications, enableThemeToggle, variant }
 
       {/* User Profile */}
       {variant === "split" ? (
-        <div className="rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 p-3 border border-primary/20">
-          <div className="flex items-center gap-3">
-            <div className="relative">
-              {user.avatar ? (
-                <img src={user.avatar} alt={user.name} className="h-8 w-8 rounded-full" />
-              ) : (
-                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-primary-foreground text-xs font-semibold">
-                  {user.name.charAt(0)}
-                </div>
-              )}
-              {user.status && (
-                <div
-                  className={cn(
-                    "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface",
-                    user.status === "online" && "bg-success",
-                    user.status === "away" && "bg-warning",
-                    user.status === "offline" && "bg-muted"
-                  )}
-                />
-              )}
+        <div className="relative" ref={userMenuRef}>
+          <button
+            type="button"
+            onClick={() => setShowUserMenu(!showUserMenu)}
+            className="w-full rounded-lg bg-gradient-to-r from-primary/10 to-secondary/10 p-3 border border-primary/20 text-left transition-all hover:from-primary/15 hover:to-secondary/15"
+          >
+            <div className="flex items-center gap-3">
+              <div className="relative">
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.name} className="h-8 w-8 rounded-full" />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-primary-foreground text-xs font-semibold">
+                    {user.name.charAt(0)}
+                  </div>
+                )}
+                {user.status && (
+                  <div
+                    className={cn(
+                      "absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-surface",
+                      user.status === "online" && "bg-success",
+                      user.status === "away" && "bg-warning",
+                      user.status === "offline" && "bg-muted"
+                    )}
+                  />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-foreground truncate">{user.name}</p>
+                <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+              </div>
+              <ChevronDown
+                className={cn(
+                  "h-4 w-4 text-muted-foreground transition-transform duration-fast ease-standard",
+                  showUserMenu && "rotate-180"
+                )}
+              />
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-semibold text-foreground truncate">{user.name}</p>
-              <p className="text-xs text-muted-foreground truncate">{user.email}</p>
-            </div>
-          </div>
+          </button>
+          {showUserMenu && (
+            <UserMenuDropdown
+              onProfileClick={onProfileClick}
+              onSettingsClick={onSettingsClick}
+              onSignOutClick={onSignOutClick}
+              setShowUserMenu={setShowUserMenu}
+            />
+          )}
         </div>
       ) : (
         <div className="relative" ref={userMenuRef}>
@@ -629,34 +688,13 @@ function SidebarFooter({ user, enableNotifications, enableThemeToggle, variant }
               )}
             />
           </button>
-          {/* User Menu Dropdown */}
           {showUserMenu && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 rounded-lg border border-border bg-surface shadow-elevated p-1 z-50">
-              <button
-                type="button"
-                onClick={() => setShowUserMenu(false)}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all hover:bg-state-hover-bg"
-              >
-                <User className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">Profile</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowUserMenu(false)}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all hover:bg-state-hover-bg"
-              >
-                <Settings className="h-4 w-4 text-muted-foreground" />
-                <span className="text-foreground">Settings</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowUserMenu(false)}
-                className="flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm transition-all hover:bg-state-hover-bg text-error"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
-              </button>
-            </div>
+            <UserMenuDropdown
+              onProfileClick={onProfileClick}
+              onSettingsClick={onSettingsClick}
+              onSignOutClick={onSignOutClick}
+              setShowUserMenu={setShowUserMenu}
+            />
           )}
         </div>
       )}

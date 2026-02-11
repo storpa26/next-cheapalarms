@@ -18,37 +18,17 @@ function getWpJsonBase() {
 }
 
 export async function getAuthContext(req) {
-  // TEMPORARY: Diagnostic logging for customer redirect loop
-  const isDev = process.env.NODE_ENV === 'development' || process.env.VERCEL_ENV === 'preview';
-  
-  if (isDev) {
-    console.log('[getAuthContext] Called - has cookies:', !!req?.headers?.cookie);
-    if (req?.headers?.cookie) {
-      console.log('[getAuthContext] Cookie contains ca_jwt:', req.headers.cookie.includes('ca_jwt='));
-    }
-  }
-
   if (!req?.headers?.cookie) {
-    if (isDev) {
-      console.log('[getAuthContext] No cookies in request');
-    }
     return null;
-  }
-
-  const wpBase = getWpJsonBase();
-  
-  if (isDev) {
-    console.log('[getAuthContext] WordPress base:', wpBase);
   }
 
   // Check if cookie contains the token
   const hasToken = req.headers.cookie.includes('ca_jwt=');
   if (!hasToken) {
-    if (isDev) {
-      console.log('[getAuthContext] No ca_jwt cookie found in request');
-    }
     return null;
   }
+
+  const wpBase = getWpJsonBase();
 
   try {
     // Add timeout to prevent hanging (using AUTH_TIMEOUT constant)
@@ -57,15 +37,10 @@ export async function getAuthContext(req) {
 
     let response;
     try {
-      // FIX: Extract only ca_jwt cookie to ensure clean format
+      // Extract only ca_jwt cookie to ensure clean format
       const cookies = req.headers.cookie.split(';').map(c => c.trim());
       const caJwtCookie = cookies.find(c => c.startsWith('ca_jwt='));
       const cookieHeader = caJwtCookie || req.headers.cookie;
-
-      if (isDev) {
-        console.log('[getAuthContext] Making request to:', `${wpBase}/ca/v1/auth/me`);
-        console.log('[getAuthContext] Cookie header length:', cookieHeader.length);
-      }
 
       response = await fetch(`${wpBase}/ca/v1/auth/me`, {
         method: 'GET',
@@ -87,13 +62,7 @@ export async function getAuthContext(req) {
     }
     clearTimeout(timeoutId);
 
-    if (isDev) {
-      console.log('[getAuthContext] Response status:', response.status);
-    }
-
     if (response.status === 401) {
-      const errorText = await response.text().catch(() => 'Unable to read error');
-      console.error('[getAuthContext] WordPress returned 401:', errorText.substring(0, 500));
       return null;
     }
     if (!response.ok) {
@@ -107,25 +76,19 @@ export async function getAuthContext(req) {
       data = await response.json();
     } catch (jsonError) {
       console.error('[getAuthContext] Failed to parse JSON response:', jsonError.message);
-      const text = await response.text().catch(() => 'Unable to read response');
-      console.error('[getAuthContext] Response text:', text.substring(0, 500));
       return null;
     }
     
     if (!data?.ok) {
-      console.error('[getAuthContext] WordPress response not ok:', JSON.stringify(data, null, 2));
+      console.error('[getAuthContext] WordPress response not ok:', data?.code || 'unknown');
       return null;
-    }
-    
-    if (isDev) {
-      console.log('[getAuthContext] Authentication successful - User ID:', data.id, 'isAdmin:', data.is_admin, 'isCustomer:', data.is_customer);
-      console.log('[getAuthContext] Full response:', JSON.stringify(data, null, 2));
     }
     
     return {
       id: data.id,
       email: data.email,
       displayName: data.displayName,
+      avatar: data.avatar || null,
       roles: data.roles || [],
       capabilities: data.capabilities || [],
       isAdmin: data.is_admin === true,
@@ -136,4 +99,3 @@ export async function getAuthContext(req) {
     return null;
   }
 }
-

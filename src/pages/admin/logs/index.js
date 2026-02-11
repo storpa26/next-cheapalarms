@@ -13,7 +13,7 @@ import { Spinner } from "../../../components/ui/spinner";
 import { RefreshCw, Search } from "lucide-react";
 import { getLevelIcon, getLevelColor, formatTimestamp, formatFileSize, getLogKey } from "../../../lib/admin/utils/log-utils";
 
-export default function AdminLogs() {
+export default function AdminLogs({ authContext }) {
   const [limit, setLimit] = useState(100);
   const [level, setLevel] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -38,7 +38,7 @@ export default function AdminLogs() {
       <Head>
         <title>Superadmin • Logs</title>
       </Head>
-      <AdminLayout title="Logs">
+      <AdminLayout title="Logs" authContext={authContext}>
         <div className="grid gap-6 md:grid-cols-2">
           <Card className="md:col-span-2">
             <CardHeader className="flex items-center justify-between gap-3">

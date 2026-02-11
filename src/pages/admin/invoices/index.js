@@ -16,7 +16,7 @@ import { Checkbox } from "../../../components/ui/checkbox";
 import Link from "next/link";
 import { useInvoicesListState } from "../../../lib/admin/useInvoicesListState";
 
-export default function InvoicesListPage() {
+export default function InvoicesListPage({ authContext }) {
   const {
     invoices,
     total,
@@ -64,7 +64,7 @@ export default function InvoicesListPage() {
       <Head>
         <title>Invoices • Admin</title>
       </Head>
-      <AdminLayout title="Invoices">
+      <AdminLayout title="Invoices" authContext={authContext}>
         <div className="space-y-8">
           {/* Page Header */}
           <div className="flex items-start justify-between">

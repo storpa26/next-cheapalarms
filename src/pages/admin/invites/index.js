@@ -6,7 +6,7 @@ import { Input } from "../../../components/ui/input";
 import { useState } from "react";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
 
-export default function AdminInvites() {
+export default function AdminInvites({ authContext }) {
   const [q, setQ] = useState("");
   const rows = mockInvites().filter((r) => filter(r, q));
   return (
@@ -14,7 +14,7 @@ export default function AdminInvites() {
       <Head>
         <title>Superadmin • Invites</title>
       </Head>
-      <AdminLayout title="Invites">
+      <AdminLayout title="Invites" authContext={authContext}>
         <Card>
           <CardHeader className="flex items-center justify-between gap-3">
             <div>

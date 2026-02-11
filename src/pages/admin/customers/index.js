@@ -27,6 +27,7 @@ export default function AdminCustomers({
   initialGhlContacts,
   error,
   debugInfo,
+  authContext,
 }) {
   const {
     activeTab,
@@ -84,7 +85,7 @@ export default function AdminCustomers({
       <Head>
         <title>Superadmin • Customers</title>
       </Head>
-      <AdminLayout title="Customers">
+      <AdminLayout title="Customers" authContext={authContext}>
         {error && (
           <Card className="mb-4 border border-error/30 bg-error-bg text-error">
             <CardHeader>

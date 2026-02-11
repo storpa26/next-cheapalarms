@@ -9,7 +9,7 @@ import { requireAdmin } from "../../lib/auth/requireAdmin";
 import { Spinner } from "../../components/ui/spinner";
 import { useAdminDashboard } from "../../lib/react-query/hooks/admin";
 
-export default function AdminOverview() {
+export default function AdminOverview({ authContext }) {
   const { data, isLoading, error } = useAdminDashboard();
 
   const stats = useMemo(() => data?.stats ?? [], [data?.stats]);
@@ -21,7 +21,7 @@ export default function AdminOverview() {
       <Head>
         <title>Superadmin • Overview</title>
       </Head>
-      <AdminLayout title="Overview">
+      <AdminLayout title="Overview" authContext={authContext}>
         {error && (
           <div className="mb-4 rounded-md border border-error/30 bg-error-bg p-4 text-sm text-error">
             <p className="font-semibold">Error loading dashboard data</p>

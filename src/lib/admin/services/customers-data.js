@@ -1,29 +1,23 @@
 /**
  * Service for fetching and processing customer data
  * Handles WordPress users and GHL contacts
+ *
+ * SERVER-SIDE ONLY — called from getServerSideProps.
+ * All WordPress calls go through wpFetch (never raw fetch + WP_API_BASE).
  */
 
-import { WP_API_BASE } from "../../wp.server";
-import { buildAuthHeaders } from "../utils/request-utils";
+import { wpFetch } from "../../wp.server";
+import { cookieHeader } from "../utils/request-utils";
 
 /**
  * Fetches WordPress users with portal access
  * @param {Request} req - Next.js request object (for server-side)
  * @returns {Promise<Array>} Array of WP users
  */
-export async function getWordPressUsers(req = null) {
-  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE || "http://localhost:10013/wp-json";
-  const headers = {
-    "Content-Type": "application/json",
-    ...(req ? buildAuthHeaders(req) : {}),
-  };
-
-  const response = await fetch(`${wpBase}/ca/v1/users`, {
-    headers,
-    credentials: "include",
+export async function getWordPressUsers(req) {
+  const data = await wpFetch("/ca/v1/users", {
+    headers: cookieHeader(req),
   });
-
-  const data = await response.json();
 
   if (!data.ok) {
     throw new Error(data.error || "Failed to fetch WordPress users");
@@ -39,29 +33,14 @@ export async function getWordPressUsers(req = null) {
  * @returns {Promise<Array>} Array of GHL contacts
  * @note GHL API doesn't support offset parameter for /contacts/ endpoint
  */
-export async function getGHLContacts(req = null, limit = 50) {
-  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE || "http://localhost:10013/wp-json";
-  const headers = {
-    "Content-Type": "application/json",
-    ...(req ? buildAuthHeaders(req) : {}),
-  };
-
-  // Add dev header for development
-  if (process.env.NODE_ENV === "development") {
-    headers["X-CA-Dev"] = "1";
-  }
-
+export async function getGHLContacts(req, limit = 50) {
   const params = new URLSearchParams();
   if (limit) params.set("limit", limit.toString());
-  // Note: GHL API doesn't support 'offset' parameter for /contacts/ endpoint
   const queryString = params.toString() ? `?${params.toString()}` : "";
 
-  const response = await fetch(`${wpBase}/ca/v1/ghl/contacts/list${queryString}`, {
-    headers,
-    credentials: "include",
+  const data = await wpFetch(`/ca/v1/ghl/contacts/list${queryString}`, {
+    headers: cookieHeader(req),
   });
-
-  const data = await response.json();
 
   if (!data.ok) {
     throw new Error(data.error || "Failed to fetch GHL contacts");

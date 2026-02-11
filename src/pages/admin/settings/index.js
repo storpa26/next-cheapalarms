@@ -6,7 +6,7 @@ import { Input } from "../../../components/ui/input";
 import { useState } from "react";
 import { requireAdmin } from "../../../lib/auth/requireAdmin";
 
-export default function AdminSettings() {
+export default function AdminSettings({ authContext }) {
   const [gstRate, setGstRate] = useState(0.1);
   const [jwtTtl, setJwtTtl] = useState(3600);
   const [cors, setCors] = useState(["http://localhost:3000"]);
@@ -26,7 +26,7 @@ export default function AdminSettings() {
       <Head>
         <title>Superadmin • Settings</title>
       </Head>
-      <AdminLayout title="Settings">
+      <AdminLayout title="Settings" authContext={authContext}>
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>

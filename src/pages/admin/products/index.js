@@ -37,7 +37,7 @@ const initialProduct = {
   components: [],
 };
 
-export default function AdminProducts() {
+export default function AdminProducts({ authContext }) {
   const [items, setItems] = useState([]);
   const [baseItems, setBaseItems] = useState([]);
   const [addonItems, setAddonItems] = useState([]);
@@ -184,7 +184,7 @@ export default function AdminProducts() {
       <Head>
         <title>Admin • Products</title>
       </Head>
-      <AdminLayout title="Products">
+      <AdminLayout title="Products" authContext={authContext}>
         <div className="grid gap-6 md:grid-cols-2">
           <Card>
             <CardHeader>

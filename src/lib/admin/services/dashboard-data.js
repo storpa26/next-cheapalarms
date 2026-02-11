@@ -1,10 +1,13 @@
 /**
  * Dashboard data service for admin overview
  * Handles fetching and processing dashboard statistics
+ *
+ * SERVER-SIDE ONLY — called from getServerSideProps.
+ * All WordPress calls go through wpFetch (never raw fetch + WP_API_BASE).
  */
 
-import { wpFetch, WP_API_BASE } from "../../wp.server";
-import { cookieHeader, buildAuthHeaders } from "../utils/request-utils";
+import { wpFetch } from "../../wp.server";
+import { cookieHeader } from "../utils/request-utils";
 import { formatTimeAgo } from "../../utils/time-utils";
 
 /**
@@ -13,45 +16,24 @@ import { formatTimeAgo } from "../../utils/time-utils";
  * @returns {Promise<{base: number, addons: number, packages: number}>}
  */
 async function fetchProductCounts(req) {
-  const wpBase = process.env.NEXT_PUBLIC_WP_URL || WP_API_BASE || "http://localhost:10013/wp-json";
-  const headers = {
-    "Content-Type": "application/json",
-    ...buildAuthHeaders(req),
+  const headers = cookieHeader(req);
+
+  const safeCount = async (path) => {
+    try {
+      const data = await wpFetch(path, { headers });
+      return Array.isArray(data) ? data.length : Array.isArray(data?.items) ? data.items.length : 0;
+    } catch {
+      return 0;
+    }
   };
 
-  try {
-    const [baseRes, addonsRes, packagesRes] = await Promise.allSettled([
-      fetch(`${wpBase}/ca/v1/products/base`, {
-        headers,
-        credentials: "include",
-      }),
-      fetch(`${wpBase}/ca/v1/products/addons`, {
-        headers,
-        credentials: "include",
-      }),
-      fetch(`${wpBase}/ca/v1/products/packages`, {
-        headers,
-        credentials: "include",
-      }),
-    ]);
+  const [baseCount, addonsCount, packagesCount] = await Promise.all([
+    safeCount("/ca/v1/products/base"),
+    safeCount("/ca/v1/products/addons"),
+    safeCount("/ca/v1/products/packages"),
+  ]);
 
-    const extractCount = async (result) => {
-      if (result.status !== "fulfilled" || !result.value.ok) return 0;
-      const data = await result.value.json();
-      return Array.isArray(data) ? data.length : Array.isArray(data?.items) ? data.items.length : 0;
-    };
-
-    const [baseCount, addonsCount, packagesCount] = await Promise.all([
-      extractCount(baseRes),
-      extractCount(addonsRes),
-      extractCount(packagesRes),
-    ]);
-
-    return { base: baseCount, addons: addonsCount, packages: packagesCount };
-  } catch (error) {
-    // Error fetching products - return empty array
-    return { base: 0, addons: 0, packages: 0 };
-  }
+  return { base: baseCount, addons: addonsCount, packages: packagesCount };
 }
 
 /**

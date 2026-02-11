@@ -1,13 +1,45 @@
 import { Sidebar } from "./Sidebar";
 import { Topbar } from "./Topbar";
 import { useRouter } from "next/router";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { getRouteMetadata } from "../../../lib/admin/route-metadata";
 
-export default function AdminLayout({ title: titleProp, children }) {
+export default function AdminLayout({ title: titleProp, authContext, children }) {
   const router = useRouter();
   // CRITICAL: Lifted state to AdminLayout so both Sidebar and Topbar update immediately
   const [navigatingTo, setNavigatingTo] = useState(null);
+
+  // Derive sidebar user from auth context (falls back to placeholder if not provided)
+  const sidebarUser = useMemo(() => {
+    if (!authContext) return undefined; // let UISidebar use its default
+    return {
+      name: authContext.displayName || authContext.email || "User",
+      email: authContext.email || "",
+      avatar: authContext.avatar || null,
+      status: "online",
+    };
+  }, [authContext]);
+
+  // Sidebar action handlers
+  const handleProfileClick = useCallback(() => {
+    router.push("/admin/profile");
+  }, [router]);
+
+  const handleSettingsClick = useCallback(() => {
+    router.push("/admin/settings");
+  }, [router]);
+
+  const handleSignOut = useCallback(async () => {
+    try {
+      await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+    } catch {
+      // Even if logout API fails, redirect to login
+    }
+    router.push("/login");
+  }, [router]);
 
   // Track router events to clear navigatingTo when navigation completes
   useEffect(() => {
@@ -70,7 +102,14 @@ export default function AdminLayout({ title: titleProp, children }) {
     <main className="light bg-muted text-foreground min-h-screen">
       {/* Force light theme - portals don't support theme switching */}
       <div className="flex min-h-screen">
-        <Sidebar navigatingTo={navigatingTo} setNavigatingTo={setNavigatingTo} />
+        <Sidebar
+          navigatingTo={navigatingTo}
+          setNavigatingTo={setNavigatingTo}
+          user={sidebarUser}
+          onProfileClick={handleProfileClick}
+          onSettingsClick={handleSettingsClick}
+          onSignOutClick={handleSignOut}
+        />
         <div className="flex-1 flex flex-col relative">
           <Topbar
             title={headerMetadata.title}

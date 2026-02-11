@@ -8,6 +8,7 @@ import {
   Settings,
   Plug,
   ScrollText,
+  UserCircle,
 } from "lucide-react";
 
 /**
@@ -25,6 +26,7 @@ export const routeMetadata = {
   "/admin/settings": { title: "Settings", icon: Settings },
   "/admin/integrations": { title: "Integrations", icon: Plug },
   "/admin/logs": { title: "Logs", icon: ScrollText },
+  "/admin/profile": { title: "Profile", icon: UserCircle },
   
   // Pattern matches (for dynamic routes)
   "/admin/estimates/[estimateId]": { title: "Estimates", icon: FileText },
